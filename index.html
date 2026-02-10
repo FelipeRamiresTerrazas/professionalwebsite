@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Felipe Ramires Terrazas | Analytics Engineering Lead</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Main Container -->
+    <div class="main-wrapper">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-circle">
+                    <span class="logo-initials">FR</span>
+                </div>
+                <h2 class="sidebar-name">Felipe Ramires</h2>
+                <p class="sidebar-title">Analytics Engineering Lead</p>
+            </div>
+            
+            <nav class="tab-navigation">
+                <button class="tab-btn active" data-tab="home">
+                    <span class="tab-icon">🏠</span>
+                    <span class="tab-label">Home</span>
+                </button>
+                <button class="tab-btn" data-tab="about">
+                    <span class="tab-icon">👤</span>
+                    <span class="tab-label">About</span>
+                </button>
+                <button class="tab-btn" data-tab="expertise">
+                    <span class="tab-icon">⚡</span>
+                    <span class="tab-label">Expertise</span>
+                </button>
+                <button class="tab-btn" data-tab="experience">
+                    <span class="tab-icon">💼</span>
+                    <span class="tab-label">Experience</span>
+                </button>
+                <button class="tab-btn" data-tab="contact">
+                    <span class="tab-icon">✉️</span>
+                    <span class="tab-label">Contact</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="social-icons">
+                    <a href="https://www.linkedin.com/in/felipe-ramires-terrazas/" target="_blank" title="LinkedIn" class="social-icon">in</a>
+                    <a href="mailto:framiresterrazas@gmail.com" title="Email" class="social-icon">📧</a>
+                </div>
+                <p class="sidebar-year">&copy; 2026</p>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Home Tab -->
+            <section id="home" class="tab-content active">
+                <div class="home-container">
+                    <div class="home-header">
+                        <h1 class="hero-title">Analytics Engineering Lead</h1>
+                        <p class="hero-subtitle">Transforming complex data into strategic insights through innovative engineering solutions</p>
+                    </div>
+
+                    <div class="home-grid">
+                        <div class="home-card">
+                            <div class="card-number">01</div>
+                            <h3>Data Architecture</h3>
+                            <p>Designing scalable, robust data warehouses and infrastructure that grow with your business</p>
+                        </div>
+                        <div class="home-card">
+                            <div class="card-number">02</div>
+                            <h3>Leadership & Strategy</h3>
+                            <p>Leading cross-functional teams and aligning data initiatives with business objectives</p>
+                        </div>
+                        <div class="home-card">
+                            <div class="card-number">03</div>
+                            <h3>Analytics Excellence</h3>
+                            <p>Creating self-service BI solutions that empower decision-makers at all levels</p>
+                        </div>
+                    </div>
+
+                    <div class="cta-buttons">
+                        <button class="btn btn-primary" onclick="switchTab('contact')">Get In Touch</button>
+                        <button class="btn btn-secondary" onclick="switchTab('about')">Learn More</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- About Tab -->
+            <section id="about" class="tab-content">
+                <div class="content-container">
+                    <h2 class="section-title">About Me</h2>
+                    
+                    <div class="about-wrapper">
+                        <div class="about-text">
+                            <p>
+                                I'm a results-driven Analytics Engineering Lead with a proven track record of building scalable data solutions that drive business impact. With expertise spanning data architecture, ETL orchestration, and analytics infrastructure, I bring technical rigor and strategic vision to every project.
+                            </p>
+                            <p>
+                                My approach combines deep technical knowledge with a passion for mentorship and organizational growth. I specialize in translating complex data challenges into elegant solutions while building and developing high-performing teams.
+                            </p>
+                            <p>
+                                I'm committed to staying at the forefront of data engineering innovation, continuously exploring emerging technologies and best practices to deliver competitive advantages for the organizations I work with.
+                            </p>
+                        </div>
+
+                        <div class="highlights-container">
+                            <div class="highlight-block">
+                                <div class="highlight-icon">📊</div>
+                                <h4>Data Strategy</h4>
+                                <p>Building comprehensive data strategies aligned with business outcomes</p>
+                            </div>
+                            <div class="highlight-block">
+                                <div class="highlight-icon">🏗️</div>
+                                <h4>Architecture</h4>
+                                <p>Designing scalable, enterprise-grade analytics infrastructure</p>
+                            </div>
+                            <div class="highlight-block">
+                                <div class="highlight-icon">👥</div>
+                                <h4>Leadership</h4>
+                                <p>Mentoring teams and fostering data-driven organizational culture</p>
+                            </div>
+                            <div class="highlight-block">
+                                <div class="highlight-icon">🚀</div>
+                                <h4>Innovation</h4>
+                                <p>Implementing cutting-edge technologies and methodologies</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Expertise Tab -->
+            <section id="expertise" class="tab-content">
+                <div class="content-container">
+                    <h2 class="section-title">Expertise</h2>
+                    
+                    <div class="expertise-grid">
+                        <div class="expertise-item">
+                            <div class="expertise-number">01</div>
+                            <h3>Data Warehousing</h3>
+                            <p>Designing and implementing modern data warehouses using Snowflake, BigQuery, and Redshift with optimal performance and cost efficiency</p>
+                        </div>
+                        <div class="expertise-item">
+                            <div class="expertise-number">02</div>
+                            <h3>ETL/ELT Pipelines</h3>
+                            <p>Building robust, scalable data pipelines with Airflow, dbt, Fivetran, and Stitch ensuring reliable data integration</p>
+                        </div>
+                        <div class="expertise-item">
+                            <div class="expertise-number">03</div>
+                            <h3>Analytics & BI</h3>
+                            <p>Creating compelling dashboards and analytics solutions using Tableau, Looker, PowerBI, and Qlik for data-driven decisions</p>
+                        </div>
+                        <div class="expertise-item">
+                            <div class="expertise-number">04</div>
+                            <h3>Data Modeling</h3>
+                            <p>Architecting sophisticated dimensional and fact models supporting complex analytical requirements and business logic</p>
+                        </div>
+                        <div class="expertise-item">
+                            <div class="expertise-number">05</div>
+                            <h3>SQL & Python</h3>
+                            <p>Advanced proficiency in SQL optimization, Python for data analysis, automation, and machine learning integration</p>
+                        </div>
+                        <div class="expertise-item">
+                            <div class="expertise-number">06</div>
+                            <h3>Cloud Platforms</h3>
+                            <p>Deep expertise in AWS, GCP, and Azure for building cloud-native analytics solutions with scalability and security</p>
+                        </div>
+                    </div>
+
+                    <div class="skills-section">
+                        <h3 class="skills-title">Technical Skills</h3>
+                        <div class="skills-container">
+                            <div class="skill-group">
+                                <h4>Platforms & Tools</h4>
+                                <div class="skill-pills">
+                                    <span class="pill">Snowflake</span>
+                                    <span class="pill">BigQuery</span>
+                                    <span class="pill">Redshift</span>
+                                    <span class="pill">Airflow</span>
+                                    <span class="pill">dbt</span>
+                                    <span class="pill">Fivetran</span>
+                                </div>
+                            </div>
+                            <div class="skill-group">
+                                <h4>BI & Visualization</h4>
+                                <div class="skill-pills">
+                                    <span class="pill">Tableau</span>
+                                    <span class="pill">Looker</span>
+                                    <span class="pill">PowerBI</span>
+                                    <span class="pill">Qlik</span>
+                                    <span class="pill">Data Studio</span>
+                                </div>
+                            </div>
+                            <div class="skill-group">
+                                <h4>Languages & Databases</h4>
+                                <div class="skill-pills">
+                                    <span class="pill">SQL</span>
+                                    <span class="pill">Python</span>
+                                    <span class="pill">PostgreSQL</span>
+                                    <span class="pill">MySQL</span>
+                                    <span class="pill">MongoDB</span>
+                                </div>
+                            </div>
+                            <div class="skill-group">
+                                <h4>Cloud & DevOps</h4>
+                                <div class="skill-pills">
+                                    <span class="pill">AWS</span>
+                                    <span class="pill">GCP</span>
+                                    <span class="pill">Azure</span>
+                                    <span class="pill">Docker</span>
+                                    <span class="pill">Git</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Experience Tab -->
+            <section id="experience" class="tab-content">
+                <div class="content-container">
+                    <h2 class="section-title">Professional Experience</h2>
+                    
+                    <div class="experience-container">
+                        <div class="experience-item">
+                            <div class="experience-header">
+                                <div class="experience-marker"></div>
+                                <div class="experience-info">
+                                    <h3>Analytics Engineering Lead</h3>
+                                    <span class="period">Present</span>
+                                </div>
+                            </div>
+                            <p class="experience-description">
+                                Leading analytics engineering initiatives with responsibility for data infrastructure strategy, pipeline architecture, and team development. Directing cross-functional projects that deliver data-driven insights to executive leadership.
+                            </p>
+                            <ul class="achievements-list">
+                                <li>Architected modern data warehouse supporting 100+ stakeholders</li>
+                                <li>Led development of executive analytics platform improving decision velocity by 50%</li>
+                                <li>Mentored team of 5+ engineers on data engineering best practices</li>
+                                <li>Optimized ETL pipelines reducing infrastructure costs by 40%</li>
+                            </ul>
+                        </div>
+
+                        <div class="experience-item">
+                            <div class="experience-header">
+                                <div class="experience-marker"></div>
+                                <div class="experience-info">
+                                    <h3>Senior Analytics Engineer</h3>
+                                    <span class="period">Previous Role</span>
+                                </div>
+                            </div>
+                            <p class="experience-description">
+                                Designed and implemented robust data pipelines and analytics solutions supporting multiple business units. Established data governance frameworks and promoted analytics best practices.
+                            </p>
+                            <ul class="achievements-list">
+                                <li>Built ETL pipelines processing 500M+ daily records with 99.9% uptime</li>
+                                <li>Developed self-service analytics dashboards reducing reporting time by 60%</li>
+                                <li>Implemented comprehensive data quality and governance frameworks</li>
+                                <li>Trained 20+ business stakeholders on data literacy and analysis</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Contact Tab -->
+            <section id="contact" class="tab-content">
+                <div class="content-container contact-section">
+                    <h2 class="section-title">Let's Work Together</h2>
+                    <p class="contact-intro">I'm always interested in discussing data challenges, analytics strategy, and opportunities to create impact through data. Feel free to reach out.</p>
+                    
+                    <div class="contact-grid">
+                        <a href="mailto:framiresterrazas@gmail.com" class="contact-box">
+                            <div class="contact-box-icon">✉️</div>
+                            <h4>Email</h4>
+                            <p>framiresterrazas@gmail.com</p>
+                        </a>
+                        <a href="https://www.linkedin.com/in/felipe-ramires-terrazas/" target="_blank" class="contact-box">
+                            <div class="contact-box-icon">💼</div>
+                            <h4>LinkedIn</h4>
+                            <p>Connect with me</p>
+                        </a>
+                    </div>
+
+                    <form class="contact-form" id="contactForm">
+                        <div class="form-group">
+                            <input type="text" placeholder="Your Name" required>
+                        </div>
+                        <div class="form-group">
+                            <input type="email" placeholder="Your Email" required>
+                        </div>
+                        <div class="form-group">
+                            <textarea placeholder="Your Message" rows="5" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Send Message</button>
+                    </form>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
