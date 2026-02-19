@@ -12,16 +12,17 @@
     --primary: #2563eb;
     --primary-dark: #1e40af;
     --secondary: #0ea5e9;
-    --accent: #dc2626;
-    --dark-bg: #0f172a;
-    --dark-card: #1e293b;
-    --light-bg: #f8fafc;
-    --text-dark: #1e293b;
-    --text-light: #64748b;
-    --border-color: #e2e8f0;
+    --accent: #ef4444;
+    --dark-bg: #071028;       /* Page background (dark) */
+    --dark-card: #0b1624;     /* Deep card color */
+    --light-bg: #071028;      /* main-content background uses this */
+    --card-bg: #0f1a2a;       /* card and form backgrounds */
+    --text-dark: #e6f0ff;     /* primary (now light) */
+    --text-light: #9fb0c8;    /* secondary text */
+    --border-color: rgba(255,255,255,0.06);
     --success: #10b981;
-    --shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.15);
+    --shadow: 0 10px 30px rgba(2,6,23,0.6);
+    --shadow-lg: 0 20px 50px rgba(2,6,23,0.7);
     --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -32,7 +33,7 @@ html {
 body {
     font-family: 'Poppins', sans-serif;
     color: var(--text-dark);
-    background-color: #ffffff;
+    background-color: var(--light-bg);
     line-height: 1.6;
     overflow-x: hidden;
     margin: 0;
@@ -50,7 +51,7 @@ body {
 
 .sidebar {
     width: 280px;
-    background: linear-gradient(180deg, #1e3a8a 0%, #0f172a 100%);
+    background: linear-gradient(180deg, #0c3a7f 0%, var(--dark-bg) 100%);
     color: white;
     padding: 40px 30px;
     display: flex;
@@ -66,7 +67,7 @@ body {
 .main-content {
     margin-left: 280px;
     flex: 1;
-    background-color: #ffffff;
+    background-color: var(--light-bg);
     min-height: 100vh;
 }
 
@@ -376,18 +377,44 @@ a:hover {
 }
 
 .home-card {
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-    padding: 35px;
-    border-radius: 15px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.01) 100%);
+    padding: 30px 28px;
+    border-radius: 12px;
     border: 1px solid var(--border-color);
     transition: var(--transition);
-    text-align: center;
+    text-align: left;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 8px 30px rgba(2,6,23,0.55), inset 0 1px 0 rgba(255,255,255,0.02);
 }
 
 .home-card:hover {
-    transform: translateY(-10px);
-    box-shadow: var(--shadow);
-    background: linear-gradient(135deg, white 0%, #f8fafc 100%);
+    transform: translateY(-8px) scale(1.01);
+    box-shadow: 0 20px 60px rgba(2,6,23,0.7), inset 0 2px 0 rgba(255,255,255,0.03);
+    background: linear-gradient(180deg, rgba(255,255,255,0.035) 0%, rgba(255,255,255,0.01) 100%);
+}
+
+.home-card::before {
+    content: '';
+    position: absolute;
+    left: 12px;
+    top: 12px;
+    bottom: 12px;
+    width: 6px;
+    border-radius: 6px;
+    background: linear-gradient(180deg, var(--primary), var(--secondary));
+    box-shadow: 0 4px 12px rgba(14,165,233,0.12);
+}
+
+.home-card::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02));
 }
 
 .card-number {
@@ -403,12 +430,13 @@ a:hover {
 
 .home-card h3 {
     color: var(--text-dark);
-    font-size: 1.3rem;
+    font-size: 1.25rem;
     margin-bottom: 10px;
 }
 
 .home-card p {
     font-size: 0.95rem;
+    color: var(--text-light);
 }
 
 .cta-buttons {
@@ -449,16 +477,16 @@ a:hover {
 }
 
 .highlight-block {
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-    padding: 25px;
-    border-radius: 12px;
-    border-left: 4px solid var(--primary);
+    background: linear-gradient(180deg, rgba(255,255,255,0.01) 0%, rgba(255,255,255,0.02) 100%);
+    padding: 20px;
+    border-radius: 10px;
+    border-left: 4px solid rgba(37,99,235,0.14);
     transition: var(--transition);
 }
 
 .highlight-block:hover {
-    transform: translateX(10px);
-    box-shadow: var(--shadow);
+    transform: translateX(8px);
+    box-shadow: 0 14px 40px rgba(2,6,23,0.5);
 }
 
 .highlight-icon {
@@ -489,13 +517,14 @@ a:hover {
 }
 
 .expertise-item {
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-    padding: 35px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.015) 0%, rgba(255,255,255,0.01) 100%);
+    padding: 28px;
     border-radius: 12px;
     border: 1px solid var(--border-color);
     transition: var(--transition);
     position: relative;
     overflow: hidden;
+    box-shadow: 0 10px 40px rgba(2,6,23,0.55), inset 0 1px 0 rgba(255,255,255,0.02);
 }
 
 .expertise-item::before {
@@ -510,8 +539,8 @@ a:hover {
 }
 
 .expertise-item:hover {
-    transform: translateY(-8px);
-    box-shadow: var(--shadow);
+    transform: translateY(-6px) scale(1.01);
+    box-shadow: 0 24px 70px rgba(2,6,23,0.7);
 }
 
 .expertise-number {
@@ -541,7 +570,7 @@ a:hover {
    ======================================== */
 
 .skills-section {
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    background: linear-gradient(135deg, var(--card-bg) 0%, #eef6fb 100%);
     padding: 50px;
     border-radius: 15px;
     border: 1px solid var(--border-color);
@@ -576,13 +605,13 @@ a:hover {
 
 .pill {
     display: inline-block;
-    background: white;
-    color: var(--primary);
-    padding: 8px 16px;
-    border-radius: 20px;
+    background: transparent;
+    color: var(--text-light);
+    padding: 6px 14px;
+    border-radius: 999px;
     font-size: 0.9rem;
-    font-weight: 500;
-    border: 2px solid var(--primary);
+    font-weight: 600;
+    border: 1px solid rgba(255,255,255,0.04);
     transition: var(--transition);
     cursor: default;
 }
@@ -606,18 +635,18 @@ a:hover {
 }
 
 .experience-item {
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-    padding: 35px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.015) 0%, rgba(255,255,255,0.01) 100%);
+    padding: 28px;
     border-radius: 12px;
     border: 1px solid var(--border-color);
-    border-left: 5px solid var(--primary);
+    border-left: 5px solid rgba(37,99,235,0.12);
     transition: var(--transition);
     position: relative;
 }
 
 .experience-item:hover {
-    transform: translateX(10px);
-    box-shadow: var(--shadow);
+    transform: translateX(8px);
+    box-shadow: 0 18px 50px rgba(2,6,23,0.6);
 }
 
 .experience-header {
@@ -706,8 +735,8 @@ a:hover {
 }
 
 .contact-box {
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-    padding: 30px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.01) 100%);
+    padding: 26px;
     border-radius: 12px;
     border: 1px solid var(--border-color);
     text-align: center;
@@ -716,9 +745,9 @@ a:hover {
 }
 
 .contact-box:hover {
-    transform: translateY(-10px);
-    box-shadow: var(--shadow);
-    background: linear-gradient(135deg, white 0%, #f8fafc 100%);
+    transform: translateY(-8px);
+    box-shadow: 0 20px 60px rgba(2,6,23,0.65);
+    background: linear-gradient(180deg, rgba(255,255,255,0.035) 0%, rgba(255,255,255,0.01) 100%);
 }
 
 .contact-box-icon {
@@ -743,9 +772,9 @@ a:hover {
 .contact-form {
     max-width: 500px;
     margin: 0 auto;
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-    padding: 40px;
-    border-radius: 15px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.01) 100%);
+    padding: 34px;
+    border-radius: 12px;
     border: 1px solid var(--border-color);
 }
 
@@ -759,7 +788,7 @@ a:hover {
     padding: 12px 16px;
     border: 2px solid var(--border-color);
     border-radius: 10px;
-    background-color: white;
+    background-color: var(--card-bg);
     color: var(--text-dark);
     font-family: 'Poppins', sans-serif;
     font-size: 0.95rem;
