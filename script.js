@@ -72,11 +72,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const contactForm = document.getElementById('contactForm');
     
     if (contactForm) {
-        contactForm.addEventListener('submit', function(e) {
+        contactForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            // Get form values
-            const formData = new FormData(this);
+            const endpoint = contactForm.dataset.formspreeEndpoint;
+            const submitButton = contactForm.querySelector('button[type="submit"]');
+            const defaultButtonText = submitButton ? submitButton.textContent : 'Send Message';
             
             // Simple validation
             const name = this.querySelector('input[type="text"]').value.trim();
@@ -94,15 +95,42 @@ document.addEventListener('DOMContentLoaded', function() {
                 showNotification('Please enter a valid email address', 'error');
                 return;
             }
+
+            if (!endpoint || endpoint.includes('YOUR_FORM_ID')) {
+                showNotification('Form is not configured yet. Add your Formspree form ID in index.html.', 'error');
+                return;
+            }
             
-            // Show success message
-            showNotification('Message sent successfully! We will contact you soon.', 'success');
-            
-            // Reset form
-            contactForm.reset();
-            
-            // Optional: Send email via FormSubmit or similar service
-            // This is a placeholder - you would need to set up a backend service
+            const formData = new FormData(this);
+
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.textContent = 'Sending...';
+            }
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    showNotification('Message sent successfully! Thank you for reaching out.', 'success');
+                    contactForm.reset();
+                } else {
+                    showNotification('Could not send message. Please try again in a moment.', 'error');
+                }
+            } catch (error) {
+                showNotification('Network error. Please check your connection and try again.', 'error');
+            } finally {
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.textContent = defaultButtonText;
+                }
+            }
         });
     }
 });

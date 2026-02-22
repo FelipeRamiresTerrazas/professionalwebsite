@@ -50,10 +50,10 @@ body {
 }
 
 .sidebar {
-    width: 280px;
+    width: 320px;
     background: linear-gradient(180deg, #0c3a7f 0%, var(--dark-bg) 100%);
     color: white;
-    padding: 40px 30px;
+    padding: 28px 24px;
     display: flex;
     flex-direction: column;
     position: fixed;
@@ -61,11 +61,11 @@ body {
     left: 0;
     top: 0;
     box-shadow: var(--shadow);
-    overflow-y: auto;
+    overflow-y: hidden;
 }
 
 .main-content {
-    margin-left: 280px;
+    margin-left: 320px;
     flex: 1;
     background-color: var(--light-bg);
     min-height: 100vh;
@@ -77,8 +77,8 @@ body {
 
 .sidebar-header {
     text-align: center;
-    margin-bottom: 50px;
-    padding-bottom: 30px;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -570,10 +570,16 @@ a:hover {
    ======================================== */
 
 .skills-section {
-    background: linear-gradient(135deg, var(--card-bg) 0%, #eef6fb 100%);
+    background: var(--card-bg);
     padding: 50px;
-    border-radius: 15px;
+    border-radius: 12px;
     border: 1px solid var(--border-color);
+    box-shadow: 0 10px 40px rgba(2,6,23,0.55), inset 0 1px 0 rgba(255,255,255,0.02);
+}
+
+.skills-section.expertise-item:hover {
+    transform: translateY(-6px) scale(1.01);
+    box-shadow: 0 24px 70px rgba(2,6,23,0.7);
 }
 
 .skills-title {
@@ -818,12 +824,12 @@ a:hover {
 
 @media (max-width: 1024px) {
     .sidebar {
-        width: 240px;
+        width: 280px;
         padding: 30px 20px;
     }
 
     .main-content {
-        margin-left: 240px;
+        margin-left: 280px;
     }
 
     .content-container {
