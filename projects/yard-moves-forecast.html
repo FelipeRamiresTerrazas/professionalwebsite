@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yard Move Forecasting Case Study | Felipe Ramires Terrazas</title>
+    <meta name="description" content="Case study covering a Snowflake and Prophet workflow used to forecast yard move demand across multiple logistics campuses.">
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css">
+</head>
+<body class="case-study-page">
+    <div class="case-study-shell">
+        <a class="case-study-back" href="../index.html">&larr; Back to portfolio</a>
+
+        <header class="case-study-hero">
+            <span class="case-study-kicker">Predictive Analytics Case Study</span>
+            <h1>Forecasting Logistic Yard Moves Across Multiple Campuses with Snowflake and Prophet</h1>
+            <p class="case-study-lead">
+                This project turns operational movement history into a short-horizon planning signal. The workflow pulls historical yard move data from Snowflake with Snowpark, anonymizes campus names, trains a per-site Prophet model, and produces a 7-day forecast with executive-friendly visualizations.
+            </p>
+            <div class="case-study-meta">
+                <span class="meta-pill">Python</span>
+                <span class="meta-pill">Jupyter Notebook</span>
+                <span class="meta-pill">Snowflake Snowpark</span>
+                <span class="meta-pill">Prophet</span>
+                <span class="meta-pill">Matplotlib</span>
+                <span class="meta-pill">GitHub Pages</span>
+            </div>
+        </header>
+
+        <div class="case-study-grid">
+            <main class="case-study-main">
+                <section class="case-panel">
+                    <h2>Business Problem</h2>
+                    <p>
+                        Yard operations create a high volume of repetitive logistics moves that vary by day of week, site profile, and local demand patterns. Planning against raw history is noisy, especially when multiple campuses need to be monitored at once.
+                    </p>
+                    <p>
+                        The goal was to create a lightweight forecasting workflow that operations leaders could use to anticipate the next 7 days of movement volume, compare likely demand across campuses, and identify where attention or staffing might be needed.
+                    </p>
+                    <div class="inline-note">
+                        Sensitive fields were masked before publication. Real campus names are transformed into neutral labels such as Site A, Site B, and Site C.
+                    </div>
+                </section>
+
+                <section class="case-panel">
+                    <h2>Architecture &amp; Tools</h2>
+                    <p>
+                        The notebook follows a straightforward pipeline: query Snowflake, convert to a Pandas frame, train one Prophet model per campus, then consolidate predictions into a single reporting dataset used for downstream charts.
+                    </p>
+                    <div class="tool-stack">
+                        <article class="tool-card">
+                            <strong>Snowflake + Snowpark</strong>
+                            <p>Source of historical yard move features and active warehouse execution context.</p>
+                        </article>
+                        <article class="tool-card">
+                            <strong>Pandas</strong>
+                            <p>Tabular wrangling, field renaming, concatenation, and summary statistics.</p>
+                        </article>
+                        <article class="tool-card">
+                            <strong>Prophet</strong>
+                            <p>Per-campus forecasting with weekly seasonality enabled for short-horizon operational demand.</p>
+                        </article>
+                        <article class="tool-card">
+                            <strong>Matplotlib</strong>
+                            <p>Presentation layer for forecast grids, comparison bars, and a top-campus heatmap.</p>
+                        </article>
+                    </div>
+                </section>
+
+                <section class="case-panel">
+                    <h2>The Code</h2>
+                    <p>
+                        The notebook is structured in four logical blocks: data extraction, model training, forecast consolidation, and visual storytelling. For a portfolio page, it is better to show the most decision-relevant slices of code rather than every notebook cell.
+                    </p>
+
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Data extraction and anonymization</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python">import pandas as pd
+import string
+from prophet import Prophet
+from snowflake.snowpark.context import get_active_session
+
+session = get_active_session()
+session.sql("USE DATABASE ANALYTICS_DB").collect()
+session.sql("USE SCHEMA DEV_MARTS").collect()
+
+df_snow = session.table("ANALYTICS_DB.DEV_MARTS.FACT_DAILY_YARD_MOVE_FEATURES")
+df = df_snow.to_pandas()
+
+unique_campuses = sorted(df["CAMPUSNAME"].unique())
+campus_mask = {
+    name: f"Site {string.ascii_uppercase[i]}" if i &lt; 26 else f"Site {i + 1}"
+    for i, name in enumerate(unique_campuses)
+}
+df["CAMPUSNAME"] = df["CAMPUSNAME"].map(campus_mask)</code></pre>
+                    </div>
+
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Campus-level forecasting loop</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python">all_predictions = []
+campuses = df["CAMPUSNAME"].unique()
+
+for campus in campuses:
+    campus_df = df[df["CAMPUSNAME"] == campus].copy()
+    campus_df = campus_df.rename(columns={"MOVE_DATE": "ds", "TOTAL_MOVES": "y"})
+
+    model = Prophet(
+        daily_seasonality=False,
+        yearly_seasonality=False,
+        weekly_seasonality=True,
+    )
+    model.fit(campus_df)
+
+    future = model.make_future_dataframe(periods=7)
+    forecast = model.predict(future)
+    forecast = forecast[["ds", "yhat", "yhat_lower", "yhat_upper"]].tail(7)
+    forecast["CAMPUSNAME"] = campus
+    all_predictions.append(forecast)
+
+final_df = pd.concat(all_predictions, ignore_index=True)</code></pre>
+                    </div>
+
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Output shaping for reporting</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python">final_df = final_df.rename(columns={
+    "ds": "PREDICTED_DATE",
+    "yhat": "FORECASTED_MOVES",
+    "yhat_lower": "LOWER_BOUND",
+    "yhat_upper": "UPPER_BOUND",
+})
+
+final_df["FORECASTED_MOVES"] = final_df["FORECASTED_MOVES"].round(0)
+final_df["LOWER_BOUND"] = final_df["LOWER_BOUND"].round(0)
+final_df["UPPER_BOUND"] = final_df["UPPER_BOUND"].round(0)
+
+print(f"Success! Forecasted 7 days for {len(campuses)} campuses.")</code></pre>
+                    </div>
+                </section>
+
+                <section class="case-panel visualizations-panel">
+                    <h2>Visualizations</h2>
+                    <p>
+                        The reporting layer combines overview and prioritization views. The forecast grid shows the full network, the comparison bars simplify executive scanning, and the heatmap highlights where the largest operational load is concentrated over the next week.
+                    </p>
+                    <div class="chart-grid">
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button" data-lightbox-src="../line_charts.png" data-lightbox-alt="7-day forecast grid for all masked campus sites" aria-label="Open forecast grid image in full screen">
+                                <img src="../line_charts.png" alt="7-day forecast grid for all masked campus sites">
+                            </button>
+                            <figcaption class="chart-caption">A campus-by-campus view of the next 7 days, including confidence intervals and daily forecast labels.</figcaption>
+                        </figure>
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button" data-lightbox-src="../bar_charts.png" data-lightbox-alt="Bar charts comparing total forecasted moves and average daily forecasted moves by campus" aria-label="Open bar chart image in full screen">
+                                <img src="../bar_charts.png" alt="Bar charts comparing total forecasted moves and average daily forecasted moves by campus">
+                            </button>
+                            <figcaption class="chart-caption">A comparative view of total forecasted moves and average daily demand by campus.</figcaption>
+                        </figure>
+
+                        <figure class="chart-frame">
+                            <iframe
+                                src="../heatmap.html"
+                                title="Top 10 campus heatmap"
+                                loading="lazy"
+                                style="width: 100%; min-height: 720px; border: 0; border-radius: 12px; background: #071028;"
+                            ></iframe>
+                            <figcaption class="chart-caption">A dense ranking view that helps spot where operational load is concentrated by day. <a href="../heatmap.html" target="_blank" rel="noopener noreferrer">Open heatmap in a new tab</a>.</figcaption>
+                        </figure>
+                    </div>
+                </section>
+
+                <section class="case-panel">
+                    <h2>Conclusion</h2>
+                    <p>
+                        This case study demonstrates an end-to-end analytics pattern that is common in modern data teams: operational data access, lightweight predictive modeling, and business-facing visualization. The implementation is intentionally pragmatic, favoring quick interpretability and repeatability over unnecessary modeling complexity.
+                    </p>
+                    <p>
+                        For a portfolio audience, the strongest signal is not only that a model was trained, but that the output was structured in a way that supports decisions. That is the core story this project tells.
+                    </p>
+                </section>
+            </main>
+
+            <aside class="case-study-sidebar">
+                <section class="case-panel sidebar-block">
+                    <h3>What This Shows</h3>
+                    <ul class="case-list">
+                        <li>Snowflake-native analytics workflow with Python orchestration</li>
+                        <li>Time-series forecasting at a multi-entity operational level</li>
+                        <li>Data masking for safe public presentation</li>
+                        <li>Visual storytelling designed for operational stakeholders</li>
+                    </ul>
+                </section>
+
+                <section class="case-panel sidebar-block">
+                    <h3>Recommended Repo Assets</h3>
+                    <ul class="case-list">
+                        <li>Notebook export in Markdown for traceability</li>
+                        <li>Three optimized PNG chart assets</li>
+                        <li>Optional raw notebook download link for technical readers</li>
+                        <li>Short README entry linking the case study page</li>
+                    </ul>
+                </section>
+
+                <section class="case-panel sidebar-block">
+                    <h3>Suggested File Layout</h3>
+                    <ul class="case-list">
+                        <li>projects/yard-moves-forecast.html</li>
+                        <li>assets/projects/yard-moves/forecast-grid.png</li>
+                        <li>assets/projects/yard-moves/volume-comparison.png</li>
+                        <li>assets/projects/yard-moves/top-campuses-heatmap.png</li>
+                        <li>notebooks/yard-moves-forecast.md</li>
+                    </ul>
+                </section>
+            </aside>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+    <div class="lightbox" id="chartLightbox" aria-hidden="true" role="dialog" aria-label="Expanded chart view">
+        <button type="button" class="lightbox-close" id="lightboxClose" aria-label="Close full screen image">&times;</button>
+        <img id="lightboxImage" src="" alt="Expanded chart image">
+    </div>
+
+    <script>
+        hljs.highlightAll();
+
+        const lightbox = document.getElementById('chartLightbox');
+        const lightboxImage = document.getElementById('lightboxImage');
+        const lightboxClose = document.getElementById('lightboxClose');
+        const zoomTriggers = document.querySelectorAll('[data-lightbox-src]');
+
+        function closeLightbox() {
+            lightbox.classList.remove('active');
+            lightbox.setAttribute('aria-hidden', 'true');
+            lightboxImage.src = '';
+        }
+
+        zoomTriggers.forEach((trigger) => {
+            trigger.addEventListener('click', () => {
+                lightboxImage.src = trigger.dataset.lightboxSrc;
+                lightboxImage.alt = trigger.dataset.lightboxAlt || 'Expanded chart image';
+                lightbox.classList.add('active');
+                lightbox.setAttribute('aria-hidden', 'false');
+            });
+        });
+
+        lightboxClose.addEventListener('click', closeLightbox);
+        lightbox.addEventListener('click', (event) => {
+            if (event.target === lightbox) {
+                closeLightbox();
+            }
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && lightbox.classList.contains('active')) {
+                closeLightbox();
+            }
+        });
+    </script>
+</body>
+</html>
