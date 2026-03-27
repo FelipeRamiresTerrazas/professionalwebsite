@@ -5,8 +5,8 @@ creditcard.csv
 *.joblib
 *.pkl
 
-# Gráficos gerados pelo script (artefatos, não precisam de versionamento)
-figures/
+# Gráficos gerados pelo script — track PNGs for GitHub Pages, ignore large files
+# figures/   ← intentionally NOT ignored so images are served via Pages
 
 # Python
 __pycache__/
