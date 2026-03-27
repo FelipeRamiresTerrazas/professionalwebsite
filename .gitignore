@@ -1,0 +1,16 @@
+# Dataset — arquivo grande (>100MB), não pode ser versionado no GitHub
+creditcard.csv
+
+# Modelo treinado (pode ser grande)
+*.joblib
+*.pkl
+
+# Gráficos gerados pelo script (artefatos, não precisam de versionamento)
+figures/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+.venv/
