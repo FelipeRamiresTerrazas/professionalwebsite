@@ -55,6 +55,10 @@ PALETTE = {"Normal": "#2ecc71", "Fraude": "#e74c3c"}
 FIG_DIR = "figures"  # diretório para salvar os gráficos
 
 import os
+import sys
+# Forçar UTF-8 no stdout para compatibilidade com terminais Windows (cp1252)
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 os.makedirs(FIG_DIR, exist_ok=True)
 
 
@@ -62,7 +66,7 @@ def save_fig(fig, name: str, dpi: int = 200):
     """Salva a figura em alta resolução para uso no portfólio."""
     fig.savefig(os.path.join(FIG_DIR, f"{name}.png"), dpi=dpi,
                 bbox_inches="tight", facecolor="white")
-    print(f"  ✔ Gráfico salvo: {FIG_DIR}/{name}.png")
+    print(f"  [OK] Grafico salvo: {FIG_DIR}/{name}.png")
 
 
 # =============================================================================
@@ -213,7 +217,7 @@ df["Time_scaled"] = scaler.fit_transform(df[["Time"]])
 # Remover colunas originais para evitar duplicidade
 df.drop(["Amount", "Time", "Time_hours"], axis=1, inplace=True)
 
-print("  ✔ 'Amount' e 'Time' escalonados com StandardScaler.")
+print(f"  [OK] 'Amount' e 'Time' escalonados com StandardScaler.")
 print(f"  Shape final: {df.shape}")
 
 # ── 3.2 Separação de Features e Target ──────────────────────────────────────
@@ -256,7 +260,7 @@ print("    → Penaliza mais erros em fraudes, sem criar dados sintéticos.")
 # no teste) para evitar data leakage.
 print("\n  Estratégia B: SMOTE (oversampling sintético)")
 
-smote = SMOTE(random_state=42, n_jobs=-1)
+smote = SMOTE(random_state=42)
 X_train_smote, y_train_smote = smote.fit_resample(X_train, y_train)
 
 print(f"    Antes do SMOTE: {y_train.value_counts().to_dict()}")
@@ -724,7 +728,7 @@ print(f"\n{summary.to_string(index=False)}\n")
 # Modelo vencedor
 winner = summary.iloc[0]["Modelo"]
 winner_auprc = summary.iloc[0]["AUPRC"]
-print(f"  🏆 MELHOR MODELO: {winner}")
+print(f"  [MELHOR MODELO]: {winner}")
 print(f"     AUPRC: {winner_auprc:.4f}")
 print(f"     Fraudes detectadas: {summary.iloc[0]['TP (Fraudes Det.)']:.0f} "
       f"de {y_test.sum()} no conjunto de teste")
@@ -741,8 +745,8 @@ import joblib
 model_path = "fraud_detection_model.joblib"
 best_final_model = results[winner]["model"]
 joblib.dump(best_final_model, model_path)
-print(f"  ✔ Modelo salvo em: {model_path}")
-print(f"  ✔ Todos os gráficos salvos em: {FIG_DIR}/")
+print(f"  [OK] Modelo salvo em: {model_path}")
+print(f"  [OK] Todos os graficos salvos em: {FIG_DIR}/")
 
 print("\n" + "=" * 70)
 print("PIPELINE CONCLUÍDO COM SUCESSO!")

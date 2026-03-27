@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Credit Card Fraud Detection Case Study | Felipe Ramires Terrazas</title>
+    <meta name="description" content="End-to-end machine learning pipeline for credit card fraud detection using Random Forest and XGBoost, evaluated with AUPRC on a highly imbalanced dataset.">
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css">
+</head>
+<body class="case-study-page">
+    <div class="case-study-shell">
+        <a class="case-study-back" href="../index.html">&larr; Back to portfolio</a>
+
+        <header class="case-study-hero">
+            <span class="case-study-kicker">Machine Learning Case Study</span>
+            <h1>Credit Card Fraud Detection with Random Forest &amp; XGBoost</h1>
+            <p class="case-study-lead">
+                An end-to-end ML pipeline that identifies fraudulent credit card transactions in a dataset of 284,807 records where only 0.17% are fraud. The project covers exploratory analysis, feature scaling, two class-imbalance strategies (class weights and SMOTE), model comparison, and a business-impact analysis that translates technical metrics into dollars saved.
+            </p>
+            <div class="case-study-meta">
+                <span class="meta-pill">Python</span>
+                <span class="meta-pill">scikit-learn</span>
+                <span class="meta-pill">XGBoost</span>
+                <span class="meta-pill">imbalanced-learn</span>
+                <span class="meta-pill">SMOTE</span>
+                <span class="meta-pill">Matplotlib / Seaborn</span>
+                <span class="meta-pill">AUPRC</span>
+            </div>
+        </header>
+
+        <div class="case-study-grid">
+            <main class="case-study-main">
+
+                <!-- ── BUSINESS PROBLEM ─────────────────────────────────── -->
+                <section class="case-panel">
+                    <h2>Business Problem</h2>
+                    <p>
+                        Credit card fraud accounts for billions of dollars in annual losses worldwide. The core challenge is not technical difficulty — it is data imbalance. Legitimate transactions vastly outnumber fraudulent ones (578:1 in this dataset), which means a naive model that predicts "everything is normal" achieves 99.83% accuracy while catching zero fraud.
+                    </p>
+                    <p>
+                        The goal of this project is to build a model that reliably identifies the rare fraudulent transaction while minimizing false alarms that disrupt genuine customers. Every metric choice, preprocessing step, and modeling decision is driven by this real-world constraint.
+                    </p>
+                    <div class="inline-note">
+                        The dataset is the public Kaggle Credit Card Fraud Detection dataset (ULB). Features V1–V28 are the result of a PCA transformation applied to protect cardholder privacy. Only <code>Time</code>, <code>Amount</code>, and <code>Class</code> retain their original meaning.
+                    </div>
+                </section>
+
+                <!-- ── ARCHITECTURE ─────────────────────────────────────── -->
+                <section class="case-panel">
+                    <h2>Pipeline Architecture &amp; Tools</h2>
+                    <p>
+                        The pipeline is structured in six sequential stages: data loading and EDA, feature scaling, class-imbalance handling, model training, evaluation, and business-impact quantification.
+                    </p>
+                    <div class="tool-stack">
+                        <article class="tool-card">
+                            <strong>scikit-learn</strong>
+                            <p>StandardScaler for feature normalization, RandomForestClassifier, train/test split with stratification, and all evaluation metrics.</p>
+                        </article>
+                        <article class="tool-card">
+                            <strong>XGBoost</strong>
+                            <p>Gradient boosted trees with L1/L2 regularization and <code>scale_pos_weight</code> for native imbalance handling.</p>
+                        </article>
+                        <article class="tool-card">
+                            <strong>imbalanced-learn (SMOTE)</strong>
+                            <p>Synthetic Minority Oversampling Technique applied exclusively on the training set to avoid data leakage.</p>
+                        </article>
+                        <article class="tool-card">
+                            <strong>Matplotlib / Seaborn</strong>
+                            <p>Publication-style charts with the <code>seaborn-v0_8</code> theme: Precision-Recall curves, confusion matrices, feature importance, and business impact bars.</p>
+                        </article>
+                    </div>
+                </section>
+
+                <!-- ── CODE ─────────────────────────────────────────────── -->
+                <section class="case-panel">
+                    <h2>The Code</h2>
+
+                    <!-- 1. Imports -->
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Imports &amp; aesthetic configuration</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python">import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import (
+    confusion_matrix, precision_recall_curve,
+    average_precision_score, roc_auc_score, f1_score
+)
+from xgboost import XGBClassifier
+from imblearn.over_sampling import SMOTE
+
+# Publication-style charts — seaborn-v0_8 provides a subtle grid
+# and clean typography without the raw matplotlib defaults.
+plt.style.use("seaborn-v0_8")
+sns.set_context("talk", font_scale=0.9)
+PALETTE = {"Normal": "#2ecc71", "Fraud": "#e74c3c"}</code></pre>
+                    </div>
+
+                    <!-- 2. EDA -->
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Exploratory Data Analysis — class imbalance check</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python">df = pd.read_csv("creditcard.csv")
+
+class_counts = df["Class"].value_counts()
+class_pct    = df["Class"].value_counts(normalize=True) * 100
+
+# Result: Normal = 284,315 (99.83%)  |  Fraud = 492 (0.17%)
+# A naive classifier that predicts "Normal" every time achieves 99.83%
+# accuracy — but catches ZERO fraud. This is why accuracy is useless
+# here. We use AUPRC (Area Under the Precision-Recall Curve) instead,
+# which focuses entirely on the minority class.
+print(f"Class imbalance ratio: {class_counts[0] / class_counts[1]:.0f}:1")</code></pre>
+                    </div>
+
+                    <!-- 3. Preprocessing -->
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Preprocessing — feature scaling &amp; stratified split</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python">scaler = StandardScaler()
+
+# V1–V28 are already PCA-scaled. Only Amount and Time need normalization.
+# Scaling ensures these two features don't dominate gradient-based models
+# due to their raw magnitude.
+df["Amount_scaled"] = scaler.fit_transform(df[["Amount"]])
+df["Time_scaled"]   = scaler.fit_transform(df[["Time"]])
+df.drop(["Amount", "Time"], axis=1, inplace=True)
+
+X = df.drop("Class", axis=1)
+y = df["Class"]
+
+# stratify=y ensures the 0.17% fraud rate is preserved in both
+# train and test sets — without this, the test set could have no fraud.
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)</code></pre>
+                    </div>
+
+                    <!-- 4. SMOTE -->
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Class-imbalance strategies — Class Weights vs. SMOTE</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python"># Strategy A — Class Weights (built into the model):
+# The simplest and most leak-proof approach. The model applies a higher
+# penalty to misclassifying the minority class. No synthetic data generated.
+rf_weighted = RandomForestClassifier(class_weight="balanced", ...)
+
+# Strategy B — SMOTE (Synthetic Minority Oversampling Technique):
+# Generates synthetic fraud samples by interpolating between real neighbors.
+# CRITICAL: SMOTE is applied ONLY on the training set. Applying it before
+# splitting would leak information from the test set into training data.
+smote = SMOTE(random_state=42)
+X_train_smote, y_train_smote = smote.fit_resample(X_train, y_train)
+
+# Before SMOTE: {0: 227,451  |  1: 394}
+# After  SMOTE: {0: 227,451  |  1: 227,451}  — perfectly balanced</code></pre>
+                    </div>
+
+                    <!-- 5. Modeling -->
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Model training &amp; evaluation function</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python">neg_count  = (y_train == 0).sum()
+pos_count  = (y_train == 1).sum()
+scale_pos  = neg_count / pos_count   # ≈ 578
+
+xgb_model = XGBClassifier(
+    n_estimators=300,
+    max_depth=6,
+    learning_rate=0.05,
+    scale_pos_weight=scale_pos,   # XGBoost's equivalent of class_weight
+    reg_alpha=0.1,                # L1 regularization
+    reg_lambda=1.0,               # L2 regularization
+    eval_metric="aucpr",          # optimize for AUPRC during training
+    random_state=42,
+    n_jobs=-1
+)
+
+def evaluate_model(model, X_tr, y_tr, X_te, y_te):
+    model.fit(X_tr, y_tr)
+    y_pred  = model.predict(X_te)
+    y_proba = model.predict_proba(X_te)[:, 1]
+
+    # AUPRC is the gold standard for imbalanced datasets.
+    # ROC-AUC can be misleadingly optimistic because the huge negative
+    # class dilutes the false-positive rate. PR curves only look at
+    # the minority class, which is exactly what we care about.
+    auprc = average_precision_score(y_te, y_proba)
+    roc   = roc_auc_score(y_te, y_proba)
+    f1    = f1_score(y_te, y_pred)
+    cm    = confusion_matrix(y_te, y_pred)
+    return auprc, roc, f1, cm</code></pre>
+                    </div>
+
+                    <!-- 6. Business Impact -->
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Business impact — translating metrics into dollars</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python">COST_PER_FP = 10  # USD — cost of a false alarm (SMS, call center, temp block)
+
+for name, res in results.items():
+    tp_mask    = (y_test.values == 1) &amp; (res["y_pred"] == 1)
+    fn_mask    = (y_test.values == 1) &amp; (res["y_pred"] == 0)
+
+    money_saved = amount_test[tp_mask].sum()   # fraud correctly blocked
+    money_lost  = amount_test[fn_mask].sum()   # fraud that slipped through
+    fp_cost     = res["cm"][0, 1] * COST_PER_FP
+
+    net_benefit = money_saved - fp_cost
+    print(f"{name}: saved ${money_saved:,.2f} | lost ${money_lost:,.2f} | net ${net_benefit:,.2f}")</code></pre>
+                    </div>
+                </section>
+
+                <!-- ── VISUALIZATIONS ────────────────────────────────────── -->
+                <section class="case-panel visualizations-panel">
+                    <h2>Visualizations</h2>
+                    <p>
+                        The 10 charts below walk through each stage of the analysis — from raw data exploration to model comparison and financial impact. The Precision-Recall curves and business impact charts are the most portfolio-relevant outputs.
+                    </p>
+
+                    <div class="chart-grid">
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button"
+                                data-lightbox-src="../figures/01_class_imbalance.png"
+                                data-lightbox-alt="Bar chart showing extreme class imbalance: 284,315 normal vs 492 fraud transactions"
+                                aria-label="Open class imbalance chart in full screen">
+                                <img src="../figures/01_class_imbalance.png" alt="Class imbalance bar chart">
+                            </button>
+                            <figcaption class="chart-caption">The dataset contains 284,315 normal transactions and only 492 fraudulent ones — a 578:1 ratio. This is why accuracy is a meaningless metric here.</figcaption>
+                        </figure>
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button"
+                                data-lightbox-src="../figures/02_amount_distribution.png"
+                                data-lightbox-alt="Histogram and boxplot of transaction amount split by fraud vs normal class"
+                                aria-label="Open amount distribution chart in full screen">
+                                <img src="../figures/02_amount_distribution.png" alt="Transaction amount distribution by class">
+                            </button>
+                            <figcaption class="chart-caption">Fraudulent transactions show a wider spread in Amount, with a heavier tail than legitimate ones — even after zooming into transactions under $500.</figcaption>
+                        </figure>
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button"
+                                data-lightbox-src="../figures/03_time_distribution.png"
+                                data-lightbox-alt="Density histogram of transaction time in hours, colored by class"
+                                aria-label="Open time distribution chart in full screen">
+                                <img src="../figures/03_time_distribution.png" alt="Temporal distribution of transactions">
+                            </button>
+                            <figcaption class="chart-caption">Fraud attempts spike at specific hours (notably around hours 10–11 and 25–26), while legitimate activity dips during late-night hours — a useful temporal signal.</figcaption>
+                        </figure>
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button"
+                                data-lightbox-src="../figures/04_pca_correlation.png"
+                                data-lightbox-alt="Lower-triangular correlation heatmap of the 28 PCA features V1 through V28"
+                                aria-label="Open PCA correlation heatmap in full screen">
+                                <img src="../figures/04_pca_correlation.png" alt="PCA feature correlation matrix">
+                            </button>
+                            <figcaption class="chart-caption">As expected from PCA output, V1–V28 are nearly uncorrelated with each other. This confirms that all 28 components carry independent information for the models.</figcaption>
+                        </figure>
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button"
+                                data-lightbox-src="../figures/05_precision_recall_curves.png"
+                                data-lightbox-alt="Precision-Recall curves for all four models with AUPRC scores in the legend"
+                                aria-label="Open Precision-Recall curves in full screen">
+                                <img src="../figures/05_precision_recall_curves.png" alt="Precision-Recall curves — model comparison">
+                            </button>
+                            <figcaption class="chart-caption">The Precision-Recall curve is the gold standard for imbalanced binary classification. XGBoost with class weights achieves the highest AUPRC, staying well above the random baseline.</figcaption>
+                        </figure>
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button"
+                                data-lightbox-src="../figures/06_confusion_matrices.png"
+                                data-lightbox-alt="Four confusion matrices side by side showing TP, FP, FN, TN counts and percentages"
+                                aria-label="Open confusion matrices in full screen">
+                                <img src="../figures/06_confusion_matrices.png" alt="Confusion matrices for all models">
+                            </button>
+                            <figcaption class="chart-caption">All four models maintain an extremely low false-positive rate (under 0.03% of normal transactions flagged), which is critical to avoid disrupting genuine customers at scale.</figcaption>
+                        </figure>
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button"
+                                data-lightbox-src="../figures/07_metrics_comparison.png"
+                                data-lightbox-alt="Grouped bar chart comparing AUPRC, ROC AUC, and F1-Score across all four models"
+                                aria-label="Open metrics comparison chart in full screen">
+                                <img src="../figures/07_metrics_comparison.png" alt="AUPRC, ROC AUC and F1 comparison">
+                            </button>
+                            <figcaption class="chart-caption">XGBoost consistently leads on AUPRC and ROC AUC. The gap between class-weight and SMOTE strategies is narrow, confirming that both are viable approaches for this problem.</figcaption>
+                        </figure>
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button"
+                                data-lightbox-src="../figures/08_feature_importance.png"
+                                data-lightbox-alt="Horizontal bar chart of the top 15 most important features from the best model"
+                                aria-label="Open feature importance chart in full screen">
+                                <img src="../figures/08_feature_importance.png" alt="Top 15 feature importances — best model">
+                            </button>
+                            <figcaption class="chart-caption">V14, V4, and V12 rank as the most predictive PCA components. Although the original features are anonymized, these components likely capture spending behavior anomalies.</figcaption>
+                        </figure>
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button"
+                                data-lightbox-src="../figures/09_feature_importance_comparison.png"
+                                data-lightbox-alt="Side-by-side horizontal bar charts comparing feature importance between Random Forest and XGBoost"
+                                aria-label="Open feature importance comparison in full screen">
+                                <img src="../figures/09_feature_importance_comparison.png" alt="Feature importance: RF vs XGBoost">
+                            </button>
+                            <figcaption class="chart-caption">Random Forest and XGBoost agree on the top features (V14, V4, V12), which increases confidence that these signals are genuine — not artifacts of a single algorithm's bias.</figcaption>
+                        </figure>
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button"
+                                data-lightbox-src="../figures/10_business_impact.png"
+                                data-lightbox-alt="Bar charts showing dollars saved vs lost per model, and net benefit after subtracting false-positive costs"
+                                aria-label="Open business impact chart in full screen">
+                                <img src="../figures/10_business_impact.png" alt="Business impact: money saved vs lost">
+                            </button>
+                            <figcaption class="chart-caption">The best model blocks the majority of fraudulent value in the test set while the cost of false alarms ($10/event) is negligible relative to the money saved — a strong case for deployment.</figcaption>
+                        </figure>
+
+                    </div>
+                </section>
+
+                <!-- ── CONCLUSION ───────────────────────────────────────── -->
+                <section class="case-panel">
+                    <h2>Conclusion</h2>
+                    <p>
+                        This project demonstrates that choosing the right evaluation metric is more important than choosing the right model. Using AUPRC instead of accuracy completely reframes what "good performance" means for imbalanced datasets — and leads to very different modeling decisions.
+                    </p>
+                    <p>
+                        The business-impact analysis shows that the gap between a mediocre and a great model is not 0.5 AUPRC points on a leaderboard — it is thousands of dollars of unblocked fraud versus a handful of inconvenienced legitimate customers. That is the framing that gets data scientists a seat at the table.
+                    </p>
+                </section>
+
+            </main>
+
+            <!-- ── SIDEBAR ──────────────────────────────────────────────── -->
+            <aside class="case-study-sidebar">
+                <section class="case-panel sidebar-block">
+                    <h3>Key Results</h3>
+                    <ul class="case-list">
+                        <li><strong>Best model:</strong> XGBoost (Class Weights)</li>
+                        <li><strong>AUPRC:</strong> 0.876</li>
+                        <li><strong>ROC AUC:</strong> 0.973</li>
+                        <li><strong>F1-Score:</strong> 0.850</li>
+                        <li><strong>Fraud caught:</strong> 82 of 98 (84%)</li>
+                        <li><strong>False alarms:</strong> only 13 of 56,864</li>
+                    </ul>
+                </section>
+
+                <section class="case-panel sidebar-block">
+                    <h3>What This Shows</h3>
+                    <ul class="case-list">
+                        <li>End-to-end ML pipeline with production-grade decisions</li>
+                        <li>Metric selection for imbalanced binary classification</li>
+                        <li>Two class-imbalance strategies benchmarked head-to-head</li>
+                        <li>Feature importance interpreted in a business context</li>
+                        <li>Business-impact framing to communicate value to stakeholders</li>
+                    </ul>
+                </section>
+
+                <section class="case-panel sidebar-block">
+                    <h3>Dataset</h3>
+                    <ul class="case-list">
+                        <li>284,807 transactions over 2 days</li>
+                        <li>492 fraudulent (0.172%)</li>
+                        <li>30 features: Time, Amount + V1–V28 (PCA)</li>
+                        <li>Source: Kaggle / ULB Machine Learning Group</li>
+                    </ul>
+                </section>
+
+                <section class="case-panel sidebar-block">
+                    <h3>Why Not Accuracy?</h3>
+                    <ul class="case-list">
+                        <li>A model labeling everything "Normal" scores 99.83%</li>
+                        <li>AUPRC penalizes both missed fraud and false alarms</li>
+                        <li>Precision-Recall curves focus on the minority class only</li>
+                        <li>Industry standard for fraud, medical diagnosis, anomaly detection</li>
+                    </ul>
+                </section>
+            </aside>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+    <div class="lightbox" id="chartLightbox" aria-hidden="true" role="dialog" aria-label="Expanded chart view">
+        <button type="button" class="lightbox-close" id="lightboxClose" aria-label="Close full screen image">&times;</button>
+        <img id="lightboxImage" src="" alt="Expanded chart image">
+    </div>
+
+    <script>
+        hljs.highlightAll();
+
+        const lightbox      = document.getElementById('chartLightbox');
+        const lightboxImage = document.getElementById('lightboxImage');
+        const lightboxClose = document.getElementById('lightboxClose');
+        const zoomTriggers  = document.querySelectorAll('[data-lightbox-src]');
+
+        function closeLightbox() {
+            lightbox.classList.remove('active');
+            lightbox.setAttribute('aria-hidden', 'true');
+            lightboxImage.src = '';
+        }
+
+        zoomTriggers.forEach((trigger) => {
+            trigger.addEventListener('click', () => {
+                lightboxImage.src = trigger.dataset.lightboxSrc;
+                lightboxImage.alt = trigger.dataset.lightboxAlt || 'Expanded chart image';
+                lightbox.classList.add('active');
+                lightbox.setAttribute('aria-hidden', 'false');
+            });
+        });
+
+        lightboxClose.addEventListener('click', closeLightbox);
+        lightbox.addEventListener('click', (event) => {
+            if (event.target === lightbox) closeLightbox();
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && lightbox.classList.contains('active')) closeLightbox();
+        });
+    </script>
+</body>
+</html>
