@@ -3,9 +3,20 @@
 // ========================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    var el = document.getElementById('years-experience');
-    if (el) {
-        el.textContent = (new Date().getFullYear() - 2019) + '+';
+    var words = ['one','two','three','four','five','six','seven','eight','nine','ten'];
+    var years = new Date().getFullYear() - 2019;
+
+    // Metric card number (e.g. "7+")
+    var metricEl = document.getElementById('years-experience');
+    if (metricEl) {
+        metricEl.textContent = years + '+';
+    }
+
+    // Prose text (e.g. "seven years")
+    var textEl = document.getElementById('years-experience-text');
+    if (textEl) {
+        var word = years >= 1 && years <= words.length ? words[years - 1] : years;
+        textEl.textContent = word + ' years';
     }
 });
 
