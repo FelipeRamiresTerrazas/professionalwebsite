@@ -565,6 +565,28 @@ a:hover {
     text-align: justify;
 }
 
+.about-philosophy {
+    margin: 8px 0 0;
+    padding: 18px 22px;
+    border-left: 4px solid var(--secondary);
+    border-radius: 0 10px 10px 0;
+    background: rgba(14, 165, 233, 0.07);
+    font-size: 1rem;
+    font-style: italic;
+    color: var(--text-dark);
+    line-height: 1.6;
+    quotes: none;
+}
+
+.about-philosophy-mark {
+    color: var(--secondary);
+    font-size: 1.4rem;
+    font-style: normal;
+    font-weight: 700;
+    line-height: 0;
+    vertical-align: -0.2em;
+}
+
 .highlights-container {
     display: grid;
     grid-template-columns: 1fr;
@@ -818,21 +840,27 @@ a:hover {
    ======================================== */
 
 .contact-shell {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    align-items: flex-start;
     gap: 32px;
-    align-items: start;
-    height: 100vh;
-    padding: 48px 48px;
+    width: 100%;
+    padding: 48px;
     box-sizing: border-box;
-    overflow: hidden;
+}
+
+#contact.tab-content {
+    display: flex;
+    align-items: center;
+    min-height: 100vh;
 }
 
 .contact-info-col {
     display: flex;
     flex-direction: column;
-    gap: 24px;
-    padding-right: 16px;
+    gap: 20px;
+    flex: 1;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .contact-heading {
@@ -871,6 +899,7 @@ a:hover {
     color: var(--text-dark);
     transition: var(--transition);
     min-width: 0;
+    overflow: hidden;
 }
 
 .contact-link-row:hover {
@@ -895,6 +924,8 @@ a:hover {
     display: flex;
     flex-direction: column;
     min-width: 0;
+    flex: 1;
+    overflow: hidden;
 }
 
 .contact-link-label {
@@ -910,16 +941,20 @@ a:hover {
 .contact-link-value {
     font-size: 0.88rem;
     color: var(--text-light);
-    overflow-wrap: break-word;
-    word-break: break-all;
+    overflow-wrap: anywhere;
+    word-break: break-word;
     white-space: normal;
     line-height: 1.3;
+    max-width: 100%;
 }
 
 .contact-form-col {
     display: flex;
     flex-direction: column;
     gap: 16px;
+    flex: 1;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .contact-form-title {
@@ -1417,10 +1452,15 @@ a:hover {
 
 @media (max-width: 768px) {
     .contact-shell {
-        grid-template-columns: 1fr;
+        flex-direction: column;
+        align-items: stretch;
         height: auto;
-        overflow: visible;
         padding: 32px 20px;
+    }
+
+    #contact.tab-content {
+        min-height: unset;
+        align-items: stretch;
     }
 
     .contact-info-col {
