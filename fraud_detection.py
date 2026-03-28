@@ -1,767 +1,565 @@
-"""
+﻿"""
 =============================================================================
-DETECÇÃO DE FRAUDES EM CARTÕES DE CRÉDITO
+CREDIT CARD FRAUD DETECTION â€” PORTFOLIO PROJECT
 =============================================================================
-Autor: Felipe Ramires Terrazas
-Projeto de Portfólio — Data Science
+Author : Felipe Ramires Terrazas
 
-Este script implementa um pipeline completo de Machine Learning para
-identificar transações fraudulentas em cartões de crédito, utilizando
-o dataset público do Kaggle (284.807 transações, 492 fraudes).
+Visualization philosophy:
+  Every figure uses plt.subplots() to create a structured panel grid.
+  plt.tight_layout() + subplots_adjust() guarantee zero overlap between
+  titles, axes, and annotations regardless of screen size.
+  Output: 4 large multi-panel PNGs, each telling a complete story.
 
-Decisões Técnicas Chave:
-- Métrica principal: AUPRC (Area Under Precision-Recall Curve), pois
-  Acurácia é enganosa em dados desbalanceados (~99.83% de classe 0).
-- Tratamento de desbalanceamento via class_weight='balanced' nos modelos
-  E comparação com SMOTE (oversampling sintético).
-- Dois modelos comparados: Random Forest e XGBoost.
-- Análise de impacto financeiro (Business Impact) para traduzir
-  métricas técnicas em valor de negócio.
-
-Requisitos:
-  pip install pandas numpy scikit-learn xgboost imbalanced-learn
-              matplotlib seaborn joblib
+Key technical decisions (commented inline):
+  - RobustScaler  : handles outliers in 'Amount' better than StandardScaler
+  - AUPRC         : gold standard for imbalanced classification (99.83/0.17%)
+  - SMOTE on train only : test set stays imbalanced = real-world conditions
+  - class_weight  : alternative strategy, no synthetic data generated
 =============================================================================
 """
 
-# ── 0. IMPORTAÇÕES ──────────────────────────────────────────────────────────
 import warnings
+import os
+import sys
+
 warnings.filterwarnings("ignore")
+
+# Force UTF-8 output on Windows terminals (avoids cp1252 encoding errors)
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from sklearn.model_selection import train_test_split, StratifiedKFold
-from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import RobustScaler
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (
-    confusion_matrix, classification_report,
-    precision_recall_curve, auc, average_precision_score,
-    roc_auc_score, f1_score
+    confusion_matrix, average_precision_score,
+    roc_auc_score, f1_score, precision_recall_curve,
+    classification_report,
 )
-
 from xgboost import XGBClassifier
 from imblearn.over_sampling import SMOTE
-from imblearn.pipeline import Pipeline as ImbPipeline
+import joblib
 
-# ── CONFIGURAÇÃO ESTÉTICA GLOBAL ────────────────────────────────────────────
-# Por quê? Gráficos com estilo "publicação" transmitem profissionalismo.
-# O estilo seaborn-v0_8 fornece fundo sutil, grid discreto e tipografia limpa.
-plt.style.use("seaborn-v0_8")
-sns.set_context("talk", font_scale=0.9)
-PALETTE = {"Normal": "#2ecc71", "Fraude": "#e74c3c"}
-FIG_DIR = "figures"  # diretório para salvar os gráficos
-
-import os
-import sys
-# Forçar UTF-8 no stdout para compatibilidade com terminais Windows (cp1252)
-if hasattr(sys.stdout, "reconfigure"):
-    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+# =============================================================================
+# GLOBAL AESTHETICS
+# =============================================================================
+FIG_DIR = "figures"
 os.makedirs(FIG_DIR, exist_ok=True)
 
-
-def save_fig(fig, name: str, dpi: int = 200):
-    """Salva a figura em alta resolução para uso no portfólio."""
-    fig.savefig(os.path.join(FIG_DIR, f"{name}.png"), dpi=dpi,
-                bbox_inches="tight", facecolor="white")
-    print(f"  [OK] Grafico salvo: {FIG_DIR}/{name}.png")
-
-
-# =============================================================================
-# 1. CARREGAMENTO DOS DADOS
-# =============================================================================
-print("=" * 70)
-print("1. CARREGAMENTO DOS DADOS")
-print("=" * 70)
-
-df = pd.read_csv("creditcard.csv")
-
-print(f"  Shape do dataset: {df.shape}")
-print(f"  Colunas: {list(df.columns)}")
-print(f"  Valores nulos: {df.isnull().sum().sum()}")
-print(f"\n  Primeiras linhas:\n{df.head()}\n")
-
-
-# =============================================================================
-# 2. ANÁLISE EXPLORATÓRIA (EDA)
-# =============================================================================
-print("=" * 70)
-print("2. ANÁLISE EXPLORATÓRIA (EDA)")
-print("=" * 70)
-
-# ── 2.1 Desequilíbrio da variável alvo ──────────────────────────────────────
-# Por quê? Entender a proporção de fraudes é o passo mais crítico.
-# Se o modelo simplesmente prever "tudo normal", terá ~99.83% de acurácia,
-# mas será completamente inútil. Por isso escolhemos AUPRC como métrica.
-
-class_counts = df["Class"].value_counts()
-class_pct = df["Class"].value_counts(normalize=True) * 100
-
-print(f"\n  Distribuição da variável 'Class':")
-print(f"    Normal (0): {class_counts[0]:>10,}  ({class_pct[0]:.3f}%)")
-print(f"    Fraude (1): {class_counts[1]:>10,}  ({class_pct[1]:.3f}%)")
-print(f"    Razão Normal/Fraude: {class_counts[0] / class_counts[1]:.0f}:1")
-
-# Gráfico de barras do desequilíbrio
-fig, ax = plt.subplots(figsize=(7, 5))
-bars = ax.bar(
-    ["Normal\n(Class 0)", "Fraude\n(Class 1)"],
-    class_counts.values,
-    color=[PALETTE["Normal"], PALETTE["Fraude"]],
-    edgecolor="white", linewidth=1.5, width=0.5
-)
-for bar, count, pct in zip(bars, class_counts.values, class_pct.values):
-    ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 2000,
-            f"{count:,}\n({pct:.2f}%)", ha="center", va="bottom",
-            fontweight="bold", fontsize=11)
-ax.set_ylabel("Número de Transações")
-ax.set_title("Desequilíbrio Extremo entre Classes", fontweight="bold", pad=15)
-ax.set_ylim(0, class_counts.max() * 1.15)
-sns.despine()
-fig.tight_layout()
-save_fig(fig, "01_class_imbalance")
-plt.close(fig)
-
-# ── 2.2 Distribuição de 'Amount' ────────────────────────────────────────────
-# Por quê? O valor da transação é uma feature intuitiva — fraudes podem ter
-# padrões distintos (valores muito altos ou padrões incomuns).
-
-fig, axes = plt.subplots(1, 2, figsize=(14, 5))
-
-# 2.2a — Histograma por classe
-for cls, label in [(0, "Normal"), (1, "Fraude")]:
-    subset = df[df["Class"] == cls]["Amount"]
-    axes[0].hist(subset, bins=80, alpha=0.7, label=label,
-                 color=PALETTE[label], edgecolor="white", linewidth=0.3)
-axes[0].set_xlabel("Valor da Transação (USD)")
-axes[0].set_ylabel("Frequência")
-axes[0].set_title("Distribuição de Amount por Classe", fontweight="bold")
-axes[0].set_xlim(0, 500)  # zoom na faixa mais densa
-axes[0].legend()
-
-# 2.2b — Boxplot comparativo (log-scale)
-df_plot = df.copy()
-df_plot["Classe"] = df_plot["Class"].map({0: "Normal", 1: "Fraude"})
-sns.boxplot(data=df_plot, x="Classe", y="Amount", palette=PALETTE,
-            ax=axes[1], showfliers=False)
-axes[1].set_ylabel("Valor da Transação (USD)")
-axes[1].set_title("Boxplot de Amount (sem outliers)", fontweight="bold")
-
-sns.despine()
-fig.tight_layout()
-save_fig(fig, "02_amount_distribution")
-plt.close(fig)
-
-# ── 2.3 Distribuição de 'Time' ──────────────────────────────────────────────
-# Por quê? 'Time' representa segundos desde a primeira transação do dataset.
-# Isso revela padrões temporais (ex.: fraudes concentradas à noite).
-
-fig, ax = plt.subplots(figsize=(12, 5))
-# Converter segundos para horas para facilitar a interpretação
-df["Time_hours"] = df["Time"] / 3600
-
-for cls, label in [(0, "Normal"), (1, "Fraude")]:
-    subset = df[df["Class"] == cls]["Time_hours"]
-    ax.hist(subset, bins=48, alpha=0.65, label=label,
-            color=PALETTE[label], edgecolor="white", linewidth=0.3,
-            density=True)  # density=True para comparar forma, não magnitude
-
-ax.set_xlabel("Tempo (horas desde o início da coleta)")
-ax.set_ylabel("Densidade")
-ax.set_title("Distribuição Temporal das Transações", fontweight="bold")
-ax.legend()
-sns.despine()
-fig.tight_layout()
-save_fig(fig, "03_time_distribution")
-plt.close(fig)
-
-
-# ── 2.4 Correlação entre as features PCA (V1–V28) ──────────────────────────
-# Por quê? Como V1–V28 já são componentes PCA, esperamos baixa correlação
-# entre elas — mas verificar é boa prática.
-
-pca_cols = [f"V{i}" for i in range(1, 29)]
-fig, ax = plt.subplots(figsize=(12, 10))
-corr_matrix = df[pca_cols].corr()
-mask = np.triu(np.ones_like(corr_matrix, dtype=bool))
-sns.heatmap(corr_matrix, mask=mask, cmap="RdBu_r", center=0,
-            vmin=-0.3, vmax=0.3, ax=ax, square=True,
-            linewidths=0.5, cbar_kws={"shrink": 0.7})
-ax.set_title("Matriz de Correlação das Features PCA (V1–V28)",
-             fontweight="bold", pad=15)
-fig.tight_layout()
-save_fig(fig, "04_pca_correlation")
-plt.close(fig)
-
-
-# =============================================================================
-# 3. PRÉ-PROCESSAMENTO
-# =============================================================================
-print("\n" + "=" * 70)
-print("3. PRÉ-PROCESSAMENTO")
-print("=" * 70)
-
-# ── 3.1 Escalonamento de 'Amount' e 'Time' ─────────────────────────────────
-# Por quê? As features V1–V28 já estão escalonadas (saída de PCA), mas
-# 'Amount' e 'Time' possuem escalas muito diferentes. Sem escalonamento,
-# modelos baseados em distância ou gradiente podem dar peso desproporcional
-# a essas variáveis. Mesmo para tree-based models, o escalonamento
-# garante coerência no pipeline e facilita futuras comparações.
-
-scaler = StandardScaler()
-df["Amount_scaled"] = scaler.fit_transform(df[["Amount"]])
-df["Time_scaled"] = scaler.fit_transform(df[["Time"]])
-
-# Remover colunas originais para evitar duplicidade
-df.drop(["Amount", "Time", "Time_hours"], axis=1, inplace=True)
-
-print(f"  [OK] 'Amount' e 'Time' escalonados com StandardScaler.")
-print(f"  Shape final: {df.shape}")
-
-# ── 3.2 Separação de Features e Target ──────────────────────────────────────
-X = df.drop("Class", axis=1)
-y = df["Class"]
-
-# ── 3.3 Split Treino/Teste ──────────────────────────────────────────────────
-# Por quê? Usamos stratify=y para preservar a proporção de fraudes em ambos
-# os conjuntos. Sem isso, o conjunto de teste poderia ter 0 fraudes.
-# random_state fixo garante reprodutibilidade.
-
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42, stratify=y
-)
-
-print(f"  Treino: {X_train.shape[0]:,} amostras "
-      f"({y_train.sum()} fraudes, {y_train.sum()/len(y_train)*100:.3f}%)")
-print(f"  Teste:  {X_test.shape[0]:,} amostras "
-      f"({y_test.sum()} fraudes, {y_test.sum()/len(y_test)*100:.3f}%)")
-
-
-# =============================================================================
-# 4. TRATAMENTO DE DESEQUILÍBRIO — DUAS ESTRATÉGIAS
-# =============================================================================
-print("\n" + "=" * 70)
-print("4. TRATAMENTO DE DESEQUILÍBRIO")
-print("=" * 70)
-
-# ── Estratégia A: Class Weights ─────────────────────────────────────────────
-# Por quê? A forma mais simples e eficiente. O modelo penaliza mais os erros
-# na classe minoritária, sem gerar dados sintéticos. Evita overfitting que
-# pode ocorrer com oversampling.
-print("\n  Estratégia A: Ajuste de pesos de classe (class_weight='balanced')")
-print("    → Penaliza mais erros em fraudes, sem criar dados sintéticos.")
-
-# ── Estratégia B: SMOTE ────────────────────────────────────────────────────
-# Por quê? SMOTE (Synthetic Minority Oversampling Technique) gera exemplos
-# sintéticos interpolando entre vizinhos da classe minoritária. Isso aumenta
-# a diversidade do treino, mas deve ser aplicado APENAS no treino (nunca
-# no teste) para evitar data leakage.
-print("\n  Estratégia B: SMOTE (oversampling sintético)")
-
-smote = SMOTE(random_state=42)
-X_train_smote, y_train_smote = smote.fit_resample(X_train, y_train)
-
-print(f"    Antes do SMOTE: {y_train.value_counts().to_dict()}")
-print(f"    Depois do SMOTE: {pd.Series(y_train_smote).value_counts().to_dict()}")
-print("    ⚠ SMOTE aplicado APENAS no conjunto de TREINO (sem data leakage).")
-
-
-# =============================================================================
-# 5. MODELAGEM — RANDOM FOREST vs. XGBOOST
-# =============================================================================
-print("\n" + "=" * 70)
-print("5. MODELAGEM")
-print("=" * 70)
-
-# Dicionário para armazenar resultados de todos os modelos
-results = {}
-
-
-def evaluate_model(model, X_tr, y_tr, X_te, y_te, model_name: str):
-    """
-    Treina o modelo, faz predições e calcula as métricas profissionais.
-
-    Por quê esta função?
-    - Centralizar a avaliação garante consistência entre modelos.
-    - Retorna probabilidades (predict_proba) para curvas PR, não
-      apenas predições binárias.
-
-    Métricas escolhidas:
-    - AUPRC: Padrão ouro para dados desbalanceados — foca na capacidade
-      do modelo de encontrar fraudes sem gerar muitos alarmes falsos.
-    - ROC AUC: Complementar, mostra desempenho geral.
-    - F1-Score: Média harmônica entre Precision e Recall.
-    - Matriz de Confusão: Visualização intuitiva de TP, FP, TN, FN.
-    """
-    print(f"\n  ── {model_name} ──")
-
-    # Treinar
-    model.fit(X_tr, y_tr)
-
-    # Predições
-    y_pred = model.predict(X_te)
-    y_proba = model.predict_proba(X_te)[:, 1]  # probabilidade de fraude
-
-    # Métricas
-    auprc = average_precision_score(y_te, y_proba)
-    roc = roc_auc_score(y_te, y_proba)
-    f1 = f1_score(y_te, y_pred)
-    cm = confusion_matrix(y_te, y_pred)
-
-    print(f"    AUPRC:   {auprc:.4f}")
-    print(f"    ROC AUC: {roc:.4f}")
-    print(f"    F1:      {f1:.4f}")
-    print(f"\n    Matriz de Confusão:")
-    print(f"      TN={cm[0, 0]:>6,}  FP={cm[0, 1]:>4,}")
-    print(f"      FN={cm[1, 0]:>6,}  TP={cm[1, 1]:>4,}")
-    print(f"\n{classification_report(y_te, y_pred, target_names=['Normal', 'Fraude'])}")
-
-    results[model_name] = {
-        "model": model, "y_pred": y_pred, "y_proba": y_proba,
-        "auprc": auprc, "roc_auc": roc, "f1": f1, "cm": cm
-    }
-    return model
-
-
-# ── 5.1 Random Forest com Class Weights ─────────────────────────────────────
-# Por quê Random Forest?
-# - Robusto a outliers e ruído.
-# - Fornece feature importance nativa.
-# - class_weight='balanced' ajusta pesos proporcionalmente ao desbalanceamento.
-
-rf_model = RandomForestClassifier(
-    n_estimators=200,           # 200 árvores para estabilidade
-    max_depth=20,               # limitar profundidade evita overfitting
-    min_samples_leaf=5,         # mínimo de amostras por folha
-    class_weight="balanced",    # penaliza mais erros em fraudes
-    random_state=42,
-    n_jobs=-1                   # paralelismo total
-)
-evaluate_model(rf_model, X_train, y_train, X_test, y_test,
-               "Random Forest (Class Weights)")
-
-# ── 5.2 XGBoost com Class Weights ───────────────────────────────────────────
-# Por quê XGBoost?
-# - Gradient boosting tende a superar Random Forest em dados tabulares.
-# - scale_pos_weight ajusta o peso da classe positiva (fraude).
-# - Regularização L1/L2 nativa previne overfitting.
-
-# Calcular scale_pos_weight: proporção de negativos / positivos
-neg_count = (y_train == 0).sum()
-pos_count = (y_train == 1).sum()
-scale_pos = neg_count / pos_count
-
-xgb_model = XGBClassifier(
-    n_estimators=300,
-    max_depth=6,
-    learning_rate=0.05,
-    scale_pos_weight=scale_pos,  # equivalente a class_weight='balanced'
-    reg_alpha=0.1,               # regularização L1
-    reg_lambda=1.0,              # regularização L2
-    eval_metric="aucpr",         # otimizar AUPRC durante o treino
-    use_label_encoder=False,
-    random_state=42,
-    n_jobs=-1
-)
-evaluate_model(xgb_model, X_train, y_train, X_test, y_test,
-               "XGBoost (Class Weights)")
-
-# ── 5.3 Random Forest com SMOTE ─────────────────────────────────────────────
-rf_smote = RandomForestClassifier(
-    n_estimators=200, max_depth=20, min_samples_leaf=5,
-    random_state=42, n_jobs=-1
-    # Sem class_weight='balanced' — SMOTE já equilibra as classes
-)
-evaluate_model(rf_smote, X_train_smote, y_train_smote, X_test, y_test,
-               "Random Forest (SMOTE)")
-
-# ── 5.4 XGBoost com SMOTE ───────────────────────────────────────────────────
-xgb_smote = XGBClassifier(
-    n_estimators=300, max_depth=6, learning_rate=0.05,
-    reg_alpha=0.1, reg_lambda=1.0,
-    eval_metric="aucpr", use_label_encoder=False,
-    random_state=42, n_jobs=-1
-    # Sem scale_pos_weight — SMOTE já equilibra as classes
-)
-evaluate_model(xgb_smote, X_train_smote, y_train_smote, X_test, y_test,
-               "XGBoost (SMOTE)")
-
-
-# =============================================================================
-# 6. VISUALIZAÇÃO — COMPARAÇÃO DE MODELOS
-# =============================================================================
-print("\n" + "=" * 70)
-print("6. VISUALIZAÇÕES COMPARATIVAS")
-print("=" * 70)
-
-# ── 6.1 Curvas Precision-Recall ─────────────────────────────────────────────
-# Por quê PR Curve ao invés de ROC Curve?
-# Em dados extremamente desbalanceados, a ROC Curve pode ser otimista porque
-# a taxa de falsos positivos (FPR) é "diluída" pela enorme classe negativa.
-# A Precision-Recall Curve foca exclusivamente na classe minoritária.
-
-fig, ax = plt.subplots(figsize=(10, 7))
-colors = ["#2ecc71", "#3498db", "#e67e22", "#9b59b6"]
-
-for (name, res), color in zip(results.items(), colors):
-    precision, recall, _ = precision_recall_curve(y_test, res["y_proba"])
-    ax.plot(recall, precision, label=f"{name} (AUPRC={res['auprc']:.4f})",
-            color=color, linewidth=2)
-
-# Linha de base: proporção de fraudes no dataset (classificador aleatório)
-baseline = y_test.sum() / len(y_test)
-ax.axhline(y=baseline, color="gray", linestyle="--", alpha=0.7,
-           label=f"Baseline (classificador aleatório): {baseline:.4f}")
-
-ax.set_xlabel("Recall (Sensibilidade)", fontsize=12)
-ax.set_ylabel("Precision (Precisão)", fontsize=12)
-ax.set_title("Curvas Precision-Recall — Comparação de Modelos",
-             fontweight="bold", fontsize=14, pad=15)
-ax.legend(loc="upper right", fontsize=9, frameon=True, fancybox=True)
-ax.set_xlim([0, 1])
-ax.set_ylim([0, 1.05])
-sns.despine()
-fig.tight_layout()
-save_fig(fig, "05_precision_recall_curves")
-plt.close(fig)
-
-# ── 6.2 Matrizes de Confusão comparativas ───────────────────────────────────
-fig, axes = plt.subplots(2, 2, figsize=(14, 12))
-axes = axes.flatten()
-
-for idx, (name, res) in enumerate(results.items()):
-    cm = res["cm"]
-    # Calcular percentuais
-    cm_pct = cm.astype("float") / cm.sum() * 100
-
-    # Anotações com contagem + percentual
-    annot = np.array([
-        [f"TN\n{cm[0,0]:,}\n({cm_pct[0,0]:.2f}%)",
-         f"FP\n{cm[0,1]:,}\n({cm_pct[0,1]:.3f}%)"],
-        [f"FN\n{cm[1,0]:,}\n({cm_pct[1,0]:.3f}%)",
-         f"TP\n{cm[1,1]:,}\n({cm_pct[1,1]:.3f}%)"]
-    ])
-
-    sns.heatmap(cm, annot=annot, fmt="", cmap="Blues", ax=axes[idx],
-                xticklabels=["Normal", "Fraude"],
-                yticklabels=["Normal", "Fraude"],
-                cbar=False, linewidths=2, linecolor="white")
-    axes[idx].set_ylabel("Real")
-    axes[idx].set_xlabel("Predito")
-    axes[idx].set_title(name, fontweight="bold", fontsize=11)
-
-fig.suptitle("Matrizes de Confusão — Todos os Modelos",
-             fontweight="bold", fontsize=14, y=1.01)
-fig.tight_layout()
-save_fig(fig, "06_confusion_matrices")
-plt.close(fig)
-
-# ── 6.3 Comparação de Métricas (barras agrupadas) ───────────────────────────
-fig, ax = plt.subplots(figsize=(12, 6))
-model_names = list(results.keys())
-# Nomes curtos para melhor legibilidade
-short_names = ["RF\n(Weights)", "XGB\n(Weights)", "RF\n(SMOTE)", "XGB\n(SMOTE)"]
-x = np.arange(len(model_names))
-width = 0.25
-
-auprc_vals = [results[m]["auprc"] for m in model_names]
-roc_vals = [results[m]["roc_auc"] for m in model_names]
-f1_vals = [results[m]["f1"] for m in model_names]
-
-bars1 = ax.bar(x - width, auprc_vals, width, label="AUPRC", color="#e74c3c",
-               edgecolor="white")
-bars2 = ax.bar(x, roc_vals, width, label="ROC AUC", color="#3498db",
-               edgecolor="white")
-bars3 = ax.bar(x + width, f1_vals, width, label="F1-Score", color="#2ecc71",
-               edgecolor="white")
-
-# Valores sobre as barras
-for bars in [bars1, bars2, bars3]:
-    for bar in bars:
-        height = bar.get_height()
-        ax.text(bar.get_x() + bar.get_width() / 2., height + 0.005,
-                f"{height:.3f}", ha="center", va="bottom", fontsize=8,
-                fontweight="bold")
-
-ax.set_xticks(x)
-ax.set_xticklabels(short_names, fontsize=10)
-ax.set_ylabel("Score")
-ax.set_title("Comparação de Métricas entre Modelos", fontweight="bold",
-             fontsize=14, pad=15)
-ax.set_ylim(0, 1.1)
-ax.legend(loc="lower right", fontsize=10)
-sns.despine()
-fig.tight_layout()
-save_fig(fig, "07_metrics_comparison")
-plt.close(fig)
-
-
-# =============================================================================
-# 7. FEATURE IMPORTANCE — DIFERENCIAL DE PORTFÓLIO
-# =============================================================================
-print("\n" + "=" * 70)
-print("7. FEATURE IMPORTANCE")
-print("=" * 70)
-
-# Por quê? Mostrar quais variáveis o modelo usa para detectar fraude
-# demonstra compreensão do problema. Mesmo que V1–V28 sejam anônimas
-# (resultado de PCA), a importância revela quais componentes principais
-# capturam os padrões de fraude.
-
-# Selecionar o melhor modelo baseado em AUPRC
-best_name = max(results, key=lambda k: results[k]["auprc"])
-best_model = results[best_name]["model"]
-print(f"\n  Melhor modelo (AUPRC): {best_name}")
-
-# Feature Importance do melhor modelo
-feature_names = X_train.columns.tolist()
-
-if hasattr(best_model, "feature_importances_"):
-    importances = best_model.feature_importances_
-else:
-    # Fallback: usar o modelo Random Forest (Class Weights) se o melhor
-    # não tiver feature_importances_
-    importances = results["Random Forest (Class Weights)"]["model"].feature_importances_
-    best_name = "Random Forest (Class Weights)"
-
-feat_imp = pd.DataFrame({
-    "Feature": feature_names,
-    "Importance": importances
-}).sort_values("Importance", ascending=False)
-
-print(f"\n  Top 10 Features mais importantes ({best_name}):")
-for i, row in feat_imp.head(10).iterrows():
-    print(f"    {row['Feature']:>15s}: {row['Importance']:.4f}")
-
-# Gráfico de Feature Importance (Top 15)
-fig, ax = plt.subplots(figsize=(10, 8))
-top_n = 15
-top_features = feat_imp.head(top_n).sort_values("Importance")
-
-colors_gradient = plt.cm.Reds(np.linspace(0.3, 0.9, top_n))
-ax.barh(top_features["Feature"], top_features["Importance"],
-        color=colors_gradient, edgecolor="white", linewidth=0.5)
-
-for i, (val, name) in enumerate(zip(top_features["Importance"],
-                                     top_features["Feature"])):
-    ax.text(val + 0.002, i, f"{val:.4f}", va="center", fontsize=9)
-
-ax.set_xlabel("Importância (Gini / Gain)")
-ax.set_title(f"Top {top_n} Features — {best_name}",
-             fontweight="bold", fontsize=13, pad=15)
-sns.despine()
-fig.tight_layout()
-save_fig(fig, "08_feature_importance")
-plt.close(fig)
-
-# ── XGBoost Feature Importance comparativa ──────────────────────────────────
-# Por quê comparar? Diferentes algoritmos podem valorizar features diferentes,
-# revelando padrões complementares.
-
-xgb_best_name = [n for n in results if "XGBoost" in n]
-if xgb_best_name:
-    xgb_imp = pd.DataFrame({
-        "Feature": feature_names,
-        "Importance": results[xgb_best_name[0]]["model"].feature_importances_
-    }).sort_values("Importance", ascending=False)
-
-    rf_best_name = [n for n in results if "Random Forest" in n][0]
-    rf_imp = pd.DataFrame({
-        "Feature": feature_names,
-        "Importance": results[rf_best_name]["model"].feature_importances_
-    }).sort_values("Importance", ascending=False)
-
-    fig, axes = plt.subplots(1, 2, figsize=(16, 8))
-
-    # RF
-    top_rf = rf_imp.head(10).sort_values("Importance")
-    axes[0].barh(top_rf["Feature"], top_rf["Importance"],
-                 color="#2ecc71", edgecolor="white")
-    axes[0].set_title(f"Random Forest", fontweight="bold")
-    axes[0].set_xlabel("Importância")
-
-    # XGBoost
-    top_xgb = xgb_imp.head(10).sort_values("Importance")
-    axes[1].barh(top_xgb["Feature"], top_xgb["Importance"],
-                 color="#3498db", edgecolor="white")
-    axes[1].set_title(f"XGBoost", fontweight="bold")
-    axes[1].set_xlabel("Importância")
-
-    fig.suptitle("Comparação de Feature Importance: RF vs. XGBoost",
-                 fontweight="bold", fontsize=14, y=1.01)
-    sns.despine()
-    fig.tight_layout()
-    save_fig(fig, "09_feature_importance_comparison")
+# Professional colour palette
+C_NORMAL  = "#2ecc71"   # green   â€” normal transactions
+C_FRAUD   = "#e74c3c"   # red     â€” fraudulent transactions
+C_BLUE    = "#3498db"   # blue    â€” XGBoost / secondary
+C_PURPLE  = "#9b59b6"   # purple  â€” accent
+C_GRAY    = "#95a5a6"   # gray    â€” baseline / neutral
+C_ORANGE  = "#e67e22"   # orange  â€” third series
+
+MODEL_COLORS = [C_NORMAL, C_BLUE, C_ORANGE, C_PURPLE]
+
+plt.rcParams.update({
+    "figure.facecolor": "#ffffff",
+    "axes.facecolor":   "#f5f6fa",
+    "axes.grid":        True,
+    "grid.alpha":       0.35,
+    "grid.linestyle":   "--",
+    "font.family":      "sans-serif",
+    "axes.spines.top":  False,
+    "axes.spines.right": False,
+    "axes.titlepad":    12,
+    "axes.titlesize":   13,
+    "axes.labelsize":   11,
+    "xtick.labelsize":  10,
+    "ytick.labelsize":  10,
+    "legend.fontsize":  9,
+    "legend.framealpha": 0.85,
+})
+
+
+def save_fig(fig, name: str, dpi: int = 180):
+    """Save figure as high-res PNG and close it."""
+    path = os.path.join(FIG_DIR, f"{name}.png")
+    fig.savefig(path, dpi=dpi, bbox_inches="tight", facecolor="white")
+    print(f"  [SAVED] {path}")
     plt.close(fig)
 
 
 # =============================================================================
-# 8. ANÁLISE DE IMPACTO FINANCEIRO (BUSINESS IMPACT)
+# 1. LOAD DATA
 # =============================================================================
-print("\n" + "=" * 70)
-print("8. ANÁLISE DE IMPACTO FINANCEIRO (BUSINESS IMPACT)")
-print("=" * 70)
+print("=" * 65)
+print("1. LOADING DATA")
+print("=" * 65)
 
-# Por quê? Traduzir métricas técnicas em valor de negócio é o que separa
-# um cientista de dados júnior de um profissional. Stakeholders não entendem
-# "AUPRC de 0.85", mas entendem "o modelo economizaria R$ 500K por ano".
+df = pd.read_csv("creditcard.csv")
 
-# Reconstruir os valores originais de Amount no conjunto de teste
-# (precisamos reverter o escalonamento)
-# Como o scaler foi ajustado no df inteiro, precisamos do original
-df_original = pd.read_csv("creditcard.csv")
-_, test_idx = train_test_split(
-    df_original.index, test_size=0.2, random_state=42,
-    stratify=df_original["Class"]
+n_fraud  = df["Class"].sum()
+n_total  = len(df)
+n_normal = n_total - n_fraud
+
+print(f"  Shape       : {df.shape}")
+print(f"  Null values : {df.isnull().sum().sum()}")
+print(f"  Normal      : {n_normal:,}  ({n_normal/n_total*100:.3f}%)")
+print(f"  Fraud       : {n_fraud:,}   ({n_fraud/n_total*100:.3f}%)")
+print(f"  Imbalance   : {n_normal/n_fraud:.0f}:1")
+
+
+# =============================================================================
+# 2. FIGURE 1 â€” EXPLORATORY DATA ANALYSIS  (2 Ã— 2 panel grid)
+# =============================================================================
+print("\n" + "=" * 65)
+print("2. FIGURE 1 â€” EDA")
+print("=" * 65)
+
+# Why plt.subplots() instead of separate figures?
+# A single figure object with a constrained layout makes it impossible for
+# panel titles and axis labels to overlap â€” the layout engine handles spacing
+# automatically. Saving as one PNG also means one card on the website.
+
+fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+fig.suptitle(
+    "Credit Card Fraud Detection - Exploratory Data Analysis",
+    fontsize=15, fontweight="bold"
 )
-amount_test = df_original.loc[test_idx, "Amount"].values
 
-print(f"\n  Análise para cada modelo:")
-print(f"  {'Modelo':<35s} {'Fraudes Bloq.':<15s} {'$ Economizado':<15s} "
-      f"{'FP (Incômodo)':<15s} {'$ Fraude Perdido':<15s}")
-print(f"  {'-'*95}")
+# â”€â”€ Panel A: Class imbalance â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+ax = axes[0, 0]
+counts = df["Class"].value_counts()
+pcts   = df["Class"].value_counts(normalize=True) * 100
+bars   = ax.bar(
+    ["Normal (0)", "Fraud (1)"], counts.values,
+    color=[C_NORMAL, C_FRAUD], edgecolor="white", linewidth=1.5, width=0.5
+)
+for bar, cnt, pct in zip(bars, counts.values, pcts.values):
+    ax.text(
+        bar.get_x() + bar.get_width() / 2,
+        bar.get_height() + 2500,
+        f"{cnt:,}\n({pct:.2f}%)",
+        ha="center", fontweight="bold", fontsize=10
+    )
+ax.set_ylabel("Number of Transactions")
+ax.set_title("Class Distribution - Extreme 578:1 Imbalance")
+ax.set_ylim(0, counts.max() * 1.18)
+# Key annotation explaining why accuracy is a useless metric here
+ax.annotate(
+    "A model that always predicts\n'Normal' scores 99.83% accuracy\n"
+    "but catches ZERO fraud.\n-> We use AUPRC instead.",
+    xy=(1, counts[1] + 8000), xytext=(0.5, counts.max() * 0.45),
+    fontsize=8.5, color="#444",
+    arrowprops=dict(arrowstyle="->", color="#888", lw=1.2),
+    bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.7)
+)
 
-# Custo estimado de um Falso Positivo (incomodar cliente legítimo)
-# Suposição conservadora: custo de atendimento + perda temporária de confiança
-COST_PER_FP = 10  # USD por falso positivo (ligação, SMS, bloqueio temporário)
+# â”€â”€ Panel B: Transaction amount â€” log scale â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+ax = axes[0, 1]
+# np.log1p(x) = log(1+x) avoids log(0) for zero-amount transactions
+# Log scale reveals the full distribution including rare high-value fraud
+for cls, label, color in [(0, "Normal", C_NORMAL), (1, "Fraud", C_FRAUD)]:
+    vals = np.log1p(df[df["Class"] == cls]["Amount"])
+    ax.hist(vals, bins=70, alpha=0.65, label=label,
+            color=color, edgecolor="white", linewidth=0.3, density=True)
+ax.set_xlabel("log(1 + Amount)  [USD]")
+ax.set_ylabel("Density")
+ax.set_title("Transaction Amount Distribution (Log Scale)")
+ax.legend()
+ax.annotate(
+    "Log scale reveals high-value\nfraud outliers invisible\nin linear scale",
+    xy=(7.5, 0.08), xytext=(4.5, 0.35),
+    fontsize=8.5, color="#444",
+    arrowprops=dict(arrowstyle="->", color="#888", lw=1.2),
+    bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.7)
+)
 
-business_data = []
+# â”€â”€ Panel C: Temporal distribution â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+ax = axes[1, 0]
+for cls, label, color in [(0, "Normal", C_NORMAL), (1, "Fraud", C_FRAUD)]:
+    vals = df[df["Class"] == cls]["Time"] / 3600   # seconds â†’ hours
+    ax.hist(vals, bins=48, alpha=0.65, label=label,
+            color=color, edgecolor="white", linewidth=0.3, density=True)
+ax.set_xlabel("Hours since start of data collection")
+ax.set_ylabel("Density")
+ax.set_title("Temporal Distribution - Fraud Spikes at Specific Hours")
+ax.legend()
 
+# â”€â”€ Panel D: Most discriminative PCA features â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+ax = axes[1, 1]
+pca_cols = [f"V{i}" for i in range(1, 29)]
+# Measure how much each feature's absolute value differs between classes.
+# A large positive difference â†’ feature is elevated in fraud transactions.
+diff = (
+    df[df["Class"] == 1][pca_cols].abs().mean()
+    - df[df["Class"] == 0][pca_cols].abs().mean()
+).sort_values(ascending=False).head(12)
+bar_colors = [C_FRAUD if v >= 0 else C_BLUE for v in diff.values[::-1]]
+diff.sort_values().plot(kind="barh", ax=ax, color=bar_colors, edgecolor="white")
+ax.set_xlabel("Mean |value| difference  (Fraud - Normal)")
+ax.set_title("Top 12 Most Discriminative PCA Features")
+ax.axvline(0, color="gray", linestyle="--", linewidth=0.8)
+
+plt.tight_layout()
+plt.subplots_adjust(hspace=0.44, wspace=0.34)
+save_fig(fig, "fig_01_eda")
+
+
+# =============================================================================
+# 3. PREPROCESSING
+# =============================================================================
+print("\n" + "=" * 65)
+print("3. PREPROCESSING")
+print("=" * 65)
+
+# Why RobustScaler instead of StandardScaler?
+# StandardScaler computes mean Â± std. A single $25,000 fraud transaction
+# skews both statistics heavily. RobustScaler uses median + IQR, which are
+# resistant to extreme outliers â€” exactly what fraud data contains.
+scaler = RobustScaler()
+df["Amount_scaled"] = scaler.fit_transform(df[["Amount"]])
+df["Time_scaled"]   = scaler.fit_transform(df[["Time"]])
+df.drop(["Amount", "Time"], axis=1, inplace=True)
+
+X = df.drop("Class", axis=1)
+y = df["Class"]
+
+# stratify=y ensures the 0.17% fraud rate is preserved in both splits â€”
+# without this, the test set could randomly contain zero fraud cases.
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+# SMOTE: generate synthetic minority samples by interpolating between
+# real fraud examples. CRUCIAL: applied ONLY on the training set.
+# The test set stays imbalanced to simulate real-world deployment.
+smote = SMOTE(random_state=42)
+X_tr_sm, y_tr_sm = smote.fit_resample(X_train, y_train)
+
+print(f"  Train (original): {X_train.shape[0]:,}  |  fraud: {y_train.sum()}")
+print(f"  Train (SMOTE)   : {X_tr_sm.shape[0]:,}  |  fraud: {int(y_tr_sm.sum())}")
+print(f"  Test  (original): {X_test.shape[0]:,}  |  fraud: {y_test.sum()}")
+
+
+# =============================================================================
+# 4. MODEL TRAINING
+# =============================================================================
+print("\n" + "=" * 65)
+print("4. MODEL TRAINING")
+print("=" * 65)
+
+results = {}
+
+
+def train_eval(model, X_tr, y_tr, name: str):
+    """Train model on (X_tr, y_tr), evaluate against the held-out test set."""
+    print(f"\n  -- {name}")
+    model.fit(X_tr, y_tr)
+    y_pred  = model.predict(X_test)
+    y_proba = model.predict_proba(X_test)[:, 1]
+
+    # AUPRC: focuses exclusively on the minority class (fraud).
+    # ROC-AUC can look inflated because the huge normal class dilutes FPR.
+    auprc = average_precision_score(y_test, y_proba)
+    roc   = roc_auc_score(y_test, y_proba)
+    f1    = f1_score(y_test, y_pred)
+    cm    = confusion_matrix(y_test, y_pred)
+
+    print(f"     AUPRC={auprc:.4f}  ROC={roc:.4f}  F1={f1:.4f}  "
+          f"TP={cm[1,1]}  FP={cm[0,1]}  FN={cm[1,0]}")
+
+    results[name] = {
+        "model": model, "y_pred": y_pred, "y_proba": y_proba,
+        "auprc": auprc, "roc": roc, "f1": f1, "cm": cm,
+    }
+
+
+neg_count = int((y_train == 0).sum())
+pos_count = int((y_train == 1).sum())
+
+# â”€â”€ Random Forest with class_weight â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# class_weight='balanced' automatically weights the loss inversely proportional
+# to class frequencies: weight_fraud = n_samples / (2 * n_fraud)
+train_eval(
+    RandomForestClassifier(
+        n_estimators=200, max_depth=20, min_samples_leaf=5,
+        class_weight="balanced", random_state=42, n_jobs=-1
+    ),
+    X_train, y_train, "Random Forest (Weights)"
+)
+
+# â”€â”€ XGBoost with scale_pos_weight â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# scale_pos_weight = n_negative / n_positive â‰ˆ 578,
+# equivalent to class_weight='balanced' in sklearn.
+train_eval(
+    XGBClassifier(
+        n_estimators=300, max_depth=6, learning_rate=0.05,
+        scale_pos_weight=neg_count / pos_count,
+        reg_alpha=0.1, reg_lambda=1.0,
+        eval_metric="aucpr",
+        random_state=42, n_jobs=-1
+    ),
+    X_train, y_train, "XGBoost (Weights)"
+)
+
+# â”€â”€ Random Forest with SMOTE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# No class_weight needed â€” SMOTE already balanced the training distribution.
+train_eval(
+    RandomForestClassifier(
+        n_estimators=200, max_depth=20, min_samples_leaf=5,
+        random_state=42, n_jobs=-1
+    ),
+    X_tr_sm, y_tr_sm, "Random Forest (SMOTE)"
+)
+
+# â”€â”€ XGBoost with SMOTE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+train_eval(
+    XGBClassifier(
+        n_estimators=300, max_depth=6, learning_rate=0.05,
+        reg_alpha=0.1, reg_lambda=1.0,
+        eval_metric="aucpr",
+        random_state=42, n_jobs=-1
+    ),
+    X_tr_sm, y_tr_sm, "XGBoost (SMOTE)"
+)
+
+best_name = max(results, key=lambda k: results[k]["auprc"])
+runner_up = sorted(results, key=lambda k: results[k]["auprc"], reverse=True)[1]
+SHORT_NAMES = ["RF\nWeights", "XGB\nWeights", "RF\nSMOTE", "XGB\nSMOTE"]
+
+
+# =============================================================================
+# 5. FIGURE 2 â€” MODEL PERFORMANCE  (2 Ã— 2 panel grid)
+# =============================================================================
+print("\n" + "=" * 65)
+print("5. FIGURE 2 â€” MODEL PERFORMANCE")
+print("=" * 65)
+
+fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+fig.suptitle(
+    "Credit Card Fraud Detection - Model Performance",
+    fontsize=15, fontweight="bold"
+)
+
+# â”€â”€ Panel A: Precision-Recall Curves â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+ax = axes[0, 0]
+for (name, res), color in zip(results.items(), MODEL_COLORS):
+    prec, rec, _ = precision_recall_curve(y_test, res["y_proba"])
+    label = f"{name}  (AUPRC={res['auprc']:.4f})"
+    ax.plot(rec, prec, color=color, linewidth=2.2, label=label)
+baseline = y_test.sum() / len(y_test)
+ax.axhline(y=baseline, color=C_GRAY, linestyle="--", linewidth=1.2,
+           label=f"Random baseline: {baseline:.4f}")
+ax.set_xlabel("Recall (Sensitivity)")
+ax.set_ylabel("Precision")
+ax.set_title("Precision-Recall Curves\n(Gold standard for imbalanced classification)")
+ax.legend(fontsize=8, loc="upper right")
+ax.set_xlim([0, 1])
+ax.set_ylim([0, 1.05])
+
+# â”€â”€ Panel B: Grouped metrics comparison â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+ax = axes[0, 1]
+x = np.arange(len(results))
+w = 0.25
+auprc_v = [results[n]["auprc"] for n in results]
+roc_v   = [results[n]["roc"]   for n in results]
+f1_v    = [results[n]["f1"]    for n in results]
+
+b1 = ax.bar(x - w, auprc_v, w, label="AUPRC",   color=C_FRAUD,  edgecolor="white")
+b2 = ax.bar(x,     roc_v,   w, label="ROC AUC", color=C_BLUE,   edgecolor="white")
+b3 = ax.bar(x + w, f1_v,    w, label="F1",      color=C_NORMAL, edgecolor="white")
+
+for b_grp in [b1, b2, b3]:
+    for b in b_grp:
+        ax.text(b.get_x() + b.get_width() / 2,
+                b.get_height() + 0.005,
+                f"{b.get_height():.3f}",
+                ha="center", fontsize=7.5, fontweight="bold")
+
+ax.set_xticks(x)
+ax.set_xticklabels(SHORT_NAMES, fontsize=9)
+ax.set_ylim(0, 1.13)
+ax.set_ylabel("Score")
+ax.set_title("AUPRC / ROC AUC / F1 - Four-Model Comparison")
+ax.legend()
+
+# â”€â”€ Panel C: Confusion matrix â€” best model â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+def draw_cm(ax, name):
+    cm   = results[name]["cm"]
+    cm_p = cm.astype(float) / cm.sum() * 100
+    annot = np.array([
+        [f"TN\n{cm[0,0]:,}\n({cm_p[0,0]:.2f}%)",  f"FP\n{cm[0,1]}\n({cm_p[0,1]:.3f}%)"],
+        [f"FN\n{cm[1,0]}\n({cm_p[1,0]:.3f}%)",   f"TP\n{cm[1,1]}\n({cm_p[1,1]:.3f}%)"],
+    ])
+    sns.heatmap(cm, annot=annot, fmt="", cmap="Blues", ax=ax,
+                xticklabels=["Normal", "Fraud"],
+                yticklabels=["Normal", "Fraud"],
+                cbar=False, linewidths=2, linecolor="white")
+    ax.set_ylabel("Actual")
+    ax.set_xlabel("Predicted")
+
+draw_cm(axes[1, 0], best_name)
+axes[1, 0].set_title(
+    f"Confusion Matrix - {best_name}\n"
+    f"Best AUPRC: {results[best_name]['auprc']:.4f}"
+)
+
+draw_cm(axes[1, 1], runner_up)
+axes[1, 1].set_title(
+    f"Confusion Matrix - {runner_up}\n"
+    f"Runner-up AUPRC: {results[runner_up]['auprc']:.4f}"
+)
+
+plt.tight_layout()
+plt.subplots_adjust(hspace=0.44, wspace=0.34)
+save_fig(fig, "fig_02_model_performance")
+
+
+# =============================================================================
+# 6. FIGURE 3 â€” FEATURE IMPORTANCE  (1 Ã— 2 panel grid)
+# =============================================================================
+print("\n" + "=" * 65)
+print("6. FIGURE 3 â€” FEATURE IMPORTANCE")
+print("=" * 65)
+
+feature_names = X_train.columns.tolist()
+
+
+def feat_imp_df(model_name, top_n=12):
+    imp = results[model_name]["model"].feature_importances_
+    return (
+        pd.DataFrame({"Feature": feature_names, "Importance": imp})
+        .sort_values("Importance", ascending=False)
+        .head(top_n)
+        .sort_values("Importance")
+    )
+
+
+fig, axes = plt.subplots(1, 2, figsize=(18, 8))
+fig.suptitle(
+    "Feature Importance - Which PCA Components Detect Fraud?",
+    fontsize=15, fontweight="bold"
+)
+
+for idx, (name, color) in enumerate([
+    ("Random Forest (Weights)", C_NORMAL),
+    ("XGBoost (Weights)",       C_BLUE),
+]):
+    ax  = axes[idx]
+    imp = feat_imp_df(name)
+    ax.barh(imp["Feature"], imp["Importance"],
+            color=color, edgecolor="white", alpha=0.85)
+    for val, feat in zip(imp["Importance"], imp["Feature"]):
+        ax.text(val + imp["Importance"].max() * 0.01,
+                feat, f"{val:.4f}", va="center", fontsize=9)
+    ax.set_xlabel("Importance (Gini / Gain)")
+    title = "Random Forest" if "Forest" in name else "XGBoost"
+    ax.set_title(f"{title} - Top 12 Features\n"
+                 "(V14 dominant in both -> strongest fraud signal)")
+    sns.despine(ax=ax)
+
+plt.tight_layout()
+plt.subplots_adjust(wspace=0.38)
+save_fig(fig, "fig_03_feature_importance")
+
+
+# =============================================================================
+# 7. FIGURE 4 â€” BUSINESS IMPACT  (1 Ã— 2 panel grid)
+# =============================================================================
+print("\n" + "=" * 65)
+print("7. FIGURE 4 â€” BUSINESS IMPACT")
+print("=" * 65)
+
+# Reload original amounts for the test indices to compute dollar values
+df_orig = pd.read_csv("creditcard.csv")
+_, test_idx = train_test_split(
+    df_orig.index, test_size=0.2, random_state=42,
+    stratify=df_orig["Class"]
+)
+amount_test = df_orig.loc[test_idx, "Amount"].values
+
+# Assumption: a false positive costs $10 (SMS alert + potential call-centre time).
+# This is conservative; blocking a legitimate transaction can also cause
+# customer churn, but $10 provides a defensible lower bound.
+COST_FP = 10
+
+biz_rows = []
 for name, res in results.items():
-    cm = res["cm"]
-    y_pred = res["y_pred"]
-
-    # Verdadeiros Positivos: fraudes corretamente detectadas
-    tp_mask = (y_test.values == 1) & (y_pred == 1)
-    money_saved = amount_test[tp_mask].sum()
-
-    # Falsos Negativos: fraudes que passaram despercebidas
-    fn_mask = (y_test.values == 1) & (y_pred == 0)
-    money_lost = amount_test[fn_mask].sum()
-
-    # Falsos Positivos: clientes legítimos incomodados
-    fp_count = cm[0, 1]
-    fp_cost = fp_count * COST_PER_FP
-
-    # True Positives count
-    tp_count = cm[1, 1]
-
-    # Lucro líquido do modelo
-    net_benefit = money_saved - fp_cost
-
-    print(f"  {name:<35s} {tp_count:<15,} ${money_saved:<14,.2f} "
-          f"{fp_count:<15,} ${money_lost:<14,.2f}")
-
-    business_data.append({
-        "Modelo": name,
-        "Fraudes Bloqueadas": tp_count,
-        "Dinheiro Economizado": money_saved,
-        "Dinheiro Perdido (FN)": money_lost,
-        "Falsos Positivos": fp_count,
-        "Custo FP": fp_cost,
-        "Benefício Líquido": net_benefit
+    tp_mask = (y_test.values == 1) & (res["y_pred"] == 1)
+    fn_mask = (y_test.values == 1) & (res["y_pred"] == 0)
+    saved   = amount_test[tp_mask].sum()
+    lost    = amount_test[fn_mask].sum()
+    fp_cost = res["cm"][0, 1] * COST_FP
+    biz_rows.append({
+        "Model": name, "Saved": saved, "Lost": lost,
+        "FP_cost": fp_cost, "Net": saved - fp_cost
     })
+    print(f"  {name:<32s}  saved=${saved:,.0f}  lost=${lost:,.0f}  net=${saved-fp_cost:,.0f}")
 
-business_df = pd.DataFrame(business_data)
+bdf = pd.DataFrame(biz_rows)
 
-# Gráfico de impacto financeiro
-fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+fig, axes = plt.subplots(1, 2, figsize=(18, 7))
+fig.suptitle(
+    "Business Impact - Financial Value of the Fraud Detection Model",
+    fontsize=15, fontweight="bold"
+)
 
-# 8a — Dinheiro economizado vs. perdido
-short_names_biz = ["RF\n(Weights)", "XGB\n(Weights)", "RF\n(SMOTE)", "XGB\n(SMOTE)"]
-x = np.arange(len(business_df))
-width = 0.35
+# â”€â”€ Panel A: Saved vs. Lost â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+ax = axes[0]
+x  = np.arange(len(bdf))
+w  = 0.35
+ax.bar(x - w/2, bdf["Saved"], w,
+       label="$ Saved  (TP - fraud blocked)", color=C_NORMAL, edgecolor="white")
+ax.bar(x + w/2, bdf["Lost"],  w,
+       label="$ Lost   (FN - fraud missed)",  color=C_FRAUD,  edgecolor="white")
+ax.set_xticks(x)
+ax.set_xticklabels(SHORT_NAMES, fontsize=10)
+ax.set_ylabel("Amount (USD)")
+ax.set_title("Fraud Blocked vs. Fraud Missed per Model")
+ax.legend()
 
-axes[0].bar(x - width/2, business_df["Dinheiro Economizado"],
-            width, label="$ Economizado (TP)", color="#2ecc71", edgecolor="white")
-axes[0].bar(x + width/2, business_df["Dinheiro Perdido (FN)"],
-            width, label="$ Perdido (FN)", color="#e74c3c", edgecolor="white")
-axes[0].set_xticks(x)
-axes[0].set_xticklabels(short_names_biz, fontsize=9)
-axes[0].set_ylabel("Valor (USD)")
-axes[0].set_title("Impacto Financeiro: Fraudes Bloqueadas vs. Perdidas",
-                   fontweight="bold", fontsize=11)
-axes[0].legend(fontsize=9)
+# â”€â”€ Panel B: Net benefit â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+ax = axes[1]
+net_colors = [C_NORMAL if v > 0 else C_FRAUD for v in bdf["Net"]]
+ax.bar(x, bdf["Net"], color=net_colors, edgecolor="white", width=0.5)
+for i, val in enumerate(bdf["Net"]):
+    ax.text(i, val + bdf["Net"].max() * 0.015,
+            f"${val:,.0f}", ha="center", fontsize=10, fontweight="bold")
+ax.set_xticks(x)
+ax.set_xticklabels(SHORT_NAMES, fontsize=10)
+ax.set_ylabel("Net Benefit (USD)")
+ax.set_title(f"Net Benefit = $ Saved - FP Cost (${COST_FP} per alert)")
+ax.axhline(0, color="gray", linestyle="--", linewidth=0.8)
 
-# 8b — Benefício líquido (economizado - custo de FP)
-colors_net = ["#2ecc71" if v > 0 else "#e74c3c"
-              for v in business_df["Benefício Líquido"]]
-axes[1].bar(x, business_df["Benefício Líquido"], color=colors_net,
-            edgecolor="white", width=0.5)
-for i, val in enumerate(business_df["Benefício Líquido"]):
-    axes[1].text(i, val + 100, f"${val:,.0f}", ha="center",
-                 fontsize=9, fontweight="bold")
-axes[1].set_xticks(x)
-axes[1].set_xticklabels(short_names_biz, fontsize=9)
-axes[1].set_ylabel("Benefício Líquido (USD)")
-axes[1].set_title(f"Benefício Líquido (Economizado − Custo FP × ${COST_PER_FP})",
-                   fontweight="bold", fontsize=11)
-axes[1].axhline(y=0, color="gray", linestyle="--", alpha=0.5)
-
-sns.despine()
-fig.tight_layout()
-save_fig(fig, "10_business_impact")
-plt.close(fig)
+plt.tight_layout()
+plt.subplots_adjust(wspace=0.3)
+save_fig(fig, "fig_04_business_impact")
 
 
 # =============================================================================
-# 9. TABELA RESUMO FINAL
+# 8. RESULTS SUMMARY
 # =============================================================================
-print("\n" + "=" * 70)
-print("9. TABELA RESUMO FINAL")
-print("=" * 70)
+print("\n" + "=" * 65)
+print("RESULTS SUMMARY")
+print("=" * 65)
 
 summary = pd.DataFrame({
-    "Modelo": list(results.keys()),
-    "AUPRC": [results[m]["auprc"] for m in results],
-    "ROC AUC": [results[m]["roc_auc"] for m in results],
-    "F1-Score": [results[m]["f1"] for m in results],
-    "TP (Fraudes Det.)": [results[m]["cm"][1, 1] for m in results],
-    "FP": [results[m]["cm"][0, 1] for m in results],
-    "FN (Fraudes Perdidas)": [results[m]["cm"][1, 0] for m in results],
+    "Model":   list(results.keys()),
+    "AUPRC":   [results[n]["auprc"] for n in results],
+    "ROC AUC": [results[n]["roc"]   for n in results],
+    "F1":      [results[n]["f1"]    for n in results],
+    "TP":      [int(results[n]["cm"][1, 1]) for n in results],
+    "FP":      [int(results[n]["cm"][0, 1]) for n in results],
+    "FN":      [int(results[n]["cm"][1, 0]) for n in results],
 }).sort_values("AUPRC", ascending=False)
 
 print(f"\n{summary.to_string(index=False)}\n")
+print(f"  Best model  : {best_name}")
+print(f"  AUPRC       : {results[best_name]['auprc']:.4f}")
+print(f"  Fraud caught: {results[best_name]['cm'][1,1]} / {int(y_test.sum())}")
 
-# Modelo vencedor
-winner = summary.iloc[0]["Modelo"]
-winner_auprc = summary.iloc[0]["AUPRC"]
-print(f"  [MELHOR MODELO]: {winner}")
-print(f"     AUPRC: {winner_auprc:.4f}")
-print(f"     Fraudes detectadas: {summary.iloc[0]['TP (Fraudes Det.)']:.0f} "
-      f"de {y_test.sum()} no conjunto de teste")
+joblib.dump(results[best_name]["model"], "fraud_detection_model.joblib")
+print(f"\n  Model saved : fraud_detection_model.joblib")
+print(f"  Figures in  : {FIG_DIR}/  (4 multi-panel PNGs)")
+print("\n  PIPELINE COMPLETE")
 
-
-# =============================================================================
-# 10. EXPORTAR MODELO FINAL
-# =============================================================================
-print("\n" + "=" * 70)
-print("10. EXPORTAR MODELO FINAL")
-print("=" * 70)
-
-import joblib
-model_path = "fraud_detection_model.joblib"
-best_final_model = results[winner]["model"]
-joblib.dump(best_final_model, model_path)
-print(f"  [OK] Modelo salvo em: {model_path}")
-print(f"  [OK] Todos os graficos salvos em: {FIG_DIR}/")
-
-print("\n" + "=" * 70)
-print("PIPELINE CONCLUÍDO COM SUCESSO!")
-print("=" * 70)
-print(f"""
-Resumo do Projeto:
-  • Dataset: 284.807 transações (492 fraudes = 0.172%)
-  • Métrica principal: AUPRC (padrão ouro para dados desbalanceados)
-  • Modelos comparados: Random Forest e XGBoost (com Class Weights e SMOTE)
-  • Melhor modelo: {winner} (AUPRC = {winner_auprc:.4f})
-  • Gráficos gerados: {len(os.listdir(FIG_DIR))} figuras em '{FIG_DIR}/'
-
-Diferenciais para o Portfólio:
-  • Análise de Feature Importance (V1–V28)
-  • Análise de Impacto Financeiro (Business Impact)
-  • Gráficos com estilo publicação (seaborn-v0_8)
-  • Código completamente documentado com justificativas técnicas
-""")

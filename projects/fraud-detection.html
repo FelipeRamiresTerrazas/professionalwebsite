@@ -58,7 +58,7 @@
                     <div class="tool-stack">
                         <article class="tool-card">
                             <strong>scikit-learn</strong>
-                            <p>StandardScaler for feature normalization, RandomForestClassifier, train/test split with stratification, and all evaluation metrics.</p>
+                            <p>RobustScaler for feature normalization (median+IQR, resistant to fraud outliers), RandomForestClassifier, train/test split with stratification, and all evaluation metrics.</p>
                         </article>
                         <article class="tool-card">
                             <strong>XGBoost</strong>
@@ -132,11 +132,13 @@ print(f"Class imbalance ratio: {class_counts[0] / class_counts[1]:.0f}:1")</code
                             <span>Preprocessing — feature scaling &amp; stratified split</span>
                             <span>Python</span>
                         </div>
-                        <pre><code class="language-python">scaler = StandardScaler()
+                        <pre><code class="language-python"># Why RobustScaler instead of StandardScaler?
+# StandardScaler computes mean +/- std. A single $25,000 fraud transaction
+# skews both statistics heavily. RobustScaler uses median + IQR, which are
+# resistant to extreme outliers &mdash; exactly what fraud data contains.
+scaler = RobustScaler()
 
-# V1–V28 are already PCA-scaled. Only Amount and Time need normalization.
-# Scaling ensures these two features don't dominate gradient-based models
-# due to their raw magnitude.
+# V1&ndash;V28 are already PCA-scaled. Only Amount and Time need normalization.
 df["Amount_scaled"] = scaler.fit_transform(df[["Amount"]])
 df["Time_scaled"]   = scaler.fit_transform(df[["Time"]])
 df.drop(["Amount", "Time"], axis=1, inplace=True)
@@ -236,109 +238,49 @@ for name, res in results.items():
                 <section class="case-panel visualizations-panel">
                     <h2>Visualizations</h2>
                     <p>
-                        The 10 charts below walk through each stage of the analysis — from raw data exploration to model comparison and financial impact. The Precision-Recall curves and business impact charts are the most portfolio-relevant outputs.
+                        Four multi-panel charts walk through each stage of the analysis &mdash; from raw data exploration to model comparison and financial impact. Each figure is built with <code>plt.subplots()</code> and <code>tight_layout()</code> to keep all panels cleanly separated.
                     </p>
 
-                    <div class="chart-grid" style="grid-template-columns: repeat(2, 1fr);">
+                    <div class="chart-grid">
 
                         <figure class="chart-frame">
                             <button class="chart-zoom" type="button"
-                                data-lightbox-src="../figures/01_class_imbalance.png"
-                                data-lightbox-alt="Bar chart showing extreme class imbalance: 284,315 normal vs 492 fraud transactions"
-                                aria-label="Open class imbalance chart in full screen">
-                                <img src="../figures/01_class_imbalance.png" alt="Class imbalance bar chart">
+                                data-lightbox-src="../figures/fig_01_eda.png"
+                                data-lightbox-alt="2x2 EDA panel: class imbalance, amount log-scale distribution, temporal distribution, top discriminative PCA features"
+                                aria-label="Open EDA panel in full screen">
+                                <img src="../figures/fig_01_eda.png" alt="Exploratory Data Analysis - 4 panel grid">
                             </button>
-                            <figcaption class="chart-caption">The dataset contains 284,315 normal transactions and only 492 fraudulent ones — a 578:1 ratio. This is why accuracy is a meaningless metric here.</figcaption>
+                            <figcaption class="chart-caption"><strong>Exploratory Data Analysis.</strong> Class imbalance (578:1), transaction amount on log scale revealing fraud outliers, temporal patterns showing fraud spikes at specific hours, and the top 12 PCA features most correlated with fraud.</figcaption>
                         </figure>
 
                         <figure class="chart-frame">
                             <button class="chart-zoom" type="button"
-                                data-lightbox-src="../figures/02_amount_distribution.png"
-                                data-lightbox-alt="Histogram and boxplot of transaction amount split by fraud vs normal class"
-                                aria-label="Open amount distribution chart in full screen">
-                                <img src="../figures/02_amount_distribution.png" alt="Transaction amount distribution by class">
+                                data-lightbox-src="../figures/fig_02_model_performance.png"
+                                data-lightbox-alt="2x2 model performance panel: PR curves, grouped metrics bar chart, and confusion matrices for the two best models"
+                                aria-label="Open model performance panel in full screen">
+                                <img src="../figures/fig_02_model_performance.png" alt="Model Performance - PR curves, metrics and confusion matrices">
                             </button>
-                            <figcaption class="chart-caption">Fraudulent transactions show a wider spread in Amount, with a heavier tail than legitimate ones — even after zooming into transactions under $500.</figcaption>
+                            <figcaption class="chart-caption"><strong>Model Performance.</strong> Precision-Recall curves for all 4 models (XGBoost Weights leads at AUPRC&nbsp;0.876), grouped bar chart comparing AUPRC / ROC AUC / F1, and confusion matrices for the best and runner-up models showing TP/FP/FN/TN counts.</figcaption>
                         </figure>
 
                         <figure class="chart-frame">
                             <button class="chart-zoom" type="button"
-                                data-lightbox-src="../figures/03_time_distribution.png"
-                                data-lightbox-alt="Density histogram of transaction time in hours, colored by class"
-                                aria-label="Open time distribution chart in full screen">
-                                <img src="../figures/03_time_distribution.png" alt="Temporal distribution of transactions">
+                                data-lightbox-src="../figures/fig_03_feature_importance.png"
+                                data-lightbox-alt="Side-by-side horizontal bar charts of top 12 features for Random Forest and XGBoost"
+                                aria-label="Open feature importance panel in full screen">
+                                <img src="../figures/fig_03_feature_importance.png" alt="Feature Importance - RF vs XGBoost top 12 features">
                             </button>
-                            <figcaption class="chart-caption">Fraud attempts spike at specific hours (notably around hours 10–11 and 25–26), while legitimate activity dips during late-night hours — a useful temporal signal.</figcaption>
+                            <figcaption class="chart-caption"><strong>Feature Importance.</strong> Both Random Forest and XGBoost rank V14 as the dominant fraud signal by a wide margin, followed by V4 and V10. Agreement between two different algorithms increases confidence that these PCA components capture genuine transaction anomalies.</figcaption>
                         </figure>
 
                         <figure class="chart-frame">
                             <button class="chart-zoom" type="button"
-                                data-lightbox-src="../figures/04_pca_correlation.png"
-                                data-lightbox-alt="Lower-triangular correlation heatmap of the 28 PCA features V1 through V28"
-                                aria-label="Open PCA correlation heatmap in full screen">
-                                <img src="../figures/04_pca_correlation.png" alt="PCA feature correlation matrix">
+                                data-lightbox-src="../figures/fig_04_business_impact.png"
+                                data-lightbox-alt="Side-by-side bar charts: dollars of fraud saved vs missed per model, and net benefit after subtracting false-positive costs"
+                                aria-label="Open business impact panel in full screen">
+                                <img src="../figures/fig_04_business_impact.png" alt="Business Impact - fraud blocked vs missed and net benefit">
                             </button>
-                            <figcaption class="chart-caption">As expected from PCA output, V1–V28 are nearly uncorrelated with each other. This confirms that all 28 components carry independent information for the models.</figcaption>
-                        </figure>
-
-                        <figure class="chart-frame">
-                            <button class="chart-zoom" type="button"
-                                data-lightbox-src="../figures/05_precision_recall_curves.png"
-                                data-lightbox-alt="Precision-Recall curves for all four models with AUPRC scores in the legend"
-                                aria-label="Open Precision-Recall curves in full screen">
-                                <img src="../figures/05_precision_recall_curves.png" alt="Precision-Recall curves — model comparison">
-                            </button>
-                            <figcaption class="chart-caption">The Precision-Recall curve is the gold standard for imbalanced binary classification. XGBoost with class weights achieves the highest AUPRC, staying well above the random baseline.</figcaption>
-                        </figure>
-
-                        <figure class="chart-frame">
-                            <button class="chart-zoom" type="button"
-                                data-lightbox-src="../figures/06_confusion_matrices.png"
-                                data-lightbox-alt="Four confusion matrices side by side showing TP, FP, FN, TN counts and percentages"
-                                aria-label="Open confusion matrices in full screen">
-                                <img src="../figures/06_confusion_matrices.png" alt="Confusion matrices for all models">
-                            </button>
-                            <figcaption class="chart-caption">All four models maintain an extremely low false-positive rate (under 0.03% of normal transactions flagged), which is critical to avoid disrupting genuine customers at scale.</figcaption>
-                        </figure>
-
-                        <figure class="chart-frame">
-                            <button class="chart-zoom" type="button"
-                                data-lightbox-src="../figures/07_metrics_comparison.png"
-                                data-lightbox-alt="Grouped bar chart comparing AUPRC, ROC AUC, and F1-Score across all four models"
-                                aria-label="Open metrics comparison chart in full screen">
-                                <img src="../figures/07_metrics_comparison.png" alt="AUPRC, ROC AUC and F1 comparison">
-                            </button>
-                            <figcaption class="chart-caption">XGBoost consistently leads on AUPRC and ROC AUC. The gap between class-weight and SMOTE strategies is narrow, confirming that both are viable approaches for this problem.</figcaption>
-                        </figure>
-
-                        <figure class="chart-frame">
-                            <button class="chart-zoom" type="button"
-                                data-lightbox-src="../figures/08_feature_importance.png"
-                                data-lightbox-alt="Horizontal bar chart of the top 15 most important features from the best model"
-                                aria-label="Open feature importance chart in full screen">
-                                <img src="../figures/08_feature_importance.png" alt="Top 15 feature importances — best model">
-                            </button>
-                            <figcaption class="chart-caption">V14, V4, and V12 rank as the most predictive PCA components. Although the original features are anonymized, these components likely capture spending behavior anomalies.</figcaption>
-                        </figure>
-
-                        <figure class="chart-frame">
-                            <button class="chart-zoom" type="button"
-                                data-lightbox-src="../figures/09_feature_importance_comparison.png"
-                                data-lightbox-alt="Side-by-side horizontal bar charts comparing feature importance between Random Forest and XGBoost"
-                                aria-label="Open feature importance comparison in full screen">
-                                <img src="../figures/09_feature_importance_comparison.png" alt="Feature importance: RF vs XGBoost">
-                            </button>
-                            <figcaption class="chart-caption">Random Forest and XGBoost agree on the top features (V14, V4, V12), which increases confidence that these signals are genuine — not artifacts of a single algorithm's bias.</figcaption>
-                        </figure>
-
-                        <figure class="chart-frame">
-                            <button class="chart-zoom" type="button"
-                                data-lightbox-src="../figures/10_business_impact.png"
-                                data-lightbox-alt="Bar charts showing dollars saved vs lost per model, and net benefit after subtracting false-positive costs"
-                                aria-label="Open business impact chart in full screen">
-                                <img src="../figures/10_business_impact.png" alt="Business impact: money saved vs lost">
-                            </button>
-                            <figcaption class="chart-caption">The best model blocks the majority of fraudulent value in the test set while the cost of false alarms ($10/event) is negligible relative to the money saved — a strong case for deployment.</figcaption>
+                            <figcaption class="chart-caption"><strong>Business Impact.</strong> XGBoost (Weights) blocks $8,523 in fraud on the test set while missing only $2,122. After subtracting a conservative $10-per-false-alarm cost (only 13 false alarms), the net benefit is $8,393 &mdash; a strong case for production deployment.</figcaption>
                         </figure>
 
                     </div>
