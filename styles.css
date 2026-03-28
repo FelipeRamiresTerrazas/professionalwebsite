@@ -545,80 +545,91 @@ a:hover {
    ABOUT SECTION
    ======================================== */
 
-.about-wrapper {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 50px;
-    align-items: start;
-    margin-top: 40px;
+.about-shell {
+    max-width: 1160px;
+    width: 95%;
+    margin: 0 auto;
+    padding: 56px 0 64px;
 }
 
-.about-text {
+.about-title {
+    margin-bottom: 2.5rem;
+}
+
+.about-row {
+    display: grid;
+    grid-template-columns: 3fr 2fr;
+    gap: 48px;
+    align-items: center;
+    padding: 32px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.about-row:last-child {
+    border-bottom: none;
+}
+
+.about-para {
+    font-size: 1rem;
+    line-height: 1.85;
+    color: var(--text-light);
+    text-align: left;
+    margin: 0;
+}
+
+.about-card {
+    background: linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 28px 24px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
-}
-
-.about-text p {
-    font-size: 1.05rem;
-    line-height: 1.9;
-    text-align: justify;
-}
-
-.about-philosophy {
-    margin: 8px 0 0;
-    padding: 18px 22px;
-    border-left: 4px solid var(--secondary);
-    border-radius: 0 10px 10px 0;
-    background: rgba(14, 165, 233, 0.07);
-    font-size: 1rem;
-    font-style: italic;
-    color: var(--text-dark);
-    line-height: 1.6;
-    quotes: none;
-}
-
-.about-philosophy-mark {
-    color: var(--secondary);
-    font-size: 1.4rem;
-    font-style: normal;
-    font-weight: 700;
-    line-height: 0;
-    vertical-align: -0.2em;
-}
-
-.highlights-container {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 20px;
-}
-
-.highlight-block {
-    background: linear-gradient(180deg, rgba(255,255,255,0.01) 0%, rgba(255,255,255,0.02) 100%);
-    padding: 20px;
-    border-radius: 10px;
-    border-left: 4px solid rgba(37,99,235,0.14);
+    gap: 10px;
+    box-shadow: 0 8px 32px rgba(2,6,23,0.45), inset 0 1px 0 rgba(255,255,255,0.03);
     transition: var(--transition);
+    position: relative;
+    overflow: hidden;
 }
 
-.highlight-block:hover {
-    transform: translateX(8px);
-    box-shadow: 0 14px 40px rgba(2,6,23,0.5);
+.about-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(180deg, var(--primary) 0%, var(--secondary) 100%);
+    border-radius: 4px 0 0 4px;
+    opacity: 0.6;
+    transition: opacity 0.3s;
 }
 
-.highlight-icon {
+.about-card:hover {
+    transform: translateY(-5px);
+    border-color: rgba(14,165,233,0.4);
+    box-shadow: 0 16px 48px rgba(2,6,23,0.6), 0 0 0 1px rgba(14,165,233,0.1);
+}
+
+.about-card:hover::before {
+    opacity: 1;
+}
+
+.about-card-icon {
     font-size: 2rem;
-    margin-bottom: 10px;
+    line-height: 1;
 }
 
-.highlight-block h4 {
-    color: var(--primary);
-    margin-bottom: 8px;
-    font-size: 1rem;
+.about-card-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin: 0;
 }
 
-.highlight-block p {
-    font-size: 0.9rem;
+.about-card-body {
+    font-size: 0.88rem;
+    color: var(--text-light);
+    line-height: 1.6;
     margin: 0;
 }
 
@@ -1458,6 +1469,18 @@ a:hover {
 
     .visualizations-panel {
         --viz-bleed: min(9vw, 130px);
+    }
+}
+
+@media (max-width: 992px) {
+    .about-row {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .about-shell {
+        padding: 40px 24px 56px;
+        width: 100%;
     }
 }
 
