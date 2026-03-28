@@ -50,10 +50,10 @@ body {
 }
 
 .sidebar {
-    width: 320px;
+    width: 280px;
     background: linear-gradient(180deg, #0c3a7f 0%, var(--dark-bg) 100%);
     color: white;
-    padding: 28px 24px;
+    padding: 18px 18px;
     display: flex;
     flex-direction: column;
     position: fixed;
@@ -80,7 +80,7 @@ body {
 }
 
 .main-content {
-    margin-left: 320px;
+    margin-left: 280px;
     flex: 1;
     background-color: var(--light-bg);
     min-height: 100vh;
@@ -92,20 +92,20 @@ body {
 
 .sidebar-header {
     text-align: center;
-    margin-bottom: 30px;
-    padding-bottom: 20px;
+    margin-bottom: 14px;
+    padding-bottom: 14px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .logo-circle {
-    width: 80px;
-    height: 80px;
+    width: 64px;
+    height: 64px;
     border-radius: 50%;
     background: linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%);
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto 15px;
+    margin: 0 auto 10px;
     box-shadow: 0 5px 20px rgba(14, 165, 233, 0.3);
     overflow: hidden;
 }
@@ -125,14 +125,14 @@ body {
 }
 
 .sidebar-name {
-    font-size: 1.4rem;
+    font-size: 1.1rem;
     font-weight: 700;
-    margin-bottom: 5px;
-    letter-spacing: -0.5px;
+    margin-bottom: 3px;
+    letter-spacing: -0.3px;
 }
 
 .sidebar-title {
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     color: rgba(255, 255, 255, 0.7);
     font-weight: 500;
     text-transform: uppercase;
@@ -146,22 +146,22 @@ body {
 .tab-navigation {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 4px;
     flex: 1;
 }
 
 .tab-btn {
     display: flex;
     align-items: center;
-    gap: 15px;
-    padding: 15px 18px;
+    gap: 10px;
+    padding: 9px 12px;
     background: transparent;
     border: 2px solid transparent;
     color: rgba(255, 255, 255, 0.7);
     border-radius: 10px;
     cursor: pointer;
     transition: var(--transition);
-    font-size: 0.95rem;
+    font-size: 0.88rem;
     font-weight: 500;
     font-family: 'Poppins', sans-serif;
 }
@@ -179,7 +179,7 @@ body {
 }
 
 .tab-icon {
-    font-size: 1.3rem;
+    font-size: 1.05rem;
 }
 
 .tab-label {
@@ -194,7 +194,7 @@ body {
 .nav-divider {
     height: 1px;
     background: rgba(255,255,255,0.1);
-    margin: 6px 0;
+    margin: 3px 0;
     flex-shrink: 0;
 }
 
@@ -264,21 +264,21 @@ body {
 
 .sidebar-footer {
     margin-top: auto;
-    padding-top: 30px;
+    padding-top: 14px;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
     text-align: center;
 }
 
 .social-icons {
     display: flex;
-    gap: 12px;
+    gap: 8px;
     justify-content: center;
-    margin-bottom: 15px;
+    margin-bottom: 8px;
 }
 
 .social-icon {
-    width: 40px;
-    height: 40px;
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.1);
     display: flex;
