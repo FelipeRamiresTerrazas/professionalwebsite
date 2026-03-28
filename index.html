@@ -99,35 +99,62 @@
         <main class="main-content">
             <!-- Home Tab -->
             <section id="home" class="tab-content active">
-                <div class="home-container">
+                <div class="home-shell">
+
+                    <!-- Hero Header -->
                     <div class="home-header">
                         <h1 class="hero-title">Tech Lead Analytics Engineer</h1>
                         <p class="hero-subtitle">Transforming complex data into strategic insights through innovative engineering solutions</p>
                     </div>
 
-                    <div class="home-grid">
-                        <div class="home-card">
-                            <div class="card-number">01</div>
-                            <h3>Data Architecture</h3>
-                            <p>Designing scalable, robust data warehouses and infrastructure that grow with your business</p>
+                    <!-- Impact Dashboard -->
+                    <div class="metric-grid">
+                        <div class="metric-card">
+                            <span class="metric-number">7+</span>
+                            <span class="metric-label">Years Experience</span>
                         </div>
-                        <div class="home-card">
-                            <div class="card-number">02</div>
-                            <h3>Leadership & Strategy</h3>
-                            <p>Leading cross-functional teams and aligning data initiatives with business objectives</p>
+                        <div class="metric-card">
+                            <span class="metric-number">6</span>
+                            <span class="metric-label">MBAs &amp; Post-Grads</span>
+                            <span class="metric-sub">Data Science, IT Project Management</span>
                         </div>
-                        <div class="home-card">
-                            <div class="card-number">03</div>
-                            <h3>Analytics Excellence</h3>
-                            <p>Creating self-service BI solutions that empower decision-makers at all levels</p>
+                        <div class="metric-card">
+                            <span class="metric-number">80+</span>
+                            <span class="metric-label">Technical Courses</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-number">3</span>
+                            <span class="metric-label">Core Industries</span>
+                            <span class="metric-sub">Finance, Logistics, Agribusiness</span>
+                        </div>
+                        <div class="metric-card metric-card--featured">
+                            <span class="metric-number">Scale</span>
+                            <div class="metric-text">
+                                <span class="metric-label">Startups to Enterprise</span>
+                                <span class="metric-sub">Thrived in agile teams of 50 to global corps with 350k+ employees</span>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="cta-buttons">
-                        <button class="btn btn-primary" onclick="switchTab('contact')">Get In Touch</button>
-                        <button class="btn btn-secondary" onclick="switchTab('about')">Learn More</button>
-                        <button class="btn btn-secondary" onclick="switchTab('resume')">View CV</button>
+                    <!-- Tech Stack Ribbon -->
+                    <div class="stack-ribbon">
+                        <span class="stack-badge">Snowflake</span>
+                        <span class="stack-badge">dbt</span>
+                        <span class="stack-badge">Python</span>
+                        <span class="stack-badge">R</span>
+                        <span class="stack-badge">SQL</span>
+                        <span class="stack-badge">Power BI</span>
+                        <span class="stack-badge">Airflow</span>
+                        <span class="stack-badge">BigQuery</span>
+                        <span class="stack-badge">Git</span>
                     </div>
+
+                    <!-- CTA -->
+                    <div class="cta-buttons">
+                        <button class="btn btn-primary" onclick="document.getElementById('portfolioToggle').click()">Explore Projects</button>
+                        <button class="btn btn-secondary" onclick="window.location.href='cv.html'">View Resume</button>
+                    </div>
+
                 </div>
             </section>
 
