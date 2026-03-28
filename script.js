@@ -30,7 +30,8 @@ function switchTab(tabName) {
 
 // Tab button event listeners
 document.addEventListener('DOMContentLoaded', function() {
-    const tabButtons = document.querySelectorAll('.tab-btn');
+    // Only bind tab switching to buttons that have a data-tab attribute
+    const tabButtons = document.querySelectorAll('.tab-btn[data-tab]');
     
     tabButtons.forEach(button => {
         button.addEventListener('click', function() {
@@ -38,6 +39,25 @@ document.addEventListener('DOMContentLoaded', function() {
             switchTab(tabName);
         });
     });
+});
+
+// ========================================
+// PORTFOLIO ACCORDION
+// ========================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    const toggle = document.getElementById('portfolioToggle');
+    const submenu = document.getElementById('portfolioSubmenu');
+
+    if (toggle && submenu) {
+        toggle.addEventListener('click', function(e) {
+            // Don't trigger the normal tab-switch logic
+            e.stopPropagation();
+            const isOpen = submenu.classList.contains('open');
+            submenu.classList.toggle('open');
+            toggle.setAttribute('aria-expanded', String(!isOpen));
+        });
+    }
 });
 
 // ========================================
