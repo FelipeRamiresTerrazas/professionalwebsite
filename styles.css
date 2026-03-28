@@ -848,7 +848,7 @@ a:hover {
     box-sizing: border-box;
 }
 
-#contact.tab-content {
+#contact.tab-content.active {
     display: flex;
     align-items: center;
     min-height: 100vh;
