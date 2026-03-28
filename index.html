@@ -204,47 +204,160 @@
 
             <!-- Expertise Tab -->
             <section id="expertise" class="tab-content">
-                <div class="content-container">
+                <div class="exp-shell">
                     <h2 class="section-title">Expertise</h2>
-                    
-                    <div class="expertise-grid">
-                        <div class="expertise-item">
-                            <div class="expertise-number">01</div>
-                            <h3>Data Warehousing</h3>
-                            <p>Designing and implementing modern data warehouses using Snowflake, BigQuery, and Redshift with optimal performance and cost efficiency</p>
+
+                    <div class="exp-master-detail">
+
+                        <!-- Left: Master nav -->
+                        <div class="exp-master">
+
+                            <div class="exp-nav-item" data-panel="arch" onclick="switchExpertise(this, 'arch')">
+                                <span class="exp-nav-num">01</span>
+                                <div class="exp-nav-text">
+                                    <h3>Data Architecture &amp; Pipelines</h3>
+                                    <p>Snowflake &middot; dbt &middot; Airflow &middot; GitHub</p>
+                                </div>
+                                <span class="exp-nav-arrow">&#8594;</span>
+                            </div>
+
+                            <div class="exp-nav-item" data-panel="bi" onclick="switchExpertise(this, 'bi')">
+                                <span class="exp-nav-num">02</span>
+                                <div class="exp-nav-text">
+                                    <h3>Analytics &amp; BI</h3>
+                                    <p>Power BI &middot; DAX &middot; Domo &middot; SQL</p>
+                                </div>
+                                <span class="exp-nav-arrow">&#8594;</span>
+                            </div>
+
+                            <div class="exp-nav-item" data-panel="leadership" onclick="switchExpertise(this, 'leadership')">
+                                <span class="exp-nav-num">03</span>
+                                <div class="exp-nav-text">
+                                    <h3>Leadership &amp; Strategy</h3>
+                                    <p>Tech Lead &middot; COO &middot; Agile &middot; OKRs</p>
+                                </div>
+                                <span class="exp-nav-arrow">&#8594;</span>
+                            </div>
+
+                            <div class="exp-nav-item" data-panel="ml" onclick="switchExpertise(this, 'ml')">
+                                <span class="exp-nav-num">04</span>
+                                <div class="exp-nav-text">
+                                    <h3>Advanced Analytics &amp; ML</h3>
+                                    <p>Python &middot; R &middot; scikit-learn &middot; XGBoost</p>
+                                </div>
+                                <span class="exp-nav-arrow">&#8594;</span>
+                            </div>
+
                         </div>
-                        <div class="expertise-item">
-                            <div class="expertise-number">02</div>
-                            <h3>ETL/ELT Pipelines</h3>
-                            <p>Building robust, scalable data pipelines with Airflow, dbt, Fivetran, and Stitch ensuring reliable data integration</p>
-                        </div>
-                        <div class="expertise-item">
-                            <div class="expertise-number">03</div>
-                            <h3>Analytics & BI</h3>
-                            <p>Creating compelling dashboards and analytics solutions using Tableau, Looker, PowerBI, and Qlik for data-driven decisions</p>
-                        </div>
-                        <div class="expertise-item">
-                            <div class="expertise-number">04</div>
-                            <h3>Data Modeling</h3>
-                            <p>Architecting sophisticated dimensional and fact models supporting complex analytical requirements and business logic</p>
-                        </div>
-                        <div class="expertise-item">
-                            <div class="expertise-number">05</div>
-                            <h3>SQL & Python</h3>
-                            <p>Advanced proficiency in SQL optimization, Python for data analysis, automation, and machine learning integration</p>
-                        </div>
-                        <div class="expertise-item">
-                            <div class="expertise-number">06</div>
-                            <h3>Cloud Platforms</h3>
-                            <p>Deep expertise in AWS, GCP, and Azure for building cloud-native analytics solutions with scalability and security</p>
+
+                        <!-- Right: Detail panels -->
+                        <div class="exp-detail">
+
+                            <!-- Panel 1: Data Architecture -->
+                            <div class="exp-panel" id="exp-panel-arch">
+                                <div class="exp-case">
+                                    <div class="exp-case-cat">&#127959;&#65039; Case Study &mdash; YMX Logistics</div>
+                                    <h2>Data Architecture &amp; Modern Pipelines</h2>
+                                    <div class="exp-case-body">
+                                        <p>At YMX Logistics, I founded the data infrastructure from the ground up &mdash; starting from zero data maturity and building an enterprise-grade Snowflake environment with full governance, role-based access control, and automated quality monitoring. The entire stack was wired through dbt for transformation logic and GitHub for version-controlled, PR-reviewed data development.</p>
+                                        <p>Every pipeline was designed for idempotency and incremental loads. The architecture enabled reliable cross-organizational data sharing and self-service analytics for the first time in the company's history &mdash; eliminating the manual data pulls that had been standard before.</p>
+                                    </div>
+                                    <div class="exp-achievement">
+                                        &#128161; Reduced data warehousing costs by 50% through query optimization and warehouse right-sizing, while simultaneously improving model coverage and pipeline reliability.
+                                    </div>
+                                    <div class="exp-tools-label">Tools Used</div>
+                                    <div class="exp-tools">
+                                        <span class="exp-badge">Snowflake</span>
+                                        <span class="exp-badge">dbt</span>
+                                        <span class="exp-badge">GitHub Actions</span>
+                                        <span class="exp-badge">SQL</span>
+                                        <span class="exp-badge">Airflow</span>
+                                        <span class="exp-badge">Python</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Panel 2: Analytics & BI -->
+                            <div class="exp-panel" id="exp-panel-bi">
+                                <div class="exp-case">
+                                    <div class="exp-case-cat">&#128202; Expertise &mdash; BI Engineering</div>
+                                    <h2>Analytics &amp; Business Intelligence</h2>
+                                    <div class="exp-case-body">
+                                        <p>My BI work goes far beyond building dashboards. In Power BI, I specialize in complex DAX &mdash; writing time-intelligence measures, dynamic ranking logic, and single-table data model optimizations that reduce report load times and eliminate the data redundancy that kills performance at enterprise scale.</p>
+                                        <p>In Domo, I've managed intricate slicer interactions where filter context conflicts across multiple datasets create inconsistent stakeholder views. I've architected Beast Mode calculations and DataFlow pipelines that reconcile these conflicts, delivering executive reports where every number is traceable and defensible.</p>
+                                    </div>
+                                    <div class="exp-achievement">
+                                        &#128161; Engineered Power BI metadata dashboards at YMX to proactively detect data model integrity issues &mdash; turning reactive fire-fighting into systematic quality control.
+                                    </div>
+                                    <div class="exp-tools-label">Tools Used</div>
+                                    <div class="exp-tools">
+                                        <span class="exp-badge">Power BI</span>
+                                        <span class="exp-badge">DAX</span>
+                                        <span class="exp-badge">Domo</span>
+                                        <span class="exp-badge">SQL</span>
+                                        <span class="exp-badge">Snowflake</span>
+                                        <span class="exp-badge">BigQuery</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Panel 3: Leadership & Strategy -->
+                            <div class="exp-panel" id="exp-panel-leadership">
+                                <div class="exp-case">
+                                    <div class="exp-case-cat">&#128101; Case Study &mdash; Carbon (Agro-Industry Startup)</div>
+                                    <h2>Leadership &amp; Data Strategy</h2>
+                                    <div class="exp-case-body">
+                                        <p>As COO at Carbon, a sugarcane agro-industry startup, I sat at the intersection of operations, technology, and executive decision-making. My role was to align the data and analytics roadmap with C-level business objectives &mdash; translating a fast-moving startup's operational reality into measurable KPIs and scalable data processes.</p>
+                                        <p>I led cross-functional teams where the data infrastructure had to keep pace with rapid product changes. This meant building governance frameworks that didn't slow down delivery &mdash; lightweight, iterative processes that gave stakeholders the visibility they needed without creating bureaucratic overhead that kills momentum in early-stage companies.</p>
+                                    </div>
+                                    <div class="exp-achievement">
+                                        &#128161; Built the data culture from scratch in an environment with no prior analytics function &mdash; establishing the metrics framework that gave the leadership team reliable operational visibility for the first time.
+                                    </div>
+                                    <div class="exp-tools-label">Tools Used</div>
+                                    <div class="exp-tools">
+                                        <span class="exp-badge">OKR Frameworks</span>
+                                        <span class="exp-badge">Agile / Scrum</span>
+                                        <span class="exp-badge">dbt</span>
+                                        <span class="exp-badge">SQL</span>
+                                        <span class="exp-badge">Python</span>
+                                        <span class="exp-badge">BI Reporting</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Panel 4: Advanced Analytics / ML -->
+                            <div class="exp-panel" id="exp-panel-ml">
+                                <div class="exp-case">
+                                    <div class="exp-case-cat">&#129302; Project &mdash; Fraud Detection</div>
+                                    <h2>Advanced Analytics &amp; Machine Learning</h2>
+                                    <div class="exp-case-body">
+                                        <p>One of my flagship ML projects involved building a credit card fraud detection system on a highly imbalanced real-world dataset (fraud rate &lt; 0.2%). The challenge wasn't just model accuracy &mdash; it was precision/recall trade-off optimization where a false negative has direct financial cost and a false positive destroys customer trust.</p>
+                                        <p>I implemented an ensemble approach combining XGBoost, Random Forest, and Logistic Regression with SMOTE oversampling for class balancing. In R, I conducted the statistical validation and deep residual analysis. The final pipeline included automated model retraining triggers and a business-impact simulation layer that translated model performance into estimated financial risk reduction.</p>
+                                    </div>
+                                    <div class="exp-achievement">
+                                        &#128161; The ensemble classifier achieved a 94%+ AUC-ROC and a precision-recall balance optimized for minimizing financial exposure &mdash; outperforming a baseline logistic model by 18 percentage points on recall.
+                                    </div>
+                                    <div class="exp-tools-label">Tools Used</div>
+                                    <div class="exp-tools">
+                                        <span class="exp-badge">Python</span>
+                                        <span class="exp-badge">R</span>
+                                        <span class="exp-badge">scikit-learn</span>
+                                        <span class="exp-badge">XGBoost</span>
+                                        <span class="exp-badge">SMOTE</span>
+                                        <span class="exp-badge">Pandas</span>
+                                    </div>
+                                </div>
+                            </div>
+
                         </div>
                     </div>
 
-                    <div class="skills-section expertise-item">
+                    <!-- Technical Skills -->
+                    <div class="skills-section">
                         <h3 class="skills-title">Technical Skills</h3>
                         <div class="skills-container">
                             <div class="skill-group">
-                                <h4>Platforms & Tools</h4>
+                                <h4>Platforms &amp; Tools</h4>
                                 <div class="skill-pills">
                                     <span class="pill">Snowflake</span>
                                     <span class="pill">BigQuery</span>
@@ -255,27 +368,27 @@
                                 </div>
                             </div>
                             <div class="skill-group">
-                                <h4>BI & Visualization</h4>
+                                <h4>BI &amp; Visualization</h4>
                                 <div class="skill-pills">
-                                    <span class="pill">Tableau</span>
+                                    <span class="pill">Power BI</span>
+                                    <span class="pill">Domo</span>
                                     <span class="pill">Looker</span>
-                                    <span class="pill">PowerBI</span>
-                                    <span class="pill">Qlik</span>
+                                    <span class="pill">Tableau</span>
                                     <span class="pill">Data Studio</span>
                                 </div>
                             </div>
                             <div class="skill-group">
-                                <h4>Languages & Databases</h4>
+                                <h4>Languages &amp; Databases</h4>
                                 <div class="skill-pills">
                                     <span class="pill">SQL</span>
                                     <span class="pill">Python</span>
+                                    <span class="pill">R</span>
                                     <span class="pill">PostgreSQL</span>
                                     <span class="pill">MySQL</span>
-                                    <span class="pill">MongoDB</span>
                                 </div>
                             </div>
                             <div class="skill-group">
-                                <h4>Cloud & DevOps</h4>
+                                <h4>Cloud &amp; DevOps</h4>
                                 <div class="skill-pills">
                                     <span class="pill">AWS</span>
                                     <span class="pill">GCP</span>
@@ -286,6 +399,7 @@
                             </div>
                         </div>
                     </div>
+
                 </div>
             </section>
 

@@ -1,4 +1,56 @@
 // ========================================
+// EXPERTISE MASTER-DETAIL
+// ========================================
+
+function switchExpertise(clickedItem, panelId) {
+    // Update nav active state
+    document.querySelectorAll('.exp-nav-item').forEach(function(item) {
+        item.classList.remove('active');
+    });
+    clickedItem.classList.add('active');
+
+    // Fade out all panels
+    var panels = document.querySelectorAll('.exp-panel');
+    panels.forEach(function(panel) {
+        panel.classList.remove('is-active');
+        setTimeout(function() {
+            if (!panel.classList.contains('is-active')) {
+                panel.classList.remove('is-visible');
+            }
+        }, 280);
+    });
+
+    // Fade in target panel
+    var target = document.getElementById('exp-panel-' + panelId);
+    if (target) {
+        target.classList.add('is-visible');
+        requestAnimationFrame(function() {
+            requestAnimationFrame(function() {
+                target.classList.add('is-active');
+            });
+        });
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    var firstNavItem = document.querySelector('.exp-nav-item');
+    if (firstNavItem) {
+        firstNavItem.classList.add('active');
+        var panelId = firstNavItem.getAttribute('data-panel');
+        var firstPanel = document.getElementById('exp-panel-' + panelId);
+        if (firstPanel) {
+            firstPanel.classList.add('is-visible');
+            // Small delay so the transition fires after display: block
+            requestAnimationFrame(function() {
+                requestAnimationFrame(function() {
+                    firstPanel.classList.add('is-active');
+                });
+            });
+        }
+    }
+});
+
+// ========================================
 // TAB SWITCHING FUNCTIONALITY
 // ========================================
 
