@@ -141,7 +141,7 @@ git push origin main
 
 Created for Felipe Ramires Terrazas - Analytics Engineering Lead
 
-- Email: framiresterrazas@gmail.com
+- Email: felipe.agro.terrazas@gmail.com
 - LinkedIn: [Felipe Ramires Terrazas](https://www.linkedin.com/in/felipe-ramires-terrazas/)
 
 ---
