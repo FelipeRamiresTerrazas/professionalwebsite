@@ -1,4 +1,15 @@
 // ========================================
+// DYNAMIC YEARS OF EXPERIENCE
+// ========================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    var el = document.getElementById('years-experience');
+    if (el) {
+        el.textContent = (new Date().getFullYear() - 2019) + '+';
+    }
+});
+
+// ========================================
 // EXPERTISE MASTER-DETAIL
 // ========================================
 
