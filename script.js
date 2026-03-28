@@ -89,10 +89,14 @@ function switchTab(tabName) {
         btn.classList.remove('active');
     });
 
-    // Show the selected tab content
+    // Show the selected tab content — force animation re-trigger via reflow
     const selectedTab = document.getElementById(tabName);
     if (selectedTab) {
+        void selectedTab.offsetWidth; // reflow so animation restarts
         selectedTab.classList.add('active');
+        // Scroll the content area back to top on every tab switch
+        const mainContent = document.querySelector('.main-content');
+        if (mainContent) mainContent.scrollTop = 0;
     }
 
     // Highlight the selected tab button
