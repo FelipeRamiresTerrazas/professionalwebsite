@@ -450,6 +450,102 @@ document.addEventListener('click', function(e) {
 });
 
 // ========================================
+// HAMBURGER MOBILE MENU
+// Uses display:none/block + .is-open class
+// so the overlay is fully out of the render
+// tree when closed — no scroll artifacts.
+// ========================================
+
+document.addEventListener('DOMContentLoaded', function () {
+    var overlay     = document.getElementById('mobile-menu-overlay');
+    var hamburgerBtn = document.getElementById('hamburger-btn');
+    var closeBtn    = document.getElementById('mobile-menu-close');
+    var backdrop    = document.getElementById('mobile-menu-backdrop');
+    var mobileNavBtns = document.querySelectorAll('.mobile-nav-btn[data-tab]');
+    var TRANSITION_MS = 360; // matches CSS transition duration
+    var closeTimer;
+
+    function openMobileMenu() {
+        clearTimeout(closeTimer);
+        overlay.style.display = '';       // remove inline display:none
+        // Force a reflow so the browser registers the element before
+        // adding .is-open (which triggers the CSS transition)
+        void overlay.offsetWidth;
+        overlay.classList.add('is-open');
+        hamburgerBtn.classList.add('is-open');
+        hamburgerBtn.setAttribute('aria-expanded', 'true');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeMobileMenu() {
+        overlay.classList.remove('is-open');
+        hamburgerBtn.classList.remove('is-open');
+        hamburgerBtn.setAttribute('aria-expanded', 'false');
+        document.body.style.overflow = '';
+        // Wait for the slide-out transition to finish, then hide with display:none
+        closeTimer = setTimeout(function () {
+            overlay.style.display = 'none';
+        }, TRANSITION_MS);
+    }
+
+    if (hamburgerBtn) hamburgerBtn.addEventListener('click', openMobileMenu);
+    if (closeBtn)     closeBtn.addEventListener('click', closeMobileMenu);
+    if (backdrop)     backdrop.addEventListener('click', closeMobileMenu);
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && overlay.classList.contains('is-open')) {
+            closeMobileMenu();
+        }
+    });
+
+    // Switch tab and close drawer when a mobile nav button is tapped
+    mobileNavBtns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var tabName = this.getAttribute('data-tab');
+            switchTab(tabName);
+            mobileNavBtns.forEach(function (b) { b.classList.remove('active'); });
+            this.classList.add('active');
+            closeMobileMenu();
+        });
+    });
+
+    // Keep mobile active indicator in sync when desktop tabs are clicked
+    document.querySelectorAll('.tab-btn[data-tab]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var tabName = this.getAttribute('data-tab');
+            mobileNavBtns.forEach(function (b) {
+                b.classList.toggle('active', b.getAttribute('data-tab') === tabName);
+            });
+        });
+    });
+});
+
+// ========================================
+// EXPLORE PROJECTS CTA
+// Desktop → opens sidebar accordion
+// Mobile  → opens hamburger drawer
+// ========================================
+
+function exploreProjects() {
+    if (window.innerWidth <= 768) {
+        var overlay      = document.getElementById('mobile-menu-overlay');
+        var hamburgerBtn = document.getElementById('hamburger-btn');
+        if (overlay) {
+            clearTimeout(window._mobileMenuCloseTimer);
+            overlay.style.display = '';
+            void overlay.offsetWidth;
+            overlay.classList.add('is-open');
+            hamburgerBtn.classList.add('is-open');
+            hamburgerBtn.setAttribute('aria-expanded', 'true');
+            document.body.style.overflow = 'hidden';
+        }
+    } else {
+        var toggle = document.getElementById('portfolioToggle');
+        if (toggle) toggle.click();
+    }
+}
+
+// ========================================
 // PREVENT CONSOLE ERRORS IN PRODUCTION
 // ========================================
 

@@ -171,13 +171,10 @@ print(f"Success! Forecasted 7 days for {len(campuses)} campuses.")</code></pre>
                         </figure>
 
                         <figure class="chart-frame">
-                            <iframe
-                                src="../heatmap.html"
-                                title="Top 10 campus heatmap"
-                                loading="lazy"
-                                style="width: 100%; min-height: 720px; border: 0; border-radius: 12px; background: #071028;"
-                            ></iframe>
-                            <figcaption class="chart-caption">A dense ranking view that helps spot where operational load is concentrated by day. <a href="../heatmap.html" target="_blank" rel="noopener noreferrer">Open heatmap in a new tab</a>.</figcaption>
+                            <button class="chart-zoom" type="button" data-lightbox-src="../heatmap_image.png" data-lightbox-alt="Top 10 campuses daily forecast heatmap" aria-label="Open heatmap image in full screen">
+                                <img src="../heatmap_image.png" alt="Top 10 campuses daily forecast heatmap">
+                            </button>
+                            <figcaption class="chart-caption">A dense ranking view that helps spot where operational load is concentrated by day.</figcaption>
                         </figure>
                     </div>
                 </section>

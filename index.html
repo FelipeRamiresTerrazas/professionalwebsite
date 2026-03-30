@@ -71,6 +71,13 @@
                 </div>
             </nav>
 
+            <!-- Hamburger button — mobile only -->
+            <button id="hamburger-btn" class="hamburger-btn" aria-label="Open navigation menu" aria-expanded="false">
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+            </button>
+
             <div class="sidebar-footer">
                 <div class="social-icons">
                     <a href="https://www.linkedin.com/in/felipe-ramires-terrazas/" target="_blank" title="LinkedIn" class="social-icon">in</a>
@@ -151,7 +158,7 @@
 
                     <!-- CTA -->
                     <div class="cta-buttons">
-                        <button class="btn btn-primary" onclick="document.getElementById('portfolioToggle').click()">Explore Projects</button>
+                        <button class="btn btn-primary" onclick="exploreProjects()">Explore Projects</button>
                         <button class="btn btn-secondary" onclick="window.location.href='cv.html'">View Resume</button>
                     </div>
 
@@ -409,96 +416,150 @@
                     <h2 class="section-title">Professional Experience</h2>
                     
                     <div class="experience-container">
+
+                        <!-- ── YMX Logistics ── -->
                         <div class="experience-item">
-                            <div class="experience-header">
-                                <div class="experience-marker"></div>
-                                <div class="experience-info">
-                                    <h3>Data Analyst · YMX Logistics</h3>
-                                    <span class="period">Jul 2025 – Present</span>
+                            <div class="exp-split-left">
+                                <p class="exp-job-title">Data Analyst</p>
+                                <p class="exp-company">YMX Logistics</p>
+                                <p class="exp-tenure">Jul 2025 – Present</p>
+                                <div class="exp-meta">
+                                    <span class="exp-domain-badge">Logistics</span>
+                                </div>
+                                <div class="exp-stack-tags">
+                                    <span class="exp-stack-tag">Snowflake</span>
+                                    <span class="exp-stack-tag">Power BI</span>
+                                    <span class="exp-stack-tag">SQL</span>
+                                    <span class="exp-stack-tag">dbt</span>
+                                    <span class="exp-stack-tag">Python</span>
                                 </div>
                             </div>
-                            <p class="experience-description">
-                                Spearheading the data architecture and analytics foundation at YMX Logistics, owning end-to-end data infrastructure from Snowflake governance to Power BI operational monitoring. Serving as the central link between engineering, business stakeholders, and executive leadership to ensure data reliability and self-service adoption across the organization.
-                            </p>
-                            <ul class="achievements-list">
-                                <li>Founded the Snowflake data architecture from the ground up, implementing enterprise-grade governance, quality monitoring, and cross-organizational data sharing that enabled reliable data consumption at scale</li>
-                                <li>Reduced data warehousing costs by 50% through SQL optimization and engineering best practices, resolving critical data problems that were directly impacting business operations</li>
-                                <li>Engineered Power BI metadata dashboards to proactively investigate data model integrity issues, coordinating cross-functional reviews of missing data and reserve practices</li>
-                                <li>Validated business metrics with stakeholders and drove self-service analytics adoption through structured user onboarding, documentation, and hands-on troubleshooting</li>
-                            </ul>
+                            <div class="exp-split-right">
+                                <p class="experience-description">
+                                    Spearheading the data architecture and analytics foundation at YMX Logistics, owning end-to-end data infrastructure from Snowflake governance to Power BI operational monitoring. Serving as the central link between engineering, business stakeholders, and executive leadership to ensure data reliability and self-service adoption across the organization.
+                                </p>
+                                <ul class="achievements-list">
+                                    <li>Founded the Snowflake data architecture from the ground up, implementing enterprise-grade governance, quality monitoring, and cross-organizational data sharing that enabled reliable data consumption at scale</li>
+                                    <li>Reduced data warehousing costs by 50% through SQL optimization and engineering best practices, resolving critical data problems that were directly impacting business operations</li>
+                                    <li>Engineered Power BI metadata dashboards to proactively investigate data model integrity issues, coordinating cross-functional reviews of missing data and reserve practices</li>
+                                    <li>Validated business metrics with stakeholders and drove self-service analytics adoption through structured user onboarding, documentation, and hands-on troubleshooting</li>
+                                </ul>
+                            </div>
                         </div>
 
+                        <!-- ── WEX Inc ── -->
                         <div class="experience-item">
-                            <div class="experience-header">
-                                <div class="experience-marker"></div>
-                                <div class="experience-info">
-                                    <h3>Risk Data Analyst · WEX Inc</h3>
-                                    <span class="period">Nov 2023 – Jul 2025</span>
+                            <div class="exp-split-left">
+                                <p class="exp-job-title">Risk Data Analyst</p>
+                                <p class="exp-company">WEX Inc</p>
+                                <p class="exp-tenure">Nov 2023 – Jul 2025</p>
+                                <div class="exp-meta">
+                                    <span class="exp-domain-badge exp-domain-badge--finance">Finance</span>
+                                </div>
+                                <div class="exp-stack-tags">
+                                    <span class="exp-stack-tag">Snowflake</span>
+                                    <span class="exp-stack-tag">Tableau</span>
+                                    <span class="exp-stack-tag">SQL</span>
+                                    <span class="exp-stack-tag">Alation</span>
+                                    <span class="exp-stack-tag">SCRUM</span>
                                 </div>
                             </div>
-                            <p class="experience-description">
-                                Delivered scalable Tableau analytics solutions and advanced SQL investigations within WEX's risk and financial data ecosystem, partnering with Data Engineering to build governed, reliable data marts. Served as a key bridge between business users and data infrastructure, championing governance and data quality across high-stakes financial domains.
-                            </p>
-                            <ul class="achievements-list">
-                                <li>Designed and maintained Tableau dashboards in close partnership with Data Engineering, building scalable data marts and documenting all solutions in Alation and Confluence for full governance traceability</li>
-                                <li>Executed intermediate-to-advanced SQL analyses in Snowflake to investigate risk patterns, collections and receivables discrepancies, and fraud detection data problems</li>
-                                <li>Facilitated data quality validation and Hypercare periods for new analytics initiatives, collaborating with business users to resolve data interpretation questions and ensure accuracy</li>
-                                <li>Managed the analytics project roadmap through formal SCRUM ceremonies — Sprint Planning and Daily Stand-ups — coordinating priorities across cross-functional stakeholder groups</li>
-                            </ul>
+                            <div class="exp-split-right">
+                                <p class="experience-description">
+                                    Delivered scalable Tableau analytics solutions and advanced SQL investigations within WEX's risk and financial data ecosystem, partnering with Data Engineering to build governed, reliable data marts. Served as a key bridge between business users and data infrastructure, championing governance and data quality across high-stakes financial domains.
+                                </p>
+                                <ul class="achievements-list">
+                                    <li>Designed and maintained Tableau dashboards in close partnership with Data Engineering, building scalable data marts and documenting all solutions in Alation and Confluence for full governance traceability</li>
+                                    <li>Executed intermediate-to-advanced SQL analyses in Snowflake to investigate risk patterns, collections and receivables discrepancies, and fraud detection data problems</li>
+                                    <li>Facilitated data quality validation and Hypercare periods for new analytics initiatives, collaborating with business users to resolve data interpretation questions and ensure accuracy</li>
+                                    <li>Managed the analytics project roadmap through formal SCRUM ceremonies — Sprint Planning and Daily Stand-ups — coordinating priorities across cross-functional stakeholder groups</li>
+                                </ul>
+                            </div>
                         </div>
 
+                        <!-- ── CMA CGM ── -->
                         <div class="experience-item">
-                            <div class="experience-header">
-                                <div class="experience-marker"></div>
-                                <div class="experience-info">
-                                    <h3>BPM Specialist · CMA CGM</h3>
-                                    <span class="period">Nov 2021 – Nov 2023</span>
+                            <div class="exp-split-left">
+                                <p class="exp-job-title">BPM Specialist</p>
+                                <p class="exp-company">CMA CGM</p>
+                                <p class="exp-tenure">Nov 2021 – Nov 2023</p>
+                                <div class="exp-meta">
+                                    <span class="exp-domain-badge exp-domain-badge--shipping">Shipping</span>
+                                </div>
+                                <div class="exp-stack-tags">
+                                    <span class="exp-stack-tag">QlikSense</span>
+                                    <span class="exp-stack-tag">Lean Six Sigma</span>
+                                    <span class="exp-stack-tag">KANBAN</span>
+                                    <span class="exp-stack-tag">SQL</span>
                                 </div>
                             </div>
-                            <p class="experience-description">
-                                Led Digital Transformation and QlikSense analytics deployments for one of the world's largest container shipping companies, bridging data-driven insights with strategic business process improvement. Acted as the technical representative in executive-level meetings, translating complex operational data into actionable decisions.
-                            </p>
-                            <ul class="achievements-list">
-                                <li>Drove QlikSense analytics deployments as part of broader Digital Transformation programs, representing the technical team in strategic business meetings to align data capabilities with executive priorities</li>
-                                <li>Developed and scaled best practices for analytics tool adoption and user communication, coordinating advanced training programs and cultivating an internal data community</li>
-                                <li>Applied Lean Six Sigma methodologies to identify, quantify, and eliminate operational gaps and process inefficiencies, tracking and delivering improvements through a KANBAN framework</li>
-                            </ul>
+                            <div class="exp-split-right">
+                                <p class="experience-description">
+                                    Led Digital Transformation and QlikSense analytics deployments for one of the world's largest container shipping companies, bridging data-driven insights with strategic business process improvement. Acted as the technical representative in executive-level meetings, translating complex operational data into actionable decisions.
+                                </p>
+                                <ul class="achievements-list">
+                                    <li>Drove QlikSense analytics deployments as part of broader Digital Transformation programs, representing the technical team in strategic business meetings to align data capabilities with executive priorities</li>
+                                    <li>Developed and scaled best practices for analytics tool adoption and user communication, coordinating advanced training programs and cultivating an internal data community</li>
+                                    <li>Applied Lean Six Sigma methodologies to identify, quantify, and eliminate operational gaps and process inefficiencies, tracking and delivering improvements through a KANBAN framework</li>
+                                </ul>
+                            </div>
                         </div>
 
+                        <!-- ── SmartBreeder ── -->
                         <div class="experience-item">
-                            <div class="experience-header">
-                                <div class="experience-marker"></div>
-                                <div class="experience-info">
-                                    <h3>Business Intelligence Analyst · SmartBreeder</h3>
-                                    <span class="period">Dec 2019 – Nov 2021</span>
+                            <div class="exp-split-left">
+                                <p class="exp-job-title">BI Analyst</p>
+                                <p class="exp-company">SmartBreeder</p>
+                                <p class="exp-tenure">Dec 2019 – Nov 2021</p>
+                                <div class="exp-meta">
+                                    <span class="exp-domain-badge exp-domain-badge--agtech">AgTech</span>
+                                </div>
+                                <div class="exp-stack-tags">
+                                    <span class="exp-stack-tag">SQL Server</span>
+                                    <span class="exp-stack-tag">Power BI</span>
+                                    <span class="exp-stack-tag">Python</span>
+                                    <span class="exp-stack-tag">ETL</span>
                                 </div>
                             </div>
-                            <p class="experience-description">
-                                Owned the full BI stack for a fast-growing AgTech startup, designing SQL Server data warehouses and Power BI reporting layers from scratch while acting as the primary data enablement partner for both product and business teams.
-                            </p>
-                            <ul class="achievements-list">
-                                <li>Designed and maintained data warehouse structures in SQL Server, powering end-to-end Power BI reporting and proactively investigating data model gaps to ensure integrity across all business processes</li>
-                                <li>Delivered intensive Power BI training programs to user groups across all skill levels — from business beginners to power users — providing ongoing support and troubleshooting to maximize adoption</li>
-                                <li>Partnered with the product team to gather business requirements, investigate data-related questions, and facilitate User Acceptance Testing (UAT) for new analytics features</li>
-                            </ul>
+                            <div class="exp-split-right">
+                                <p class="experience-description">
+                                    Owned the full BI stack for a fast-growing AgTech startup, designing SQL Server data warehouses and Power BI reporting layers from scratch while acting as the primary data enablement partner for both product and business teams.
+                                </p>
+                                <ul class="achievements-list">
+                                    <li>Designed and maintained data warehouse structures in SQL Server, powering end-to-end Power BI reporting and proactively investigating data model gaps to ensure integrity across all business processes</li>
+                                    <li>Delivered intensive Power BI training programs to user groups across all skill levels — from business beginners to power users — providing ongoing support and troubleshooting to maximize adoption</li>
+                                    <li>Partnered with the product team to gather business requirements, investigate data-related questions, and facilitate User Acceptance Testing (UAT) for new analytics features</li>
+                                </ul>
+                            </div>
                         </div>
 
+                        <!-- ── Cargill ── -->
                         <div class="experience-item">
-                            <div class="experience-header">
-                                <div class="experience-marker"></div>
-                                <div class="experience-info">
-                                    <h3>Projects Intern · Cargill</h3>
-                                    <span class="period">Jan 2019 – Dec 2019</span>
+                            <div class="exp-split-left">
+                                <p class="exp-job-title">Projects Intern</p>
+                                <p class="exp-company">Cargill</p>
+                                <p class="exp-tenure">Jan 2019 – Dec 2019</p>
+                                <div class="exp-meta">
+                                    <span class="exp-domain-badge exp-domain-badge--agri">Agribusiness</span>
+                                </div>
+                                <div class="exp-stack-tags">
+                                    <span class="exp-stack-tag">Power BI</span>
+                                    <span class="exp-stack-tag">Power Apps</span>
+                                    <span class="exp-stack-tag">VBA</span>
+                                    <span class="exp-stack-tag">Excel</span>
                                 </div>
                             </div>
-                            <p class="experience-description">
-                                Contributed to digital product development at a global agribusiness leader, building internal tools to automate manual processes and improve reporting visibility across multiple departments.
-                            </p>
-                            <ul class="achievements-list">
-                                <li>Built custom internal tools using VBA (Excel), Power BI, and Power Apps, digitizing manual workflows for multiple internal departments and reducing operational overhead</li>
-                                <li>Developed automated reporting solutions that improved data visibility and cut manual reporting effort for operations and logistics teams</li>
-                            </ul>
+                            <div class="exp-split-right">
+                                <p class="experience-description">
+                                    Contributed to digital product development at a global agribusiness leader, building internal tools to automate manual processes and improve reporting visibility across multiple departments.
+                                </p>
+                                <ul class="achievements-list">
+                                    <li>Built custom internal tools using VBA (Excel), Power BI, and Power Apps, digitizing manual workflows for multiple internal departments and reducing operational overhead</li>
+                                    <li>Developed automated reporting solutions that improved data visibility and cut manual reporting effort for operations and logistics teams</li>
+                                </ul>
+                            </div>
                         </div>
+
                     </div>
                 </div>
             </section>
@@ -605,5 +666,30 @@
     </div>
 
     <script src="script.js"></script>
+
+    <!-- Mobile Navigation Overlay — hidden via display:none until JS opens it -->
+    <div id="mobile-menu-overlay" class="mobile-menu-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="Mobile navigation">
+        <div class="mobile-menu-backdrop" id="mobile-menu-backdrop"></div>
+        <div class="mobile-menu-drawer">
+            <div class="mobile-menu-header">
+                <span class="mobile-menu-title">Felipe Ramires Terrazas</span>
+                <button id="mobile-menu-close" class="mobile-menu-close" aria-label="Close navigation menu">&times;</button>
+            </div>
+            <nav class="mobile-menu-nav">
+                <button class="mobile-nav-btn" data-tab="home"><span class="mobile-nav-icon">🏠</span> Home</button>
+                <button class="mobile-nav-btn" data-tab="about"><span class="mobile-nav-icon">👤</span> About</button>
+                <button class="mobile-nav-btn" data-tab="expertise"><span class="mobile-nav-icon">⚡</span> Expertise</button>
+                <button class="mobile-nav-btn" data-tab="experience"><span class="mobile-nav-icon">💼</span> Experience</button>
+                <button class="mobile-nav-btn" data-tab="contact"><span class="mobile-nav-icon">✉️</span> Contact</button>
+                <button class="mobile-nav-btn" data-tab="resume"><span class="mobile-nav-icon">📄</span> Resume / CV</button>
+            </nav>
+            <div class="mobile-menu-divider"></div>
+            <div class="mobile-menu-projects">
+                <p class="mobile-menu-section-label">🗂️ Projects</p>
+                <a class="mobile-nav-link" href="projects/fraud-detection.html">Credit Card Fraud Detection</a>
+                <a class="mobile-nav-link" href="projects/yard-moves-forecast.html">Yard Moves Forecast</a>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
