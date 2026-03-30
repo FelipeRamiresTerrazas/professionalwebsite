@@ -450,6 +450,100 @@ document.addEventListener('click', function(e) {
 });
 
 // ========================================
+// HAMBURGER MOBILE MENU
+// ========================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    const hamburgerBtn = document.getElementById('hamburger-btn');
+    const overlay = document.getElementById('mobile-menu-overlay');
+    const closeBtn = document.getElementById('mobile-menu-close');
+    const backdrop = document.getElementById('mobile-menu-backdrop');
+    const mobileNavBtns = document.querySelectorAll('.mobile-nav-btn[data-tab]');
+
+    function openMobileMenu() {
+        overlay.classList.add('is-open');
+        overlay.setAttribute('aria-hidden', 'false');
+        hamburgerBtn.classList.add('is-open');
+        hamburgerBtn.setAttribute('aria-expanded', 'true');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeMobileMenu() {
+        overlay.classList.remove('is-open');
+        overlay.setAttribute('aria-hidden', 'true');
+        hamburgerBtn.classList.remove('is-open');
+        hamburgerBtn.setAttribute('aria-expanded', 'false');
+        document.body.style.overflow = '';
+    }
+
+    if (hamburgerBtn) {
+        hamburgerBtn.addEventListener('click', openMobileMenu);
+    }
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeMobileMenu);
+    }
+
+    if (backdrop) {
+        backdrop.addEventListener('click', closeMobileMenu);
+    }
+
+    // Close via Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && overlay.classList.contains('is-open')) {
+            closeMobileMenu();
+        }
+    });
+
+    // Mobile nav tab buttons — switch tab and close drawer
+    mobileNavBtns.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const tabName = this.getAttribute('data-tab');
+            switchTab(tabName);
+
+            // Sync active state in mobile menu
+            mobileNavBtns.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+
+            closeMobileMenu();
+        });
+    });
+
+    // Keep mobile menu active indicator in sync when desktop tabs are clicked
+    document.querySelectorAll('.tab-btn[data-tab]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const tabName = this.getAttribute('data-tab');
+            mobileNavBtns.forEach(function(mBtn) {
+                mBtn.classList.toggle('active', mBtn.getAttribute('data-tab') === tabName);
+            });
+        });
+    });
+});
+
+// ========================================
+// EXPLORE PROJECTS CTA (desktop + mobile)
+// ========================================
+
+function exploreProjects() {
+    if (window.innerWidth <= 768) {
+        // On mobile: open the hamburger / slide-out menu
+        const overlay = document.getElementById('mobile-menu-overlay');
+        const hamburgerBtn = document.getElementById('hamburger-btn');
+        if (overlay) {
+            overlay.classList.add('is-open');
+            overlay.setAttribute('aria-hidden', 'false');
+            hamburgerBtn.classList.add('is-open');
+            hamburgerBtn.setAttribute('aria-expanded', 'true');
+            document.body.style.overflow = 'hidden';
+        }
+    } else {
+        // On desktop: open the portfolio accordion in the sidebar
+        const toggle = document.getElementById('portfolioToggle');
+        if (toggle) toggle.click();
+    }
+}
+
+// ========================================
 // PREVENT CONSOLE ERRORS IN PRODUCTION
 // ========================================
 

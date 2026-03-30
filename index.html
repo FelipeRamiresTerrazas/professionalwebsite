@@ -71,6 +71,13 @@
                 </div>
             </nav>
 
+            <!-- Hamburger button — mobile only -->
+            <button id="hamburger-btn" class="hamburger-btn" aria-label="Open navigation menu" aria-expanded="false" aria-controls="mobile-menu-overlay">
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+            </button>
+
             <div class="sidebar-footer">
                 <div class="social-icons">
                     <a href="https://www.linkedin.com/in/felipe-ramires-terrazas/" target="_blank" title="LinkedIn" class="social-icon">in</a>
@@ -151,7 +158,7 @@
 
                     <!-- CTA -->
                     <div class="cta-buttons">
-                        <button class="btn btn-primary" onclick="document.getElementById('portfolioToggle').click()">Explore Projects</button>
+                        <button class="btn btn-primary" onclick="exploreProjects()">Explore Projects</button>
                         <button class="btn btn-secondary" onclick="window.location.href='cv.html'">View Resume</button>
                     </div>
 
@@ -605,5 +612,30 @@
     </div>
 
     <script src="script.js"></script>
+
+    <!-- Mobile Navigation Overlay -->
+    <div id="mobile-menu-overlay" class="mobile-menu-overlay" role="dialog" aria-modal="true" aria-label="Mobile navigation" aria-hidden="true">
+        <div class="mobile-menu-backdrop" id="mobile-menu-backdrop"></div>
+        <div class="mobile-menu-drawer">
+            <div class="mobile-menu-header">
+                <span class="mobile-menu-title">Felipe Ramires Terrazas</span>
+                <button id="mobile-menu-close" class="mobile-menu-close" aria-label="Close navigation menu">&times;</button>
+            </div>
+            <nav class="mobile-menu-nav">
+                <button class="mobile-nav-btn" data-tab="home"><span class="mobile-nav-icon">🏠</span> Home</button>
+                <button class="mobile-nav-btn" data-tab="about"><span class="mobile-nav-icon">👤</span> About</button>
+                <button class="mobile-nav-btn" data-tab="expertise"><span class="mobile-nav-icon">⚡</span> Expertise</button>
+                <button class="mobile-nav-btn" data-tab="experience"><span class="mobile-nav-icon">💼</span> Experience</button>
+                <button class="mobile-nav-btn" data-tab="contact"><span class="mobile-nav-icon">✉️</span> Contact</button>
+                <button class="mobile-nav-btn" data-tab="resume"><span class="mobile-nav-icon">📄</span> Resume / CV</button>
+            </nav>
+            <div class="mobile-menu-divider"></div>
+            <div class="mobile-menu-projects">
+                <p class="mobile-menu-section-label">🗂️ Projects</p>
+                <a class="mobile-nav-link" href="projects/fraud-detection.html">Credit Card Fraud Detection</a>
+                <a class="mobile-nav-link" href="projects/yard-moves-forecast.html">Yard Moves Forecast</a>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
