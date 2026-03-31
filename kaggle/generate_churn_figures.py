@@ -86,27 +86,12 @@ model = XGBClassifier(
     scale_pos_weight=scale_pos,
     eval_metric="logloss",
     random_state=42,
-    n_jobs=-1,
+    n_jobs=1,
     verbosity=0,
 )
 model.fit(X_train, y_train)
 y_pred  = model.predict(X_test)
 y_proba = model.predict_proba(X_test)[:, 1]
-
-# Also train a full model on all training data for submission
-model_full = XGBClassifier(
-    n_estimators=400,
-    max_depth=4,
-    learning_rate=0.05,
-    subsample=0.8,
-    colsample_bytree=0.8,
-    scale_pos_weight=(y == 0).sum() / (y == 1).sum(),
-    eval_metric="logloss",
-    random_state=42,
-    n_jobs=-1,
-    verbosity=0,
-)
-model_full.fit(X, y)
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -234,11 +219,21 @@ ax.set_facecolor(CARD_BG)
 # Panel 3 — Confusion Matrix
 ax = axes[1, 0]
 cm = confusion_matrix(y_test, y_pred)
-sns.heatmap(cm, annot=True, fmt="d", cmap="Blues",
+sns.heatmap(cm, annot=False, cmap="Blues",
             xticklabels=["Pred: No Churn", "Pred: Churn"],
             yticklabels=["True: No Churn", "True: Churn"],
-            ax=ax, cbar=False,
-            annot_kws={"size": 15, "weight": "bold", "color": TEXT})
+            ax=ax, cbar=False, linewidths=2, linecolor=DARK_BG,
+            vmin=0, vmax=cm.max())
+# Annotate manually — dark text on light cells, light text on dark cells
+thresh = cm.max() / 2.0
+for i in range(cm.shape[0]):
+    for j in range(cm.shape[1]):
+        cell_val = cm[i, j]
+        # Blues colormap: low value = light cell → dark text; high value = dark cell → light text
+        font_color = "#071028" if cell_val < thresh else "#e6f0ff"
+        ax.text(j + 0.5, i + 0.5, f"{cell_val:,}",
+                ha="center", va="center",
+                color=font_color, fontsize=16, fontweight="bold")
 ax.set_title("Confusion Matrix", color=TEXT, fontsize=14, pad=10)
 ax.tick_params(labelcolor=TEXT_DIM, labelsize=10)
 ax.set_facecolor(CARD_BG)
@@ -247,7 +242,7 @@ ax.set_facecolor(CARD_BG)
 ax = axes[1, 1]
 cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 cv_proba = cross_val_predict(model, X, y, cv=cv, method="predict_proba",
-                             n_jobs=-1)[:, 1]
+                             n_jobs=1)[:, 1]
 cv_pred  = (cv_proba >= 0.5).astype(int)
 metrics = {
     "ROC AUC":   roc_auc_score(y, cv_proba),
@@ -453,35 +448,3 @@ plt.close(fig)
 print("✓ fig_churn_04_business_impact.png")
 
 print("\nAll 4 figures saved to", FIGURES_DIR)
-
-
-# ════════════════════════════════════════════════════════════════════════════
-# SUBMISSION — predict on test.csv using full-data model
-# ════════════════════════════════════════════════════════════════════════════
-print("\n--- Generating Kaggle submission ---")
-
-test_raw = pd.read_csv(KAGGLE_DIR / "test.csv")
-test_raw["TotalCharges"] = pd.to_numeric(test_raw["TotalCharges"], errors="coerce")
-test_raw["SeniorCitizen"] = test_raw["SeniorCitizen"].map({0: "No", 1: "Yes"})
-
-test_enc = test_raw.copy()
-for c, le in encoders.items():
-    if c in test_enc.columns:
-        # handle unseen labels by mapping to the most frequent class (index 0)
-        test_enc[c] = test_enc[c].astype(str).map(
-            lambda v, le=le: le.transform([v])[0]
-            if v in le.classes_ else 0
-        )
-
-test_enc[num_cols] = scaler.transform(test_enc[num_cols].fillna(0))
-
-X_submit = test_enc[FEATURE_COLS].fillna(0)
-churn_proba = model_full.predict_proba(X_submit)[:, 1]
-
-submission = pd.DataFrame({"id": test_raw["id"], "Churn": churn_proba})
-
-submission_path = KAGGLE_DIR / "submission.csv"
-submission.to_csv(submission_path, index=False)
-print(f"✓ submission.csv  ({len(submission):,} rows, proba range "
-      f"[{churn_proba.min():.4f}, {churn_proba.max():.4f}])")
-print(f"  Saved to: {submission_path}")
