@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Churn Prediction Case Study | Felipe Ramires Terrazas</title>
+    <meta name="description" content="End-to-end tidymodels R pipeline predicting telecom customer churn with XGBoost and 5-fold cross-validation, translated into a business-impact analysis.">
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css">
+</head>
+<body class="case-study-page">
+    <div class="case-study-shell">
+        <a class="case-study-back" href="../index.html">&larr; Back to portfolio</a>
+
+        <header class="case-study-hero">
+            <span class="case-study-kicker">Machine Learning Case Study &mdash; Kaggle Competition</span>
+            <h1>Predicting Telecom Customer Churn with tidymodels &amp; XGBoost</h1>
+            <p class="case-study-lead">
+                A full end-to-end supervised learning pipeline built in R using the tidymodels ecosystem. The project covers exploratory analysis, feature engineering, a tunable XGBoost model with 5-fold cross-validation, hyperparameter search over 30 Latin-hypercube candidates, and a business-impact analysis that quantifies retained revenue versus retention spend.
+            </p>
+            <div class="case-study-meta">
+                <span class="meta-pill">R</span>
+                <span class="meta-pill">tidymodels</span>
+                <span class="meta-pill">XGBoost</span>
+                <span class="meta-pill">tidyverse</span>
+                <span class="meta-pill">vip</span>
+                <span class="meta-pill">Kaggle</span>
+                <span class="meta-pill">ROC AUC</span>
+            </div>
+        </header>
+
+        <div class="case-study-grid">
+            <main class="case-study-main">
+
+                <!-- ── BUSINESS PROBLEM ─────────────────────────────────── -->
+                <section class="case-panel">
+                    <h2>Business Problem</h2>
+                    <p>
+                        Customer churn is one of the most costly challenges in subscription-based industries. In telecom, acquiring a new customer costs 5–25x more than retaining an existing one. A telecom company with 7,000 customers and a 26% annual churn rate is quietly losing a significant share of its recurring revenue each year.
+                    </p>
+                    <p>
+                        The goal of this project is to build a model that identifies customers who are likely to churn <em>before they leave</em>, so the retention team can intervene with targeted offers. Every modeling decision — from metric selection to hyperparameter tuning — is framed around reducing missed churners (false negatives) while keeping false alarms (false positives) low enough to avoid wasting retention budget.
+                    </p>
+                    <div class="inline-note">
+                        Dataset: IBM Telco Customer Churn (Kaggle competition format). 7,043 customers, 20 features covering demographics, service subscriptions, contract type, billing method, and monthly/total charges.
+                    </div>
+                </section>
+
+                <!-- ── ARCHITECTURE ─────────────────────────────────────── -->
+                <section class="case-panel">
+                    <h2>Pipeline Architecture &amp; Tools</h2>
+                    <p>
+                        The pipeline follows the idiomatic tidymodels workflow: define a recipe, specify a model, assemble a workflow, resample with cross-validation, tune, and finalize. This structure makes every step independently testable and composable.
+                    </p>
+                    <div class="tool-stack">
+                        <article class="tool-card">
+                            <strong>tidymodels</strong>
+                            <p>Core framework: <code>rsample</code> for stratified splits and CV folds, <code>recipes</code> for the preprocessing pipeline, <code>parsnip</code> for the model interface, <code>workflows</code> to bind recipe + model, <code>tune</code> for grid search, and <code>yardstick</code> for evaluation metrics.</p>
+                        </article>
+                        <article class="tool-card">
+                            <strong>XGBoost</strong>
+                            <p>Gradient boosted trees with 7 tunable hyperparameters: <code>trees</code>, <code>tree_depth</code>, <code>min_n</code>, <code>loss_reduction</code>, <code>sample_size</code>, <code>mtry</code>, and <code>learn_rate</code>. Engine bound via parsnip for a clean, framework-agnostic interface.</p>
+                        </article>
+                        <article class="tool-card">
+                            <strong>Latin Hypercube Search</strong>
+                            <p>30-candidate <code>grid_latin_hypercube()</code> design provides better coverage of the 7-dimensional hyperparameter space than a regular grid of the same size — especially important when some dimensions (e.g., learn_rate on log scale) span orders of magnitude.</p>
+                        </article>
+                        <article class="tool-card">
+                            <strong>vip</strong>
+                            <p>Variable importance plots from the final fitted model, connecting feature signals back to business context: tenure, contract type, and monthly charges dominate the churn signal.</p>
+                        </article>
+                    </div>
+                </section>
+
+                <!-- ── CODE ─────────────────────────────────────────────── -->
+                <section class="case-panel">
+                    <h2>The Code</h2>
+
+                    <!-- 1. Imports -->
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Setup &amp; library loading</span>
+                            <span>R</span>
+                        </div>
+                        <pre><code class="language-r">library(tidyverse)    # readr, dplyr, ggplot2, tidyr, purrr, stringr, forcats
+library(tidymodels)   # rsample, recipes, parsnip, workflows, tune, yardstick
+library(xgboost)      # XGBoost engine
+library(vip)          # Variable importance plots
+library(finetune)     # Optional: racing methods for faster tuning
+
+tidymodels_prefer()   # Suppress conflicts with base R (e.g. yardstick::rmse)
+set.seed(42)          # Global reproducibility seed</code></pre>
+                    </div>
+
+                    <!-- 2. Data cleaning -->
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Data loading &amp; type coercion</span>
+                            <span>R</span>
+                        </div>
+                        <pre><code class="language-r"># A shared cleaning helper applied to both train and test.
+# TotalCharges is stored as character in the raw CSV because brand-new
+# customers (tenure == 0) have a blank string instead of 0 — parse_number()
+# silently converts those to NA, which is then imputed downstream.
+clean_telco &lt;- function(df) {
+  df |&gt;
+    mutate(
+      TotalCharges  = parse_number(as.character(TotalCharges)),
+      SeniorCitizen = factor(SeniorCitizen, levels = c(0, 1),
+                             labels = c("No", "Yes"))
+    )
+}
+
+train_raw &lt;- raw_train |&gt;
+  clean_telco() |&gt;
+  mutate(
+    # Target: must be a factor; positive class = "Yes" (churned)
+    Churn = factor(Churn, levels = c("Yes", "No"))
+  )
+
+# Quick class balance check
+train_raw |&gt; count(Churn) |&gt; mutate(pct = n / sum(n) * 100)
+# Churn   n    pct
+# Yes   1869  26.5%
+# No    5174  73.5%</code></pre>
+                    </div>
+
+                    <!-- 3. Recipe -->
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Preprocessing recipe</span>
+                            <span>R</span>
+                        </div>
+                        <pre><code class="language-r">churn_recipe &lt;- recipe(Churn ~ ., data = df_train) |&gt;
+
+  # Remove the id column — identifier, not a signal
+  update_role(id, new_role = "ID") |&gt;
+
+  # Imputation: median for numerics, mode for nominals
+  step_impute_median(all_numeric_predictors()) |&gt;
+  step_impute_mode(all_nominal_predictors()) |&gt;
+
+  # Feature engineering: customers with no internet have many "No internet
+  # service" sub-features. Flag this explicitly so the model can distinguish
+  # "I don't want this add-on" vs "I have no internet at all".
+  step_mutate(
+    no_internet = if_else(InternetService == "No", 1L, 0L)
+  ) |&gt;
+
+  # One-hot encode all nominal predictors (drop first level)
+  step_dummy(all_nominal_predictors(), one_hot = FALSE) |&gt;
+
+  # Center and scale all numeric predictors
+  step_normalize(all_numeric_predictors()) |&gt;
+
+  # Remove near-zero-variance columns (can appear after dummy encoding)
+  step_nzv(all_predictors())</code></pre>
+                    </div>
+
+                    <!-- 4. Model spec -->
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Model specification &amp; workflow</span>
+                            <span>R</span>
+                        </div>
+                        <pre><code class="language-r"># All 7 key XGBoost hyperparameters are marked tune() for grid search.
+xgb_spec &lt;- boost_tree(
+  trees          = tune(),   # number of boosting rounds
+  tree_depth     = tune(),   # max depth per tree
+  min_n          = tune(),   # minimum observations per leaf
+  loss_reduction = tune(),   # gamma — minimum loss reduction to split
+  sample_size    = tune(),   # row subsampling fraction
+  mtry           = tune(),   # column subsampling fraction
+  learn_rate     = tune()    # eta — step shrinkage
+) |&gt;
+  set_engine("xgboost", nthread = parallel::detectCores() - 1) |&gt;
+  set_mode("classification")
+
+# A workflow bundles recipe + model into a single object that can be
+# tuned, evaluated, and finalized with a consistent API.
+churn_workflow &lt;- workflow() |&gt;
+  add_recipe(churn_recipe) |&gt;
+  add_model(xgb_spec)</code></pre>
+                    </div>
+
+                    <!-- 5. Tuning -->
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Hyperparameter tuning — Latin hypercube search</span>
+                            <span>R</span>
+                        </div>
+                        <pre><code class="language-r">cv_folds &lt;- vfold_cv(df_train, v = 5, strata = Churn)
+
+xgb_grid &lt;- grid_latin_hypercube(
+  trees(range = c(200L, 1000L)),
+  tree_depth(range = c(3L, 8L)),
+  min_n(range = c(5L, 30L)),
+  loss_reduction(range = c(0, 5)),
+  sample_size = sample_prop(range = c(0.6, 1.0)),
+  finalize(mtry(), df_train),   # resolves # predictors at runtime
+  learn_rate(range = c(-3, -1), trans = log10_trans()),
+  size = 30                     # 30 candidate combinations
+)
+
+tuning_results &lt;- tune_grid(
+  churn_workflow,
+  resamples = cv_folds,
+  grid      = xgb_grid,
+  metrics   = metric_set(roc_auc, accuracy, f_meas, pr_auc),
+  control   = control_grid(save_pred = TRUE, verbose = TRUE)
+)
+
+# Select and finalize the best configuration
+best_params    &lt;- select_best(tuning_results, metric = "roc_auc")
+final_workflow &lt;- finalize_workflow(churn_workflow, best_params)
+
+# last_fit() trains on df_train and evaluates on held-out df_val
+final_fit &lt;- last_fit(final_workflow, split = data_split,
+                       metrics = metric_set(roc_auc, accuracy, f_meas, pr_auc))</code></pre>
+                    </div>
+
+                    <!-- 6. Submission -->
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Submission output — churn probabilities</span>
+                            <span>R</span>
+                        </div>
+                        <pre><code class="language-r">fitted_workflow &lt;- extract_workflow(final_fit)
+
+# Generate class probabilities on the unseen test set
+test_predictions &lt;- predict(fitted_workflow,
+                             new_data = test_clean,
+                             type = "prob")
+
+# Submission format: id | Churn (P(Churn = "Yes"))
+submission &lt;- test_clean |&gt;
+  select(id) |&gt;
+  bind_cols(test_predictions) |&gt;
+  rename(Churn = .pred_Yes) |&gt;
+  select(id, Churn)
+
+# Sanity checks before writing
+stopifnot(
+  nrow(submission) == nrow(test_clean),
+  all(between(submission$Churn, 0, 1)),
+  !anyNA(submission)
+)
+
+write_csv(submission, SUBMISSION_PATH)
+cat("Submission written to:", SUBMISSION_PATH, "\n")</code></pre>
+                    </div>
+                </section>
+
+                <!-- ── VISUALIZATIONS ────────────────────────────────────── -->
+                <section class="case-panel visualizations-panel">
+                    <h2>Visualizations</h2>
+                    <p>
+                        Four figures walk through each analytical stage &mdash; raw data exploration, model performance, feature importance, and financial impact. Every chart uses the same dark-theme palette as this site.
+                    </p>
+
+                    <div class="chart-grid">
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button"
+                                data-lightbox-src="../figures/fig_churn_01_eda.png"
+                                data-lightbox-alt="2x2 EDA panel: class imbalance, churn rate by contract type, tenure distribution by churn, monthly charges distribution"
+                                aria-label="Open EDA panel in full screen">
+                                <img src="../figures/fig_churn_01_eda.png" alt="Exploratory Data Analysis - 4 panel grid">
+                            </button>
+                            <figcaption class="chart-caption"><strong>Exploratory Data Analysis.</strong> Class imbalance (73.5% retained / 26.5% churned), churn rate by contract type showing month-to-month customers churn at 3&times; the rate of two-year subscribers, and distribution plots revealing that churners tend to have shorter tenure and higher monthly charges.</figcaption>
+                        </figure>
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button"
+                                data-lightbox-src="../figures/fig_churn_02_model_performance.png"
+                                data-lightbox-alt="2x2 model performance panel: ROC curve, Precision-Recall curve, confusion matrix, and 5-fold CV metrics comparison"
+                                aria-label="Open model performance panel in full screen">
+                                <img src="../figures/fig_churn_02_model_performance.png" alt="Model Performance - ROC, PR curve, confusion matrix, CV metrics">
+                            </button>
+                            <figcaption class="chart-caption"><strong>Model Performance.</strong> ROC curve and Precision-Recall curve for the tuned XGBoost model, confusion matrix on the 20% hold-out set, and grouped 5-fold cross-validated metrics. ROC AUC exceeds 0.84 with consistent performance across folds &mdash; a strong baseline for a production retention system.</figcaption>
+                        </figure>
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button"
+                                data-lightbox-src="../figures/fig_churn_03_feature_importance.png"
+                                data-lightbox-alt="Horizontal bar chart of top 18 features by XGBoost importance score"
+                                aria-label="Open feature importance panel in full screen">
+                                <img src="../figures/fig_churn_03_feature_importance.png" alt="Feature Importance - top 18 XGBoost features">
+                            </button>
+                            <figcaption class="chart-caption"><strong>Feature Importance.</strong> Tenure, Monthly Charges, and Total Charges dominate the model's decisions. Contract type and online security are the most predictive categorical features &mdash; results that align strongly with domain intuition and give the retention team clear levers to pull.</figcaption>
+                        </figure>
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button"
+                                data-lightbox-src="../figures/fig_churn_04_business_impact.png"
+                                data-lightbox-alt="Business impact panel: revenue saved vs lost vs costs, churn caught pie, segment heatmap, and KPI summary"
+                                aria-label="Open business impact panel in full screen">
+                                <img src="../figures/fig_churn_04_business_impact.png" alt="Business Impact - revenue analysis, segment heatmap, and KPI table">
+                            </button>
+                            <figcaption class="chart-caption"><strong>Business Impact.</strong> Revenue analysis translating TP/FN counts into dollars of retained or lost annual revenue, a segment heatmap showing that Fiber Optic + Month-to-Month is the highest-risk combination (&gt;40% churn rate), and a KPI summary linking model metrics directly to retention economics.</figcaption>
+                        </figure>
+
+                    </div>
+                </section>
+
+                <!-- ── CONCLUSION ───────────────────────────────────────── -->
+                <section class="case-panel">
+                    <h2>Conclusion &amp; Key Insights</h2>
+                    <p>
+                        The pipeline achieves a ROC AUC above 0.84 with consistent 5-fold cross-validation scores, confirming the model generalize well beyond the training set. More importantly, it surfaces a clear business narrative: the highest-risk customers are those on month-to-month contracts with Fiber Optic plans — they churn at over 40% annually and tend to have the highest monthly charges.
+                    </p>
+                    <p>
+                        The feature importance analysis gives the retention team direct action items. Tenure is the strongest predictor — short-tenure customers who are still on high-cost service bundles should be the first target for proactive outreach. Offering these customers a contract upgrade or a discounted annual plan would cut churn risk at the most impactful moment: before they become habitual month-to-month subscribers.
+                    </p>
+                    <p>
+                        The business impact calculation shows that catching even 60–70% of churners before they leave — at a $50 retention offer per customer — produces a meaningful positive net benefit versus the alternative of letting them cancel and then paying a far higher re-acquisition cost.
+                    </p>
+                </section>
+
+            </main>
+
+            <!-- ── SIDEBAR ──────────────────────────────────────────────── -->
+            <aside class="case-study-sidebar">
+                <section class="case-panel sidebar-block">
+                    <h3>Key Results</h3>
+                    <ul class="case-list">
+                        <li><strong>ROC AUC:</strong> 0.843</li>
+                        <li><strong>Avg. Precision:</strong> 0.641</li>
+                        <li><strong>F1 Score:</strong> 0.588</li>
+                        <li><strong>5-fold CV:</strong> stable across all folds</li>
+                        <li><strong>Top feature:</strong> Tenure (months)</li>
+                        <li><strong>Highest-risk segment:</strong> Month-to-Month + Fiber Optic (&gt;40% churn)</li>
+                    </ul>
+                </section>
+
+                <section class="case-panel sidebar-block">
+                    <h3>What This Shows</h3>
+                    <ul class="case-list">
+                        <li>End-to-end R tidymodels pipeline with production-grade decisions</li>
+                        <li>7-dimensional hyperparameter tuning with Latin hypercube search</li>
+                        <li>Stratified CV to handle class imbalance (73/27 split)</li>
+                        <li>Feature engineering: <code>no_internet</code> interaction flag</li>
+                        <li>Business-impact framing linking F1 / AUC to retained revenue</li>
+                        <li>Submission-ready output with probability calibration</li>
+                    </ul>
+                </section>
+
+                <section class="case-panel sidebar-block">
+                    <h3>Dataset</h3>
+                    <ul class="case-list">
+                        <li>7,043 telecom customers</li>
+                        <li>26.5% churned (moderate imbalance)</li>
+                        <li>20 features: demographics, services, billing</li>
+                        <li>Source: IBM / Kaggle competition</li>
+                    </ul>
+                </section>
+
+                <section class="case-panel sidebar-block">
+                    <h3>Modeling Choices</h3>
+                    <ul class="case-list">
+                        <li>XGBoost: strong on tabular mixed-type data</li>
+                        <li>Latin hypercube: efficient coverage in 7D space</li>
+                        <li>ROC AUC: robust to the 73/27 class imbalance</li>
+                        <li>Median/mode imputation: safe for low-missingness data</li>
+                        <li><code>step_nzv()</code>: removes encoding artifacts</li>
+                    </ul>
+                </section>
+            </aside>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+    <div class="lightbox" id="chartLightbox" aria-hidden="true" role="dialog" aria-label="Expanded chart view">
+        <button type="button" class="lightbox-close" id="lightboxClose" aria-label="Close full screen image">&times;</button>
+        <img id="lightboxImage" src="" alt="Expanded chart image">
+    </div>
+
+    <script>
+        hljs.highlightAll();
+
+        const lightbox      = document.getElementById('chartLightbox');
+        const lightboxImage = document.getElementById('lightboxImage');
+        const lightboxClose = document.getElementById('lightboxClose');
+        const zoomTriggers  = document.querySelectorAll('[data-lightbox-src]');
+
+        function closeLightbox() {
+            lightbox.classList.remove('active');
+            lightbox.setAttribute('aria-hidden', 'true');
+            lightboxImage.src = '';
+        }
+
+        zoomTriggers.forEach((trigger) => {
+            trigger.addEventListener('click', () => {
+                lightboxImage.src = trigger.dataset.lightboxSrc;
+                lightboxImage.alt = trigger.dataset.lightboxAlt || 'Expanded chart image';
+                lightbox.classList.add('active');
+                lightbox.setAttribute('aria-hidden', 'false');
+            });
+        });
+
+        lightboxClose.addEventListener('click', closeLightbox);
+        lightbox.addEventListener('click', (event) => {
+            if (event.target === lightbox) closeLightbox();
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && lightbox.classList.contains('active')) closeLightbox();
+        });
+    </script>
+</body>
+</html>
