@@ -42,9 +42,10 @@ PALETTE   = {0: "#2ecc71", 1: "#e74c3c"}   # No Churn / Churn
 
 FIGURES_DIR = Path(__file__).resolve().parent.parent / "figures"
 FIGURES_DIR.mkdir(exist_ok=True)
+KAGGLE_DIR = Path(__file__).resolve().parent
 
 # ── Load & Prep Data ─────────────────────────────────────────────────────────
-df = pd.read_csv(Path(__file__).resolve().parent / "train.csv")
+df = pd.read_csv(KAGGLE_DIR / "train.csv")
 
 # Fix TotalCharges (blank strings for new customers)
 df["TotalCharges"] = pd.to_numeric(df["TotalCharges"], errors="coerce")
@@ -53,14 +54,18 @@ df["TotalCharges"] = pd.to_numeric(df["TotalCharges"], errors="coerce")
 df["ChurnBin"] = (df["Churn"] == "Yes").astype(int)
 df["SeniorCitizen"] = df["SeniorCitizen"].map({0: "No", 1: "Yes"})
 
-# Full feature encoding for model
+# Full feature encoding for model — store encoders fitted on train
 cat_cols = df.select_dtypes("object").columns.drop(["Churn"])
+encoders = {}
 df_enc = df.copy()
 for c in cat_cols:
-    df_enc[c] = LabelEncoder().fit_transform(df_enc[c].astype(str))
+    le = LabelEncoder()
+    df_enc[c] = le.fit_transform(df_enc[c].astype(str))
+    encoders[c] = le
 
 num_cols = ["tenure", "MonthlyCharges", "TotalCharges"]
-df_enc[num_cols] = StandardScaler().fit_transform(df_enc[num_cols].fillna(0))
+scaler = StandardScaler()
+df_enc[num_cols] = scaler.fit_transform(df_enc[num_cols].fillna(0))
 
 FEATURE_COLS = [c for c in df_enc.columns
                 if c not in ("id", "Churn", "ChurnBin")]
@@ -87,6 +92,21 @@ model = XGBClassifier(
 model.fit(X_train, y_train)
 y_pred  = model.predict(X_test)
 y_proba = model.predict_proba(X_test)[:, 1]
+
+# Also train a full model on all training data for submission
+model_full = XGBClassifier(
+    n_estimators=400,
+    max_depth=4,
+    learning_rate=0.05,
+    subsample=0.8,
+    colsample_bytree=0.8,
+    scale_pos_weight=(y == 0).sum() / (y == 1).sum(),
+    eval_metric="logloss",
+    random_state=42,
+    n_jobs=-1,
+    verbosity=0,
+)
+model_full.fit(X, y)
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -433,3 +453,35 @@ plt.close(fig)
 print("✓ fig_churn_04_business_impact.png")
 
 print("\nAll 4 figures saved to", FIGURES_DIR)
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# SUBMISSION — predict on test.csv using full-data model
+# ════════════════════════════════════════════════════════════════════════════
+print("\n--- Generating Kaggle submission ---")
+
+test_raw = pd.read_csv(KAGGLE_DIR / "test.csv")
+test_raw["TotalCharges"] = pd.to_numeric(test_raw["TotalCharges"], errors="coerce")
+test_raw["SeniorCitizen"] = test_raw["SeniorCitizen"].map({0: "No", 1: "Yes"})
+
+test_enc = test_raw.copy()
+for c, le in encoders.items():
+    if c in test_enc.columns:
+        # handle unseen labels by mapping to the most frequent class (index 0)
+        test_enc[c] = test_enc[c].astype(str).map(
+            lambda v, le=le: le.transform([v])[0]
+            if v in le.classes_ else 0
+        )
+
+test_enc[num_cols] = scaler.transform(test_enc[num_cols].fillna(0))
+
+X_submit = test_enc[FEATURE_COLS].fillna(0)
+churn_proba = model_full.predict_proba(X_submit)[:, 1]
+
+submission = pd.DataFrame({"id": test_raw["id"], "Churn": churn_proba})
+
+submission_path = KAGGLE_DIR / "submission.csv"
+submission.to_csv(submission_path, index=False)
+print(f"✓ submission.csv  ({len(submission):,} rows, proba range "
+      f"[{churn_proba.min():.4f}, {churn_proba.max():.4f}])")
+print(f"  Saved to: {submission_path}")
