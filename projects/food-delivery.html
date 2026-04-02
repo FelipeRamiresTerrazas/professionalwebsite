@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Delivery Time Prediction Case Study | Felipe Ramires Terrazas</title>
+    <meta name="description" content="End-to-end regression pipeline predicting food delivery times with Random Forest and XGBoost, featuring haversine distance engineering and a 30-minute SLA business analysis.">
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css">
+</head>
+<body class="case-study-page">
+    <div class="case-study-shell">
+        <a class="case-study-back" href="../index.html">&larr; Back to portfolio</a>
+
+        <header class="case-study-hero">
+            <span class="case-study-kicker">Machine Learning Case Study &mdash; Kaggle Competition</span>
+            <h1>Food Delivery Time Prediction with Random Forest &amp; XGBoost</h1>
+            <p class="case-study-lead">
+                An end-to-end regression pipeline that predicts food delivery time (in minutes) from 45,593 real-world orders. The project covers exploratory analysis, geographic feature engineering (haversine distance), a scikit-learn preprocessing pipeline with imputation, three model benchmarks, and a business-impact analysis framed around 30-minute SLA compliance.
+            </p>
+            <div class="case-study-meta">
+                <span class="meta-pill">Python</span>
+                <span class="meta-pill">scikit-learn</span>
+                <span class="meta-pill">XGBoost</span>
+                <span class="meta-pill">Pandas</span>
+                <span class="meta-pill">Haversine Distance</span>
+                <span class="meta-pill">Matplotlib / Seaborn</span>
+                <span class="meta-pill">RMSE / R²</span>
+            </div>
+        </header>
+
+        <div class="case-study-grid">
+            <main class="case-study-main">
+
+                <!-- ── BUSINESS PROBLEM ─────────────────────────────────── -->
+                <section class="case-panel">
+                    <h2>Business Problem</h2>
+                    <p>
+                        In the competitive food delivery market, delivery time is the single metric customers care about most. A platform that consistently overpromises delivery windows loses customer trust and incurs chargeback costs. One that always pads estimates to be safe drives customers to competitors with shorter quoted times.
+                    </p>
+                    <p>
+                        The goal is to build a model that predicts delivery time accurately enough to support a <strong>30-minute SLA promise</strong> — knowing in advance which orders are on track and which need proactive communication. Beyond RMSE, every modeling decision is evaluated against that operational constraint.
+                    </p>
+                    <div class="inline-note">
+                        Dataset: Kaggle &ldquo;Food Delivery Time Prediction&rdquo; competition. 45,593 training orders across Indian cities, with features covering delivery personnel, weather, traffic, vehicle type, order category, and GPS coordinates for both the restaurant and the drop-off location.
+                    </div>
+                </section>
+
+                <!-- ── ARCHITECTURE ─────────────────────────────────────── -->
+                <section class="case-panel">
+                    <h2>Pipeline Architecture &amp; Tools</h2>
+                    <p>
+                        The pipeline is structured in five sequential stages: data cleaning, feature engineering, preprocessing, model training, and business-impact evaluation.
+                    </p>
+                    <div class="tool-stack">
+                        <article class="tool-card">
+                            <strong>Feature Engineering</strong>
+                            <p>Three derived features drive most of the predictive signal: <code>distance_km</code> (haversine straight-line distance from restaurant to customer), <code>pickup_wait</code> (minutes between order placed and rider pick-up), and <code>order_hour</code> (extracted from the order timestamp to capture peak-hour effects).</p>
+                        </article>
+                        <article class="tool-card">
+                            <strong>scikit-learn Pipelines</strong>
+                            <p>A <code>ColumnTransformer</code> applies <code>SimpleImputer</code> + <code>StandardScaler</code> to numeric columns and <code>SimpleImputer</code> + <code>OneHotEncoder</code> to categoricals — all within a single <code>Pipeline</code> to prevent data leakage between train and test sets.</p>
+                        </article>
+                        <article class="tool-card">
+                            <strong>Random Forest &amp; XGBoost</strong>
+                            <p>Both tree-ensemble models are benchmarked against a Ridge regression baseline. Random Forest achieves RMSE&nbsp;3.94 min (R²&nbsp;0.823); XGBoost is within 1% at RMSE&nbsp;3.98 min (R²&nbsp;0.819). Ridge lags at RMSE&nbsp;6.21 min, illustrating the importance of non-linear interactions in delivery logistics.</p>
+                        </article>
+                        <article class="tool-card">
+                            <strong>SLA Business Analysis</strong>
+                            <p>Model predictions are mapped to a binary &ldquo;on-time vs. at-risk&rdquo; classification at the 30-minute SLA threshold, then evaluated using precision, recall, and accuracy — metrics the operations team can act on directly.</p>
+                        </article>
+                    </div>
+                </section>
+
+                <!-- ── CODE ─────────────────────────────────────────────── -->
+                <section class="case-panel">
+                    <h2>The Code</h2>
+
+                    <!-- 1. Imports -->
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Imports &amp; aesthetic configuration</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python">import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.impute import SimpleImputer
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.linear_model import Ridge
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from xgboost import XGBRegressor
+
+plt.style.use("seaborn-v0_8")
+sns.set_context("talk", font_scale=0.88)</code></pre>
+                    </div>
+
+                    <!-- 2. Feature Engineering -->
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Feature engineering — distance, pickup wait, and order hour</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python">def haversine_km(lat1, lon1, lat2, lon2):
+    """Great-circle distance between two GPS coordinates (in km)."""
+    R = 6371.0
+    lat1, lon1, lat2, lon2 = map(np.radians, [lat1, lon1, lat2, lon2])
+    dlat, dlon = lat2 - lat1, lon2 - lon1
+    a = np.sin(dlat / 2)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2)**2
+    return R * 2 * np.arcsin(np.sqrt(a))
+
+# Straight-line distance from restaurant to drop-off — the strongest
+# individual predictor (more distance → more time, on avg 1.4 min/km).
+df["distance_km"] = haversine_km(
+    df["Restaurant_latitude"],  df["Restaurant_longitude"],
+    df["Delivery_location_latitude"], df["Delivery_location_longitude"],
+)
+
+# Pickup wait: minutes from order placed to rider departing.
+# Long waits indicate kitchen backlog and predict longer end-to-end times.
+def to_minutes(t):
+    h, m, s = t.split(":")
+    return int(h) * 60 + int(m) + int(s) / 60
+
+df["ordered_min"] = df["Time_Orderd"].apply(to_minutes)
+df["picked_min"]  = df["Time_Order_picked"].apply(to_minutes)
+df["pickup_wait"] = (df["picked_min"] - df["ordered_min"]).clip(lower=0)
+
+# Order hour: captures peak demand (lunch 12–14, dinner 19–21)
+# when traffic is heaviest and delivery times are longest.
+df["order_hour"] = df["ordered_min"].apply(lambda x: int(x // 60) % 24)</code></pre>
+                    </div>
+
+                    <!-- 3. Preprocessing Pipeline -->
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Preprocessing — imputation, scaling, and encoding inside a Pipeline</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python">NUM_FEATURES = [
+    "Delivery_person_Age", "Delivery_person_Ratings",
+    "Vehicle_condition", "multiple_deliveries",
+    "distance_km", "pickup_wait", "order_hour",
+]
+CAT_FEATURES = [
+    "Weatherconditions", "Road_traffic_density",
+    "Type_of_order", "Type_of_vehicle", "Festival", "City",
+]
+
+# Why use a Pipeline?
+# 1. All transformers are fit on training data only — no leakage.
+# 2. The whole chain (impute → scale/encode → model) can be pickled
+#    and served as a single artifact in production.
+# 3. Cross-validation and hyperparameter tuning work correctly
+#    because the preprocessor refits on each fold automatically.
+
+num_pipe = Pipeline([
+    ("imputer", SimpleImputer(strategy="median")),   # handles NaN ages/ratings
+    ("scaler",  StandardScaler()),
+])
+cat_pipe = Pipeline([
+    ("imputer", SimpleImputer(strategy="most_frequent")),  # handles NaN city/weather
+    ("ohe",     OneHotEncoder(handle_unknown="ignore", sparse_output=False)),
+])
+preprocessor = ColumnTransformer([
+    ("num", num_pipe, NUM_FEATURES),
+    ("cat", cat_pipe, CAT_FEATURES),
+])
+
+X_train, X_test, y_train, y_test = train_test_split(
+    df[NUM_FEATURES + CAT_FEATURES],
+    df["Time_taken_min"],
+    test_size=0.2,
+    random_state=42,
+)</code></pre>
+                    </div>
+
+                    <!-- 4. Model Training -->
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Model training — Ridge, Random Forest, XGBoost</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python">models = {
+    "Ridge (baseline)": Pipeline([
+        ("prep",  preprocessor),
+        ("model", Ridge(alpha=1.0)),
+    ]),
+    "Random Forest": Pipeline([
+        ("prep",  preprocessor),
+        ("model", RandomForestRegressor(
+            n_estimators=200, max_depth=12,
+            min_samples_leaf=5, n_jobs=-1, random_state=42,
+        )),
+    ]),
+    "XGBoost": Pipeline([
+        ("prep",  preprocessor),
+        ("model", XGBRegressor(
+            n_estimators=400, max_depth=6, learning_rate=0.05,
+            subsample=0.8, colsample_bytree=0.8,
+            reg_alpha=0.1, reg_lambda=1.0,
+            n_jobs=-1, random_state=42,
+        )),
+    ]),
+}
+
+results = {}
+for name, pipe in models.items():
+    pipe.fit(X_train, y_train)
+    y_pred = pipe.predict(X_test)
+    results[name] = {
+        "y_pred": y_pred,
+        "rmse":   np.sqrt(mean_squared_error(y_test, y_pred)),
+        "mae":    mean_absolute_error(y_test, y_pred),
+        "r2":     r2_score(y_test, y_pred),
+    }
+
+# Ridge:          RMSE=6.21 min | MAE=4.91 min | R²=0.560
+# Random Forest:  RMSE=3.94 min | MAE=3.16 min | R²=0.823  ← winner
+# XGBoost:        RMSE=3.98 min | MAE=3.18 min | R²=0.819</code></pre>
+                    </div>
+
+                    <!-- 5. SLA Business Analysis -->
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Business impact — 30-minute SLA compliance analysis</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python">SLA = 30  # minutes — the promise shown to customers at checkout
+
+def sla_metrics(y_true, y_pred, sla=SLA):
+    """Treats delivery prediction as a binary 'on-time / at-risk' classifier."""
+    actual_yes = y_true &lt;= sla
+    pred_yes   = y_pred &lt;= sla
+    tp = (actual_yes &amp;  pred_yes).sum()
+    fp = (~actual_yes &amp;  pred_yes).sum()
+    fn = (actual_yes &amp; ~pred_yes).sum()
+    tn = (~actual_yes &amp; ~pred_yes).sum()
+    return {
+        "precision": tp / (tp + fp),   # of predicted on-time, how many were?
+        "recall":    tp / (tp + fn),   # of truly on-time, how many did we catch?
+        "accuracy":  (tp + tn) / len(y_true),
+    }
+
+# Naive model: always predicts the training-set mean (26.3 min)
+naive_pred = np.full_like(y_test.values, y_train.mean(), dtype=float)
+
+# XGBoost SLA accuracy: 93.0%  |  precision: 94.2%  |  recall: 96.0%
+# Naive baseline SLA accuracy:  81.2%  — 12pp gap attributable to the model</code></pre>
+                    </div>
+                </section>
+
+                <!-- ── VISUALIZATIONS ────────────────────────────────────── -->
+                <section class="case-panel visualizations-panel">
+                    <h2>Visualizations</h2>
+                    <p>
+                        Four multi-panel charts walk through each stage of the analysis &mdash; from raw data exploration through model comparison, feature importance, and SLA business impact. Each figure is built with <code>plt.subplots()</code> on a dark background to match the portfolio&rsquo;s visual language.
+                    </p>
+
+                    <div class="chart-grid">
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button"
+                                data-lightbox-src="../figures/fig_food_01_eda.png"
+                                data-lightbox-alt="2x2 EDA panel: delivery time distribution, time by traffic density, time by weather condition, and scatter plot of distance vs delivery time"
+                                aria-label="Open EDA panel in full screen">
+                                <img src="../figures/fig_food_01_eda.png" alt="Exploratory Data Analysis - 4 panel grid">
+                            </button>
+                            <figcaption class="chart-caption"><strong>Exploratory Data Analysis.</strong> Delivery time is right-skewed (mean 26.3 min, max 54 min). Traffic &ldquo;Jam&rdquo; adds ~10 minutes over &ldquo;Low&rdquo; density. Sandstorms and stormy weather are the biggest weather penalties. Distance shows a clear positive correlation (slope ~1.4 min/km) — the foundation for haversine feature engineering.</figcaption>
+                        </figure>
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button"
+                                data-lightbox-src="../figures/fig_food_02_model_performance.png"
+                                data-lightbox-alt="2x2 model performance panel: RMSE comparison, R² comparison, actual vs predicted scatter for best model, residual distribution"
+                                aria-label="Open model performance panel in full screen">
+                                <img src="../figures/fig_food_02_model_performance.png" alt="Model Performance - RMSE, R², actual vs predicted, residuals">
+                            </button>
+                            <figcaption class="chart-caption"><strong>Model Performance.</strong> Random Forest (RMSE&nbsp;3.94 min, R²&nbsp;0.823) edges out XGBoost by a slim margin while both reduce error by 37% over the Ridge baseline. The residual distribution is tightly centered at zero, with no systematic bias — predictions are as likely to run early as late.</figcaption>
+                        </figure>
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button"
+                                data-lightbox-src="../figures/fig_food_03_feature_importance.png"
+                                data-lightbox-alt="Side-by-side horizontal bar charts of top 12 feature importances for Random Forest and XGBoost"
+                                aria-label="Open feature importance panel in full screen">
+                                <img src="../figures/fig_food_03_feature_importance.png" alt="Feature Importance - RF vs XGBoost top 12 features">
+                            </button>
+                            <figcaption class="chart-caption"><strong>Feature Importance.</strong> Both models agree: <code>distance_km</code> and <code>pickup_wait</code> &mdash; the two engineered features &mdash; are the top predictors. Traffic &ldquo;Jam&rdquo; and delivery person ratings are next, followed by city type. The raw GPS coordinates carry almost no signal individually, confirming that the haversine transformation was essential.</figcaption>
+                        </figure>
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button"
+                                data-lightbox-src="../figures/fig_food_04_business_impact.png"
+                                data-lightbox-alt="3-panel bar chart: SLA precision, recall, and accuracy across naive baseline, Ridge, Random Forest, and XGBoost"
+                                aria-label="Open business impact panel in full screen">
+                                <img src="../figures/fig_food_04_business_impact.png" alt="Business Impact - SLA compliance across all models">
+                            </button>
+                            <figcaption class="chart-caption"><strong>Business Impact.</strong> XGBoost correctly classifies 93.0% of orders against the 30-minute SLA — a 12-percentage-point improvement over the naive mean-prediction baseline (81.2%). Precision of 94.2% means only 5.8% of &ldquo;on-time&rdquo; predictions will be wrong, and recall of 96.0% means almost no genuinely fast orders are mislabeled as &ldquo;at risk.&rdquo;</figcaption>
+                        </figure>
+
+                    </div>
+                </section>
+
+                <!-- ── CONCLUSION ───────────────────────────────────────── -->
+                <section class="case-panel">
+                    <h2>Conclusion</h2>
+                    <p>
+                        The biggest lesson from this project is that raw data rarely contains the right representation. The dataset ships with GPS coordinates — but latitude and longitude alone carry almost no predictive signal when treated as plain numerics. Converting them to a <strong>haversine distance</strong> produced the single most important feature in both models, explaining more variance than weather, traffic density, and vehicle type combined.
+                    </p>
+                    <p>
+                        The SLA framing also changes the conversation with stakeholders. A standalone RMSE of 3.94 minutes is hard to contextualize; &ldquo;93% of our 30-minute SLA promises are correct&rdquo; is a number an operations team can build a customer-communication strategy around.
+                    </p>
+                </section>
+
+            </main>
+
+            <!-- ── SIDEBAR ──────────────────────────────────────────────── -->
+            <aside class="case-study-sidebar">
+                <section class="case-panel sidebar-block">
+                    <h3>Key Results</h3>
+                    <ul class="case-list">
+                        <li><strong>Best model:</strong> Random Forest</li>
+                        <li><strong>RMSE:</strong> 3.94 min</li>
+                        <li><strong>MAE:</strong> 3.16 min</li>
+                        <li><strong>R²:</strong> 0.823</li>
+                        <li><strong>SLA accuracy (30 min):</strong> 93.0%</li>
+                        <li><strong>SLA precision:</strong> 94.2%</li>
+                        <li><strong>SLA recall:</strong> 96.0%</li>
+                        <li><strong>vs. naive baseline:</strong> +12pp SLA accuracy</li>
+                    </ul>
+                </section>
+
+                <section class="case-panel sidebar-block">
+                    <h3>What This Shows</h3>
+                    <ul class="case-list">
+                        <li>End-to-end regression pipeline with real data messiness</li>
+                        <li>Geographic feature engineering (haversine distance)</li>
+                        <li>scikit-learn Pipeline to prevent data leakage</li>
+                        <li>Three-model benchmark with Ridge as an interpretable baseline</li>
+                        <li>Business-impact framing via SLA threshold analysis</li>
+                    </ul>
+                </section>
+
+                <section class="case-panel sidebar-block">
+                    <h3>Dataset</h3>
+                    <ul class="case-list">
+                        <li>45,593 delivery orders across Indian cities</li>
+                        <li>Target: delivery time 10–54 minutes (mean 26.3 min)</li>
+                        <li>Features: GPS coords, weather, traffic, vehicle type, order type, driver age &amp; ratings</li>
+                        <li>Source: Kaggle Food Delivery Time Prediction</li>
+                    </ul>
+                </section>
+
+                <section class="case-panel sidebar-block">
+                    <h3>Why Haversine?</h3>
+                    <ul class="case-list">
+                        <li>Raw lat/lon are nearly useless as individual model inputs</li>
+                        <li>Haversine computes great-circle distance between two GPS points</li>
+                        <li>Became the #1 feature in both RF and XGBoost</li>
+                        <li>Explains ~37% more variance than Ridge (which only sees raw coords)</li>
+                    </ul>
+                </section>
+            </aside>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+    <div class="lightbox" id="chartLightbox" aria-hidden="true" role="dialog" aria-label="Expanded chart view">
+        <button type="button" class="lightbox-close" id="lightboxClose" aria-label="Close full screen image">&times;</button>
+        <img id="lightboxImage" src="" alt="Expanded chart image">
+    </div>
+
+    <script>
+        hljs.highlightAll();
+
+        const lightbox      = document.getElementById('chartLightbox');
+        const lightboxImage = document.getElementById('lightboxImage');
+        const lightboxClose = document.getElementById('lightboxClose');
+        const zoomTriggers  = document.querySelectorAll('[data-lightbox-src]');
+
+        function closeLightbox() {
+            lightbox.classList.remove('active');
+            lightbox.setAttribute('aria-hidden', 'true');
+            lightboxImage.src = '';
+        }
+
+        zoomTriggers.forEach((trigger) => {
+            trigger.addEventListener('click', () => {
+                lightboxImage.src = trigger.dataset.lightboxSrc;
+                lightboxImage.alt = trigger.dataset.lightboxAlt || 'Expanded chart image';
+                lightbox.classList.add('active');
+                lightbox.setAttribute('aria-hidden', 'false');
+            });
+        });
+
+        lightboxClose.addEventListener('click', closeLightbox);
+        lightbox.addEventListener('click', (event) => {
+            if (event.target === lightbox) closeLightbox();
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && lightbox.classList.contains('active')) closeLightbox();
+        });
+    </script>
+</body>
+</html>
