@@ -1,6 +1,10 @@
 """
 Generate publication-quality figures for the Food Delivery Time Prediction project.
 Outputs 4 PNG files to ../figures/ with prefix fig_food_
+
+Models benchmarked:
+  Ridge (baseline), Random Forest, XGBoost,
+  HistGradientBoosting, LightGBM, CatBoost, Stacking Ensemble
 """
 
 import warnings
@@ -14,15 +18,21 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from pathlib import Path
 
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, cross_val_predict, KFold
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.impute import SimpleImputer
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.linear_model import Ridge
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import (
+    RandomForestRegressor,
+    HistGradientBoostingRegressor,
+    StackingRegressor,
+)
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from xgboost import XGBRegressor
+from lightgbm import LGBMRegressor
+from catboost import CatBoostRegressor
 
 # ── Style ────────────────────────────────────────────────────────────────────
 plt.style.use("seaborn-v0_8")
@@ -39,6 +49,11 @@ GREEN    = "#22c55e"
 TEXT     = "#e6f0ff"
 TEXT_DIM = "#9fb0c8"
 CARD_BG  = "#162236"
+
+# ── Colors also used for the new models ──────────────────────────────────────
+PURPLE   = "#7c3aed"
+LIME     = "#84cc16"
+ORANGE   = "#f97316"
 
 FIGURES_DIR = Path(__file__).resolve().parent.parent / "figures"
 FIGURES_DIR.mkdir(exist_ok=True)
@@ -162,6 +177,46 @@ preprocessor = ColumnTransformer([
 # ══════════════════════════════════════════════════════════════════════════════
 # 3.  Train Models
 # ══════════════════════════════════════════════════════════════════════════════
+
+# HistGradientBoosting handles NaN natively — no imputer needed for numerics.
+# CatBoost handles categoricals natively — we pass raw string columns to it.
+# For a fair pipeline comparison, all other models use the full preprocessor.
+
+# Shared preprocessor (for Ridge, RF, XGBoost, LightGBM, Stacking)
+num_pipe_shared = Pipeline([
+    ("imputer", SimpleImputer(strategy="median")),
+    ("scaler", StandardScaler()),
+])
+cat_pipe_shared = Pipeline([
+    ("imputer", SimpleImputer(strategy="most_frequent")),
+    ("ohe", OneHotEncoder(handle_unknown="ignore", sparse_output=False)),
+])
+preprocessor = ColumnTransformer([
+    ("num", num_pipe_shared, NUM_FEATURES),
+    ("cat", cat_pipe_shared, CAT_FEATURES),
+], remainder="drop")
+
+# HistGBRT preprocessor: numeric only imputed, categoricals label-encoded
+# (HistGBRT accepts NaN natively so we omit the numeric imputer too)
+preprocessor_hist = ColumnTransformer([
+    ("num", "passthrough", NUM_FEATURES),
+    ("cat", Pipeline([
+        ("imputer", SimpleImputer(strategy="most_frequent")),
+        ("ohe", OneHotEncoder(handle_unknown="ignore", sparse_output=False)),
+    ]), CAT_FEATURES),
+], remainder="drop")
+
+# CatBoost: handle NaN in numerics via imputer; pass categoricals as strings.
+# We build a separate X matrix where categoricals stay as object dtype.
+X_cb = df[ALL_FEATURES].copy()
+for col in CAT_FEATURES:
+    X_cb[col] = X_cb[col].fillna("Unknown").astype(str)
+for col in NUM_FEATURES:
+    X_cb[col] = pd.to_numeric(X_cb[col], errors="coerce")
+
+X_train_cb, X_test_cb = X_cb.iloc[X_train.index], X_cb.iloc[X_test.index]
+cat_feature_indices = [X_cb.columns.get_loc(c) for c in CAT_FEATURES]
+
 models = {
     "Ridge\n(baseline)": Pipeline([
         ("prep", preprocessor),
@@ -183,6 +238,22 @@ models = {
             n_jobs=-1, random_state=42, verbosity=0,
         )),
     ]),
+    "HistGBRT": Pipeline([
+        ("prep", preprocessor_hist),
+        ("model", HistGradientBoostingRegressor(
+            max_iter=400, max_depth=6, learning_rate=0.05,
+            l2_regularization=0.1, random_state=42,
+        )),
+    ]),
+    "LightGBM": Pipeline([
+        ("prep", preprocessor),
+        ("model", LGBMRegressor(
+            n_estimators=400, max_depth=6, learning_rate=0.05,
+            subsample=0.8, colsample_bytree=0.8,
+            reg_alpha=0.1, reg_lambda=1.0,
+            n_jobs=-1, random_state=42, verbosity=-1,
+        )),
+    ]),
 }
 
 results = {}
@@ -196,8 +267,55 @@ for name, pipe in models.items():
     results[name] = {"pipe": pipe, "y_pred": y_pred, "rmse": rmse, "mae": mae, "r2": r2}
     print(f"  RMSE={rmse:.2f} min | MAE={mae:.2f} min | R²={r2:.3f}")
 
+# CatBoost — trained on its own X matrix with native categorical support
+print("Training CatBoost …")
+cb_model = CatBoostRegressor(
+    iterations=400, depth=6, learning_rate=0.05,
+    l2_leaf_reg=3, random_seed=42, verbose=0,
+    cat_features=cat_feature_indices,
+)
+cb_model.fit(X_train_cb, y_train)
+y_pred_cb = cb_model.predict(X_test_cb)
+results["CatBoost"] = {
+    "pipe": cb_model, "y_pred": y_pred_cb,
+    "rmse": np.sqrt(mean_squared_error(y_test, y_pred_cb)),
+    "mae":  mean_absolute_error(y_test, y_pred_cb),
+    "r2":   r2_score(y_test, y_pred_cb),
+}
+print(f"  RMSE={results['CatBoost']['rmse']:.2f} min | MAE={results['CatBoost']['mae']:.2f} min | R²={results['CatBoost']['r2']:.3f}")
+
+# Stacking ensemble: RF + XGBoost + LightGBM base learners, Ridge meta-learner
+print("Training Stacking Ensemble …")
+stacking = StackingRegressor(
+    estimators=[
+        ("rf", Pipeline([("prep", preprocessor),
+                         ("model", RandomForestRegressor(n_estimators=200, max_depth=12,
+                                                         min_samples_leaf=5, n_jobs=-1, random_state=42))])),
+        ("xgb", Pipeline([("prep", preprocessor),
+                           ("model", XGBRegressor(n_estimators=400, max_depth=6, learning_rate=0.05,
+                                                   subsample=0.8, colsample_bytree=0.8,
+                                                   n_jobs=-1, random_state=42, verbosity=0))])),
+        ("lgb", Pipeline([("prep", preprocessor),
+                           ("model", LGBMRegressor(n_estimators=400, max_depth=6, learning_rate=0.05,
+                                                    subsample=0.8, colsample_bytree=0.8,
+                                                    n_jobs=-1, random_state=42, verbosity=-1))])),
+    ],
+    final_estimator=Ridge(alpha=1.0),
+    cv=5,
+    n_jobs=-1,
+)
+stacking.fit(X_train, y_train)
+y_pred_st = stacking.predict(X_test)
+results["Stacking\nEnsemble"] = {
+    "pipe": stacking, "y_pred": y_pred_st,
+    "rmse": np.sqrt(mean_squared_error(y_test, y_pred_st)),
+    "mae":  mean_absolute_error(y_test, y_pred_st),
+    "r2":   r2_score(y_test, y_pred_st),
+}
+print(f"  RMSE={results['Stacking'+chr(10)+'Ensemble']['rmse']:.2f} min | MAE={results['Stacking'+chr(10)+'Ensemble']['mae']:.2f} min | R²={results['Stacking'+chr(10)+'Ensemble']['r2']:.3f}")
+
 best_name = min(results, key=lambda n: results[n]["rmse"])
-print(f"\nBest model: {best_name.replace(chr(10), ' ')}  (RMSE={results[best_name]['rmse']:.2f} min)")
+print(f"\nBest model: {best_name.replace(chr(10), ' ')}  (RMSE={results[best_name]['rmse']:.2f} min  R²={results[best_name]['r2']:.3f})")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -284,14 +402,14 @@ print(f"Saved {out.name}")
 # ══════════════════════════════════════════════════════════════════════════════
 # 4b.  FIGURE 2 — Model Performance
 # ══════════════════════════════════════════════════════════════════════════════
-fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+fig, axes = plt.subplots(2, 2, figsize=(18, 12))
 fig.patch.set_facecolor(DARK_BG)
-fig.suptitle("Model Performance Comparison",
+fig.suptitle("Model Performance Comparison — All 7 Models",
              color=TEXT, fontsize=18, fontweight="bold", y=0.98)
 
 for ax in axes.flat:
     ax.set_facecolor(CARD_BG)
-    ax.tick_params(colors=TEXT_DIM, labelsize=10)
+    ax.tick_params(colors=TEXT_DIM, labelsize=9)
     for spine in ax.spines.values():
         spine.set_edgecolor("#2a3f5f")
 
@@ -299,40 +417,49 @@ model_colors = {
     "Ridge\n(baseline)": "#64748b",
     "Random\nForest":    SKY,
     "XGBoost":           AMBER,
+    "HistGBRT":          TEAL,
+    "LightGBM":          LIME,
+    "CatBoost":          ORANGE,
+    "Stacking\nEnsemble": ROSE,
 }
+
+names_clean = [n.replace("\n", " ") for n in results]
+rmse_vals   = [results[n]["rmse"] for n in results]
+r2_vals     = [results[n]["r2"]   for n in results]
+mae_vals    = [results[n]["mae"]  for n in results]
+bar_cols    = [model_colors[n]    for n in results]
 
 # Panel 1: RMSE comparison
 ax = axes[0, 0]
-names_clean = [n.replace("\n", " ") for n in results]
-rmse_vals   = [results[n]["rmse"] for n in results]
-bar_cols    = [model_colors[n] for n in results]
-bars = ax.bar(names_clean, rmse_vals, color=bar_cols, edgecolor=DARK_BG, linewidth=0.5, width=0.5)
+bars = ax.bar(names_clean, rmse_vals, color=bar_cols, edgecolor=DARK_BG, linewidth=0.5, width=0.6)
 for bar, val in zip(bars, rmse_vals):
-    ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.05,
-            f"{val:.2f}", ha="center", va="bottom", color=TEXT, fontsize=11, fontweight="bold")
-ax.set_title("RMSE (lower is better)", color=TEXT, fontsize=13, pad=8)
+    ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.04,
+            f"{val:.2f}", ha="center", va="bottom", color=TEXT, fontsize=9, fontweight="bold")
+ax.set_title("RMSE — lower is better", color=TEXT, fontsize=13, pad=8)
 ax.set_ylabel("Root Mean Squared Error (min)", color=TEXT_DIM, fontsize=10)
 ax.set_ylim(0, max(rmse_vals) * 1.3)
+ax.tick_params(axis="x", labelrotation=15)
 
 # Panel 2: R² comparison
 ax = axes[0, 1]
-r2_vals = [results[n]["r2"] for n in results]
-bars = ax.bar(names_clean, r2_vals, color=bar_cols, edgecolor=DARK_BG, linewidth=0.5, width=0.5)
+bars = ax.bar(names_clean, r2_vals, color=bar_cols, edgecolor=DARK_BG, linewidth=0.5, width=0.6)
 for bar, val in zip(bars, r2_vals):
-    ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.005,
-            f"{val:.3f}", ha="center", va="bottom", color=TEXT, fontsize=11, fontweight="bold")
-ax.set_title("R² Score (higher is better)", color=TEXT, fontsize=13, pad=8)
+    ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.004,
+            f"{val:.3f}", ha="center", va="bottom", color=TEXT, fontsize=9, fontweight="bold")
+ax.set_title("R² Score — higher is better", color=TEXT, fontsize=13, pad=8)
 ax.set_ylabel("R² Score", color=TEXT_DIM, fontsize=10)
 ax.set_ylim(0, 1.15)
 ax.axhline(1.0, color="#2a3f5f", linewidth=1, linestyle="--")
+ax.tick_params(axis="x", labelrotation=15)
 
 # Panel 3: Actual vs Predicted (best model)
 ax = axes[1, 0]
-best_pred = results[best_name]["y_pred"]
+best_pred  = results[best_name]["y_pred"]
 best_label = best_name.replace("\n", " ")
+best_color = model_colors[best_name]
 sample_idx = np.random.default_rng(42).choice(len(y_test), size=2000, replace=False)
 ax.scatter(y_test.values[sample_idx], best_pred[sample_idx],
-           alpha=0.3, s=10, color=AMBER, rasterized=True)
+           alpha=0.3, s=10, color=best_color, rasterized=True)
 lo, hi = y_test.min() - 1, y_test.max() + 1
 ax.plot([lo, hi], [lo, hi], color=ROSE, linewidth=2, linestyle="--", label="Perfect prediction")
 ax.set_title(f"Actual vs. Predicted — {best_label}", color=TEXT, fontsize=13, pad=8)
@@ -343,7 +470,7 @@ ax.legend(fontsize=9, facecolor=CARD_BG, labelcolor=TEXT, edgecolor="#2a3f5f")
 # Panel 4: Residuals (best model)
 ax = axes[1, 1]
 residuals = y_test.values - best_pred
-ax.hist(residuals, bins=50, color=SKY, edgecolor=DARK_BG, linewidth=0.4)
+ax.hist(residuals, bins=50, color=best_color, edgecolor=DARK_BG, linewidth=0.4)
 ax.axvline(0,  color=ROSE, linewidth=2, linestyle="--", label="Zero error")
 ax.axvline(residuals.mean(), color=AMBER, linewidth=2, linestyle=":",
            label=f"Mean error: {residuals.mean():.2f} min")
@@ -360,20 +487,17 @@ print(f"Saved {out.name}")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 4c.  FIGURE 3 — Feature Importance
+# 4c.  FIGURE 3 — Feature Importance (RF, LightGBM, CatBoost)
 # ══════════════════════════════════════════════════════════════════════════════
 
-# Get feature names from preprocessor
-feature_names = (
-    NUM_FEATURES
-    + list(results["Random\nForest"]["pipe"].named_steps["prep"]
-           .named_transformers_["cat"]
-           .named_steps["ohe"]
-           .get_feature_names_out(CAT_FEATURES))
+# Get OHE feature names (shared preprocessor)
+ohe_names = list(
+    results["Random\nForest"]["pipe"].named_steps["prep"]
+    .named_transformers_["cat"]
+    .named_steps["ohe"]
+    .get_feature_names_out(CAT_FEATURES)
 )
-
-rf_importance  = results["Random\nForest"]["pipe"].named_steps["model"].feature_importances_
-xgb_importance = results["XGBoost"]["pipe"].named_steps["model"].feature_importances_
+feature_names = NUM_FEATURES + ohe_names
 
 TOP_N = 12
 
@@ -381,42 +505,53 @@ def top_n_importance(importance, names, n=TOP_N):
     idx = np.argsort(importance)[::-1][:n]
     return np.array(names)[idx], importance[idx]
 
-rf_names,  rf_vals  = top_n_importance(rf_importance,  feature_names)
-xgb_names, xgb_vals = top_n_importance(xgb_importance, feature_names)
-
-# Shorten OHE feature names for readability
 def shorten(name):
-    return name.replace("Road_traffic_density_", "Traffic: ") \
-               .replace("Weatherconditions_", "Weather: ") \
-               .replace("Type_of_vehicle_", "Vehicle: ") \
-               .replace("Type_of_order_", "Order: ") \
-               .replace("Festival_", "Festival: ") \
-               .replace("City_", "City: ") \
-               .replace("Delivery_person_", "Driver ")
+    return (name.replace("Road_traffic_density_", "Traffic: ")
+                .replace("Weatherconditions_", "Weather: ")
+                .replace("Type_of_vehicle_", "Vehicle: ")
+                .replace("Type_of_order_", "Order: ")
+                .replace("Festival_", "Festival: ")
+                .replace("City_", "City: ")
+                .replace("Delivery_person_", "Driver "))
 
-rf_names  = [shorten(n) for n in rf_names]
-xgb_names = [shorten(n) for n in xgb_names]
+# RF importances
+rf_imp   = results["Random\nForest"]["pipe"].named_steps["model"].feature_importances_
+rf_n, rf_v = top_n_importance(rf_imp, feature_names)
+rf_n = [shorten(n) for n in rf_n]
 
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 8))
+# LightGBM importances
+lgb_imp  = results["LightGBM"]["pipe"].named_steps["model"].feature_importances_
+lgb_n, lgb_v = top_n_importance(lgb_imp, feature_names)
+lgb_n = [shorten(n) for n in lgb_n]
+
+# CatBoost importances — returns one value per raw input feature
+cb_imp_raw   = cb_model.get_feature_importance()
+cb_feat_names = list(X_train_cb.columns)
+cb_n_raw, cb_v_raw = top_n_importance(cb_imp_raw, cb_feat_names)
+cb_n = [shorten(n).replace("_", " ").title() for n in cb_n_raw]
+
+fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(24, 8))
 fig.patch.set_facecolor(DARK_BG)
 fig.suptitle("Feature Importance — What Drives Delivery Time?",
              color=TEXT, fontsize=18, fontweight="bold", y=1.01)
 
-for ax in (ax1, ax2):
+for ax in (ax1, ax2, ax3):
     ax.set_facecolor(CARD_BG)
     ax.tick_params(colors=TEXT_DIM, labelsize=10)
     for spine in ax.spines.values():
         spine.set_edgecolor("#2a3f5f")
 
-# RF
-bars = ax1.barh(rf_names[::-1], rf_vals[::-1], color=SKY, edgecolor=DARK_BG, linewidth=0.5)
-ax1.set_title("Random Forest — Top 12 Features", color=TEXT, fontsize=13, pad=8)
+ax1.barh(rf_n[::-1],  rf_v[::-1],  color=SKY,    edgecolor=DARK_BG, linewidth=0.5)
+ax1.set_title("Random Forest — Top 12 Features",  color=TEXT, fontsize=13, pad=8)
 ax1.set_xlabel("Feature Importance (Gini impurity reduction)", color=TEXT_DIM, fontsize=10)
 
-# XGBoost
-bars = ax2.barh(xgb_names[::-1], xgb_vals[::-1], color=AMBER, edgecolor=DARK_BG, linewidth=0.5)
-ax2.set_title("XGBoost — Top 12 Features", color=TEXT, fontsize=13, pad=8)
-ax2.set_xlabel("Feature Importance (gain)", color=TEXT_DIM, fontsize=10)
+ax2.barh(lgb_n[::-1], lgb_v[::-1], color=LIME,   edgecolor=DARK_BG, linewidth=0.5)
+ax2.set_title("LightGBM — Top 12 Features",        color=TEXT, fontsize=13, pad=8)
+ax2.set_xlabel("Feature Importance (split gain)",   color=TEXT_DIM, fontsize=10)
+
+ax3.barh(cb_n[::-1],  cb_v_raw[::-1], color=ORANGE, edgecolor=DARK_BG, linewidth=0.5)
+ax3.set_title("CatBoost — Top 12 Features",        color=TEXT, fontsize=13, pad=8)
+ax3.set_xlabel("Feature Importance (PredictionValuesChange)", color=TEXT_DIM, fontsize=10)
 
 plt.tight_layout()
 out = FIGURES_DIR / "fig_food_03_feature_importance.png"
@@ -428,13 +563,9 @@ print(f"Saved {out.name}")
 # ══════════════════════════════════════════════════════════════════════════════
 # 4d.  FIGURE 4 — Business Impact (SLA Analysis)
 # ══════════════════════════════════════════════════════════════════════════════
-# SLA: Orders promised within 30 minutes — what % does each model predict
-# correctly as "on time" (predicted ≤ 30) vs actual on time (actual ≤ 30)?
-# We also show how a naive mean-prediction baseline compares.
 SLA = 30  # minutes
 
-actual_on_time = (y_test.values <= SLA)
-naive_pred     = np.full_like(y_test.values, y_train.mean())  # always predicts the mean
+naive_pred = np.full_like(y_test.values, y_train.mean(), dtype=float)
 
 def sla_metrics(y_true, y_pred, sla=SLA):
     actual_yes = y_true <= sla
@@ -448,43 +579,55 @@ def sla_metrics(y_true, y_pred, sla=SLA):
     accuracy  = (tp + tn) / len(y_true)
     return {"precision": precision, "recall": recall, "accuracy": accuracy}
 
-naive_metrics = sla_metrics(y_test.values, naive_pred)
+model_order_sla = [
+    "Naive\n(mean)", "Ridge\n(baseline)", "Random\nForest",
+    "XGBoost", "HistGBRT", "LightGBM", "CatBoost", "Stacking\nEnsemble",
+]
+model_colors_sla = {
+    "Naive\n(mean)":       "#475569",
+    "Ridge\n(baseline)":   "#64748b",
+    "Random\nForest":      SKY,
+    "XGBoost":             AMBER,
+    "HistGBRT":            TEAL,
+    "LightGBM":            LIME,
+    "CatBoost":            ORANGE,
+    "Stacking\nEnsemble":  ROSE,
+}
 
-fig, axes = plt.subplots(1, 3, figsize=(18, 7))
+sla_results = {"Naive\n(mean)": sla_metrics(y_test.values, naive_pred)}
+for name in list(results.keys()):
+    sla_results[name] = sla_metrics(y_test.values, results[name]["y_pred"])
+
+fig, axes = plt.subplots(1, 3, figsize=(22, 7))
 fig.patch.set_facecolor(DARK_BG)
 fig.suptitle(f"Business Impact — SLA Compliance (Promise: ≤{SLA} min Delivery)",
              color=TEXT, fontsize=18, fontweight="bold", y=1.01)
 
 for ax in axes:
     ax.set_facecolor(CARD_BG)
-    ax.tick_params(colors=TEXT_DIM, labelsize=10)
+    ax.tick_params(colors=TEXT_DIM, labelsize=9)
     for spine in ax.spines.values():
         spine.set_edgecolor("#2a3f5f")
 
-metric_labels = ["Precision\n(fewer false promises)", "Recall\n(catch all on-time orders)", "Accuracy"]
-model_order   = ["Naive\n(mean)", "Ridge\n(baseline)", "Random\nForest", "XGBoost"]
-model_colors_sla = {"Naive\n(mean)": "#64748b", "Ridge\n(baseline)": TEXT_DIM,
-                    "Random\nForest": SKY, "XGBoost": AMBER}
+metric_defs = [
+    ("precision", "Precision\n(fewer false promises)"),
+    ("recall",    "Recall\n(catch all on-time orders)"),
+    ("accuracy",  "Accuracy"),
+]
 
-sla_results = {"Naive\n(mean)": naive_metrics}
-for name in ["Ridge\n(baseline)", "Random\nForest", "XGBoost"]:
-    sla_results[name] = sla_metrics(y_test.values, results[name]["y_pred"])
-
-for i, (metric_key, label) in enumerate(
-    zip(["precision", "recall", "accuracy"], metric_labels)
-):
+for i, (metric_key, label) in enumerate(metric_defs):
     ax = axes[i]
-    vals   = [sla_results[n][metric_key] for n in model_order]
-    cols   = [model_colors_sla[n] for n in model_order]
-    labels = [n.replace("\n", " ") for n in model_order]
-    bars   = ax.bar(labels, vals, color=cols, edgecolor=DARK_BG, linewidth=0.5, width=0.55)
+    vals   = [sla_results[n][metric_key] for n in model_order_sla]
+    cols   = [model_colors_sla[n] for n in model_order_sla]
+    labels = [n.replace("\n", " ") for n in model_order_sla]
+    bars   = ax.bar(labels, vals, color=cols, edgecolor=DARK_BG, linewidth=0.5, width=0.65)
     for bar, val in zip(bars, vals):
-        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.005,
-                f"{val:.1%}", ha="center", va="bottom", color=TEXT, fontsize=11, fontweight="bold")
+        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.004,
+                f"{val:.1%}", ha="center", va="bottom", color=TEXT, fontsize=8.5, fontweight="bold")
     ax.set_title(label, color=TEXT, fontsize=13, pad=8)
     ax.set_ylabel("Score", color=TEXT_DIM, fontsize=10)
     ax.set_ylim(0, 1.2)
-    ax.tick_params(axis="x", labelrotation=15)
+    ax.tick_params(axis="x", labelrotation=30)
 
 plt.tight_layout()
 out = FIGURES_DIR / "fig_food_04_business_impact.png"
@@ -495,7 +638,9 @@ print(f"Saved {out.name}")
 print("\nAll figures saved.")
 print("\nFinal model metrics:")
 for name, r in results.items():
-    print(f"  {name.replace(chr(10), ' '):20s}  RMSE={r['rmse']:.2f}  MAE={r['mae']:.2f}  R²={r['r2']:.3f}")
-print(f"\nSLA ({SLA} min) — XGBoost accuracy: {sla_results['XGBoost']['accuracy']:.1%}")
-print(f"SLA ({SLA} min) — XGBoost precision: {sla_results['XGBoost']['precision']:.1%}")
-print(f"SLA ({SLA} min) — XGBoost recall:    {sla_results['XGBoost']['recall']:.1%}")
+    marker = " ← best" if name == best_name else ""
+    print(f"  {name.replace(chr(10), ' '):25s}  RMSE={r['rmse']:.2f}  MAE={r['mae']:.2f}  R²={r['r2']:.3f}{marker}")
+best = results[best_name]
+print(f"\nSLA ({SLA} min) — {best_name.replace(chr(10), ' ')} accuracy:  {sla_results[best_name]['accuracy']:.1%}")
+print(f"SLA ({SLA} min) — {best_name.replace(chr(10), ' ')} precision: {sla_results[best_name]['precision']:.1%}")
+print(f"SLA ({SLA} min) — {best_name.replace(chr(10), ' ')} recall:    {sla_results[best_name]['recall']:.1%}")
