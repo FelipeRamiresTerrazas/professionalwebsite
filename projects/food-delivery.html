@@ -19,13 +19,15 @@
             <span class="case-study-kicker">Machine Learning Case Study &mdash; Kaggle Competition</span>
             <h1>Food Delivery Time Prediction with Random Forest &amp; XGBoost</h1>
             <p class="case-study-lead">
-                An end-to-end regression pipeline that predicts food delivery time (in minutes) from 45,593 real-world orders. The project covers exploratory analysis, geographic feature engineering (haversine distance), a scikit-learn preprocessing pipeline with imputation, three model benchmarks, and a business-impact analysis framed around 30-minute SLA compliance.
+                An end-to-end regression pipeline that predicts food delivery time (in minutes) from 45,593 real-world orders. The project covers exploratory analysis, geographic feature engineering (haversine distance), a scikit-learn preprocessing pipeline with imputation, a seven-model benchmark (Ridge through a Stacking Ensemble), and a business-impact analysis framed around 30-minute SLA compliance.
             </p>
             <div class="case-study-meta">
                 <span class="meta-pill">Python</span>
                 <span class="meta-pill">scikit-learn</span>
                 <span class="meta-pill">XGBoost</span>
-                <span class="meta-pill">Pandas</span>
+                <span class="meta-pill">LightGBM</span>
+                <span class="meta-pill">CatBoost</span>
+                <span class="meta-pill">Stacking Ensemble</span>
                 <span class="meta-pill">Haversine Distance</span>
                 <span class="meta-pill">Matplotlib / Seaborn</span>
                 <span class="meta-pill">RMSE / R²</span>
@@ -62,15 +64,19 @@
                         </article>
                         <article class="tool-card">
                             <strong>scikit-learn Pipelines</strong>
-                            <p>A <code>ColumnTransformer</code> applies <code>SimpleImputer</code> + <code>StandardScaler</code> to numeric columns and <code>SimpleImputer</code> + <code>OneHotEncoder</code> to categoricals — all within a single <code>Pipeline</code> to prevent data leakage between train and test sets.</p>
+                            <p>A <code>ColumnTransformer</code> applies <code>SimpleImputer</code> + <code>StandardScaler</code> to numeric columns and <code>SimpleImputer</code> + <code>OneHotEncoder</code> to categoricals — all within a single <code>Pipeline</code> to prevent data leakage. CatBoost receives raw string categoricals and handles them natively; HistGBRT passes NaN through without any imputer.</p>
                         </article>
                         <article class="tool-card">
-                            <strong>Random Forest &amp; XGBoost</strong>
-                            <p>Both tree-ensemble models are benchmarked against a Ridge regression baseline. Random Forest achieves RMSE&nbsp;3.94 min (R²&nbsp;0.823); XGBoost is within 1% at RMSE&nbsp;3.98 min (R²&nbsp;0.819). Ridge lags at RMSE&nbsp;6.21 min, illustrating the importance of non-linear interactions in delivery logistics.</p>
+                            <strong>Seven-Model Benchmark</strong>
+                            <p>Ridge (baseline), Random Forest, XGBoost, <code>HistGradientBoostingRegressor</code>, LightGBM, and CatBoost are all evaluated head-to-head. XGBoost, HistGBRT, LightGBM, and CatBoost cluster tightly at RMSE&nbsp;3.97&ndash;3.98 min (R²&nbsp;0.819&ndash;0.820), showing diminishing per-model returns — the key signal to justify a stacking approach.</p>
+                        </article>
+                        <article class="tool-card">
+                            <strong>Stacking Ensemble</strong>
+                            <p>A <code>StackingRegressor</code> blends Random Forest, XGBoost, and LightGBM via 5-fold cross-validation, with a Ridge meta-learner combining their out-of-fold predictions. This produces the best result: RMSE&nbsp;3.90 min, R²&nbsp;0.826 — a 37% improvement over Ridge and a meaningful step past any individual ensemble model.</p>
                         </article>
                         <article class="tool-card">
                             <strong>SLA Business Analysis</strong>
-                            <p>Model predictions are mapped to a binary &ldquo;on-time vs. at-risk&rdquo; classification at the 30-minute SLA threshold, then evaluated using precision, recall, and accuracy — metrics the operations team can act on directly.</p>
+                            <p>Model predictions are mapped to a binary &ldquo;on-time vs. at-risk&rdquo; classification at the 30-minute SLA threshold, then evaluated using precision, recall, and accuracy across all 8 entries (including a naive mean baseline) — metrics the operations team can act on directly.</p>
                         </article>
                     </div>
                 </section>
@@ -187,52 +193,88 @@ X_train, X_test, y_train, y_test = train_test_split(
                     <!-- 4. Model Training -->
                     <div class="code-shell">
                         <div class="code-shell-header">
-                            <span>Model training — Ridge, Random Forest, XGBoost</span>
+                            <span>Model training — seven models including HistGBRT, LightGBM, CatBoost</span>
                             <span>Python</span>
                         </div>
-                        <pre><code class="language-python">models = {
-    "Ridge (baseline)": Pipeline([
-        ("prep",  preprocessor),
-        ("model", Ridge(alpha=1.0)),
-    ]),
-    "Random Forest": Pipeline([
-        ("prep",  preprocessor),
-        ("model", RandomForestRegressor(
-            n_estimators=200, max_depth=12,
-            min_samples_leaf=5, n_jobs=-1, random_state=42,
-        )),
-    ]),
-    "XGBoost": Pipeline([
-        ("prep",  preprocessor),
-        ("model", XGBRegressor(
-            n_estimators=400, max_depth=6, learning_rate=0.05,
-            subsample=0.8, colsample_bytree=0.8,
-            reg_alpha=0.1, reg_lambda=1.0,
-            n_jobs=-1, random_state=42,
-        )),
-    ]),
-}
+                        <pre><code class="language-python">from sklearn.ensemble import HistGradientBoostingRegressor, StackingRegressor
+from lightgbm import LGBMRegressor
+from catboost import CatBoostRegressor
 
-results = {}
-for name, pipe in models.items():
-    pipe.fit(X_train, y_train)
-    y_pred = pipe.predict(X_test)
-    results[name] = {
-        "y_pred": y_pred,
-        "rmse":   np.sqrt(mean_squared_error(y_test, y_pred)),
-        "mae":    mean_absolute_error(y_test, y_pred),
-        "r2":     r2_score(y_test, y_pred),
-    }
+# HistGBRT: scikit-learn's native fast GBDT — handles NaN without imputation
+# and uses histograms for fast binning (similar to LightGBM internally).
+models["HistGBRT"] = Pipeline([
+    ("prep",  preprocessor_hist),   # passthrough numerics, OHE categoricals
+    ("model", HistGradientBoostingRegressor(
+        max_iter=400, max_depth=6, learning_rate=0.05,
+        l2_regularization=0.1, random_state=42,
+    )),
+])
 
-# Ridge:          RMSE=6.21 min | MAE=4.91 min | R²=0.560
-# Random Forest:  RMSE=3.94 min | MAE=3.16 min | R²=0.823  ← winner
-# XGBoost:        RMSE=3.98 min | MAE=3.18 min | R²=0.819</code></pre>
+# LightGBM: histogram GBDT from Microsoft — typically fastest to train,
+# competitive with XGBoost, and exposes a scikit-learn compatible API.
+models["LightGBM"] = Pipeline([
+    ("prep",  preprocessor),
+    ("model", LGBMRegressor(
+        n_estimators=400, max_depth=6, learning_rate=0.05,
+        subsample=0.8, colsample_bytree=0.8,
+        reg_alpha=0.1, reg_lambda=1.0,
+        n_jobs=-1, random_state=42, verbosity=-1,
+    )),
+])
+
+# CatBoost: passes categorical columns as raw strings, converting them
+# internally via target statistics — no OHE required, often strongest
+# on data with many high-cardinality categoricals.
+cb_model = CatBoostRegressor(
+    iterations=400, depth=6, learning_rate=0.05,
+    l2_leaf_reg=3, random_seed=42, verbose=0,
+    cat_features=cat_feature_indices,   # raw column positions
+)
+cb_model.fit(X_train_cb, y_train)   # X_train_cb keeps cats as str dtype
+
+# Results after all 6 base models:
+# Ridge (baseline):  RMSE=6.21  R²=0.560
+# Random Forest:     RMSE=3.94  R²=0.823
+# XGBoost:           RMSE=3.98  R²=0.819
+# HistGBRT:          RMSE=3.98  R²=0.820
+# LightGBM:          RMSE=3.98  R²=0.819
+# CatBoost:          RMSE=3.97  R²=0.820</code></pre>
+                    </div>
+
+                    <!-- 4b. Stacking -->
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Stacking ensemble — blending RF, XGBoost, LightGBM with a Ridge meta-learner</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python"># Why stack?
+# All five GBDT models cluster at R² 0.819-0.823 — the individual
+# models have hit a ceiling on this data. A stacking ensemble exploits
+# their different error patterns to push past what any single model
+# achieves. Each base learner's out-of-fold predictions become the
+# meta-learner's feature matrix, preventing leakage.
+
+stacking = StackingRegressor(
+    estimators=[
+        ("rf",  rf_pipeline),
+        ("xgb", xgb_pipeline),
+        ("lgb", lgb_pipeline),
+    ],
+    final_estimator=Ridge(alpha=1.0),
+    cv=5,          # 5-fold CV for out-of-fold meta-features
+    n_jobs=-1,
+)
+stacking.fit(X_train, y_train)
+
+# Stacking Ensemble:  RMSE=3.90  MAE=3.13  R²=0.826  ← new best
+# Improvement over best single model (RF): +0.003 R²  /  -0.04 RMSE
+# SLA accuracy: 93.5%  |  precision: 94.4%  |  recall: 96.3%</code></pre>
                     </div>
 
                     <!-- 5. SLA Business Analysis -->
                     <div class="code-shell">
                         <div class="code-shell-header">
-                            <span>Business impact — 30-minute SLA compliance analysis</span>
+                            <span>Business impact — 30-minute SLA compliance across all 8 entries</span>
                             <span>Python</span>
                         </div>
                         <pre><code class="language-python">SLA = 30  # minutes — the promise shown to customers at checkout
@@ -254,8 +296,8 @@ def sla_metrics(y_true, y_pred, sla=SLA):
 # Naive model: always predicts the training-set mean (26.3 min)
 naive_pred = np.full_like(y_test.values, y_train.mean(), dtype=float)
 
-# XGBoost SLA accuracy: 93.0%  |  precision: 94.2%  |  recall: 96.0%
-# Naive baseline SLA accuracy:  81.2%  — 12pp gap attributable to the model</code></pre>
+# Stacking Ensemble SLA accuracy:  93.5%  |  precision: 94.4%  |  recall: 96.3%
+# Naive baseline SLA accuracy:      70.2%  — &gt;23pp gap attributable to the model</code></pre>
                     </div>
                 </section>
 
@@ -285,7 +327,7 @@ naive_pred = np.full_like(y_test.values, y_train.mean(), dtype=float)
                                 aria-label="Open model performance panel in full screen">
                                 <img src="../figures/fig_food_02_model_performance.png" alt="Model Performance - RMSE, R², actual vs predicted, residuals">
                             </button>
-                            <figcaption class="chart-caption"><strong>Model Performance.</strong> Random Forest (RMSE&nbsp;3.94 min, R²&nbsp;0.823) edges out XGBoost by a slim margin while both reduce error by 37% over the Ridge baseline. The residual distribution is tightly centered at zero, with no systematic bias — predictions are as likely to run early as late.</figcaption>
+                            <figcaption class="chart-caption"><strong>Model Performance.</strong> The Stacking Ensemble (RMSE&nbsp;3.90 min, R²&nbsp;0.826) edges past all six base models. XGBoost, HistGBRT, LightGBM, and CatBoost cluster tightly at R²&nbsp;0.819&ndash;0.820 — the diminishing-returns pattern that motivates stacking. All ensemble models cut Ridge's error by 37%. The residual distribution is tightly centered at zero with no systematic bias.</figcaption>
                         </figure>
 
                         <figure class="chart-frame">
@@ -295,7 +337,7 @@ naive_pred = np.full_like(y_test.values, y_train.mean(), dtype=float)
                                 aria-label="Open feature importance panel in full screen">
                                 <img src="../figures/fig_food_03_feature_importance.png" alt="Feature Importance - RF vs XGBoost top 12 features">
                             </button>
-                            <figcaption class="chart-caption"><strong>Feature Importance.</strong> Both models agree: <code>distance_km</code> and <code>pickup_wait</code> &mdash; the two engineered features &mdash; are the top predictors. Traffic &ldquo;Jam&rdquo; and delivery person ratings are next, followed by city type. The raw GPS coordinates carry almost no signal individually, confirming that the haversine transformation was essential.</figcaption>
+                            <figcaption class="chart-caption"><strong>Feature Importance.</strong> All three models highlight driver ratings and multiple-delivery flag as top numeric signals. Low-traffic and sunny-weather indicators dominate in LightGBM and CatBoost because they capture when fast deliveries are possible. <code>distance_km</code> consistently ranks in the top 4 across all three algorithms — validating the haversine engineering step.</figcaption>
                         </figure>
 
                         <figure class="chart-frame">
@@ -305,7 +347,7 @@ naive_pred = np.full_like(y_test.values, y_train.mean(), dtype=float)
                                 aria-label="Open business impact panel in full screen">
                                 <img src="../figures/fig_food_04_business_impact.png" alt="Business Impact - SLA compliance across all models">
                             </button>
-                            <figcaption class="chart-caption"><strong>Business Impact.</strong> XGBoost correctly classifies 93.0% of orders against the 30-minute SLA — a 12-percentage-point improvement over the naive mean-prediction baseline (81.2%). Precision of 94.2% means only 5.8% of &ldquo;on-time&rdquo; predictions will be wrong, and recall of 96.0% means almost no genuinely fast orders are mislabeled as &ldquo;at risk.&rdquo;</figcaption>
+                            <figcaption class="chart-caption"><strong>Business Impact.</strong> The Stacking Ensemble achieves the best SLA accuracy at 93.5%, a 23-percentage-point improvement over the naive mean-prediction baseline (70.2%). Precision of 94.4% means fewer than 6% of &ldquo;on-time&rdquo; promises will be broken, and recall of 96.3% means almost no genuinely fast orders are mislabeled as &ldquo;at risk.&rdquo; All 8 entries including the naive baseline are shown for full transparency.</figcaption>
                         </figure>
 
                     </div>
@@ -315,10 +357,13 @@ naive_pred = np.full_like(y_test.values, y_train.mean(), dtype=float)
                 <section class="case-panel">
                     <h2>Conclusion</h2>
                     <p>
-                        The biggest lesson from this project is that raw data rarely contains the right representation. The dataset ships with GPS coordinates — but latitude and longitude alone carry almost no predictive signal when treated as plain numerics. Converting them to a <strong>haversine distance</strong> produced the single most important feature in both models, explaining more variance than weather, traffic density, and vehicle type combined.
+                        The biggest lesson from this project is that raw data rarely contains the right representation. The dataset ships with GPS coordinates — but latitude and longitude alone carry almost no predictive signal when treated as plain numerics. Converting them to a <strong>haversine distance</strong> produced a top-4 feature across all three importance charts.
                     </p>
                     <p>
-                        The SLA framing also changes the conversation with stakeholders. A standalone RMSE of 3.94 minutes is hard to contextualize; &ldquo;93% of our 30-minute SLA promises are correct&rdquo; is a number an operations team can build a customer-communication strategy around.
+                        The second lesson is about model ceilings. When XGBoost, HistGBRT, LightGBM, and CatBoost all converge to within 0.001 R² of each other, adding another base model will not help — but a <strong>stacking ensemble</strong> that blends their out-of-fold predictions can still extract additional signal by exploiting different error patterns among the learners.
+                    </p>
+                    <p>
+                        The SLA framing also changes the conversation with stakeholders. A standalone RMSE of 3.90 minutes is hard to contextualize; &ldquo;93.5% of our 30-minute SLA promises are correct — up 23 points over guessing the average&rdquo; is a number an operations team can build a customer-communication strategy around.
                     </p>
                 </section>
 
@@ -329,14 +374,15 @@ naive_pred = np.full_like(y_test.values, y_train.mean(), dtype=float)
                 <section class="case-panel sidebar-block">
                     <h3>Key Results</h3>
                     <ul class="case-list">
-                        <li><strong>Best model:</strong> Random Forest</li>
-                        <li><strong>RMSE:</strong> 3.94 min</li>
-                        <li><strong>MAE:</strong> 3.16 min</li>
-                        <li><strong>R²:</strong> 0.823</li>
-                        <li><strong>SLA accuracy (30 min):</strong> 93.0%</li>
-                        <li><strong>SLA precision:</strong> 94.2%</li>
-                        <li><strong>SLA recall:</strong> 96.0%</li>
-                        <li><strong>vs. naive baseline:</strong> +12pp SLA accuracy</li>
+                        <li><strong>Best model:</strong> Stacking Ensemble</li>
+                        <li><strong>RMSE:</strong> 3.90 min</li>
+                        <li><strong>MAE:</strong> 3.13 min</li>
+                        <li><strong>R²:</strong> 0.826</li>
+                        <li><strong>SLA accuracy (30 min):</strong> 93.5%</li>
+                        <li><strong>SLA precision:</strong> 94.4%</li>
+                        <li><strong>SLA recall:</strong> 96.3%</li>
+                        <li><strong>vs. naive baseline:</strong> +23pp SLA accuracy</li>
+                        <li><strong>Models evaluated:</strong> 7 (+ naive)</li>
                     </ul>
                 </section>
 
@@ -346,7 +392,8 @@ naive_pred = np.full_like(y_test.values, y_train.mean(), dtype=float)
                         <li>End-to-end regression pipeline with real data messiness</li>
                         <li>Geographic feature engineering (haversine distance)</li>
                         <li>scikit-learn Pipeline to prevent data leakage</li>
-                        <li>Three-model benchmark with Ridge as an interpretable baseline</li>
+                        <li>Seven-model benchmark incl. HistGBRT, LightGBM, CatBoost</li>
+                        <li>Model ceiling diagnosis and stacking as the remedy</li>
                         <li>Business-impact framing via SLA threshold analysis</li>
                     </ul>
                 </section>
@@ -362,11 +409,22 @@ naive_pred = np.full_like(y_test.values, y_train.mean(), dtype=float)
                 </section>
 
                 <section class="case-panel sidebar-block">
+                    <h3>Why Stack?</h3>
+                    <ul class="case-list">
+                        <li>XGBoost, HistGBRT, LightGBM &amp; CatBoost all converge to R²&nbsp;0.819&ndash;0.820</li>
+                        <li>Individual model ceiling reached — more tuning won't help</li>
+                        <li>Stacking blends out-of-fold predictions from 3 diverse learners</li>
+                        <li>Ridge meta-learner learns optimal blend weights on held-out data</li>
+                        <li>Result: R²&nbsp;0.826 — best single model was 0.823</li>
+                    </ul>
+                </section>
+
+                <section class="case-panel sidebar-block">
                     <h3>Why Haversine?</h3>
                     <ul class="case-list">
                         <li>Raw lat/lon are nearly useless as individual model inputs</li>
                         <li>Haversine computes great-circle distance between two GPS points</li>
-                        <li>Became the #1 feature in both RF and XGBoost</li>
+                        <li>Top-4 feature across RF, LightGBM, and CatBoost charts</li>
                         <li>Explains ~37% more variance than Ridge (which only sees raw coords)</li>
                     </ul>
                 </section>
