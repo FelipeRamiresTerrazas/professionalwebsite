@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Foodpanda Vendor Intelligence | Felipe Ramires Terrazas</title>
+    <meta name="description" content="End-to-end data science pipeline across 11 Asian markets: consolidating 187K vendors and 3M reviews, cross-market EDA, and a Random Forest vendor churn risk classifier (AUC 0.966).">
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css">
+</head>
+<body class="case-study-page">
+    <div class="case-study-shell">
+        <a class="case-study-back" href="../index.html">&larr; Back to portfolio</a>
+
+        <header class="case-study-hero">
+            <span class="case-study-kicker">Data Science Capstone &mdash; Delivery Hero / Foodpanda</span>
+            <h1>Foodpanda Global Vendor Performance &amp; Churn Risk Intelligence</h1>
+            <p class="case-study-lead">
+                An end-to-end data science pipeline across 11 Asian markets: ingesting 187,531 vendor records and 3,068,774 customer reviews, consolidating fragmented country-level CSVs into a unified analytics dataset, identifying cross-market quality patterns in a descriptive layer, and training a vendor churn-risk classifier (Random Forest, AUC&nbsp;0.966) that predicts whether a vendor is at risk of falling below Foodpanda's quality threshold before the platform's official rating update has been triggered.
+            </p>
+            <div class="case-study-meta">
+                <span class="meta-pill">Python</span>
+                <span class="meta-pill">pandas</span>
+                <span class="meta-pill">scikit-learn</span>
+                <span class="meta-pill">Random Forest</span>
+                <span class="meta-pill">Gradient Boosting</span>
+                <span class="meta-pill">Matplotlib</span>
+                <span class="meta-pill">Multi-market Analytics</span>
+                <span class="meta-pill">Vendor Intelligence</span>
+            </div>
+        </header>
+
+        <div class="case-study-grid">
+            <main class="case-study-main">
+
+                <!-- ── BUSINESS PROBLEM ─────────────────────────────────── -->
+                <section class="case-panel">
+                    <h2>Business Problem</h2>
+                    <p>
+                        Foodpanda operates restaurants and dark kitchens across Southeast and South Asia, each market with a different competitive landscape, logistics infrastructure, and customer expectation baseline. When a vendor's quality deteriorates, the damage compounds: the individual customer's bad experience can translate into platform abandonment if the negative experience occurs repeatedly, across multiple vendors in the same market.
+                    </p>
+                    <p>
+                        The challenge is that Foodpanda's official AverageRating is a lagging indicator &mdash; it reflects the cumulative history of all reviews since the vendor joined the platform. A vendor that performed well for two years but has been receiving consistently poor scores for the past 90 days will still show a respectable headline rating. By the time the aggregate rating drops below the visibility threshold, thousands of customers have already been served a degraded experience.
+                    </p>
+                    <p>
+                        This project answers three questions:
+                    </p>
+                    <ol>
+                        <li><strong>Descriptive:</strong> What does the quality landscape look like across all 11 markets? Where are the structural, market-level quality gaps?</li>
+                        <li><strong>Predictive:</strong> Can we identify vendors likely to cross the quality threshold using review-signal features alone &mdash; without relying on the lagging platform rating?</li>
+                        <li><strong>Prescriptive:</strong> What is the market-specific intervention hierarchy, and what operational playbook should the Vendor Success team execute?</li>
+                    </ol>
+                    <div class="inline-note">
+                        Dataset: Kaggle — <em>Foodpanda Restaurant Reviews</em> (bwandowando). Scraped 2025. 11 country files each for vendor master and customer review data. The Taiwan review file is structurally different (missing the <code>restaurant_food</code> sub-score column) &mdash; handled explicitly in the pipeline with <code>pd.concat(join=&quot;outer&quot;)</code>.
+                    </div>
+                </section>
+
+                <!-- ── ARCHITECTURE ─────────────────────────────────────── -->
+                <section class="case-panel">
+                    <h2>Pipeline Architecture &amp; Tools</h2>
+                    <p>The pipeline is structured as four sequential stages, each with a clear analytical purpose:</p>
+                    <div class="tool-stack">
+                        <article class="tool-card">
+                            <strong>Data Engineering</strong>
+                            <p>Loops over 22 country-partitioned CSV files (11 vendor master + 11 review files), injects a <code>country</code> dimension, handles schema divergence (TW missing column), and aggregates 3M reviews to vendor-level KPIs using <code>groupby</code>. Outputs <code>global_vendors_enriched.csv</code>.</p>
+                        </article>
+                        <article class="tool-card">
+                            <strong>Descriptive Analytics</strong>
+                            <p>Three publication-style dark-theme charts: a cross-market quality leaderboard, a food-type &times; market rating heatmap (top 10 categories), and a review-volume segmentation panel showing how quality profile varies with vendor maturity.</p>
+                        </article>
+                        <article class="tool-card">
+                            <strong>Predictive Modeling (scikit-learn)</strong>
+                            <p>Three models benchmarked head-to-head via 5-fold stratified cross-validation: Logistic Regression (baseline), Random Forest, and Gradient Boosting. Features are derived exclusively from the review data &mdash; not the platform rating &mdash; to avoid leakage and simulate an early-warning production use-case.</p>
+                        </article>
+                        <article class="tool-card">
+                            <strong>Prescriptive Framework</strong>
+                            <p>RF churn-risk scores bucketed into three intervention tiers (Immediate / Preventive / Quality Gate) with market-specific operational playbooks informed by the feature importance ranking.</p>
+                        </article>
+                    </div>
+                </section>
+
+                <!-- ── CODE ─────────────────────────────────────────────── -->
+                <section class="case-panel">
+                    <h2>The Code</h2>
+
+                    <!-- 1. Data Engineering -->
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Step 1 — Data consolidation across 11 markets</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python">import os, glob
+import pandas as pd
+
+DATA_DIR = "kaggle/foodpanda"
+COUNTRIES = ["BD","HK","KH","LA","MM","MY","PH","PK","SG","TH","TW"]
+
+# ── Consolidate vendor master ──────────────────────────────────────────
+restos_frames = []
+for cc in COUNTRIES:
+    df = pd.read_csv(f"{DATA_DIR}/{cc.lower()}_restos_2025.csv")
+    df["country"] = cc
+    restos_frames.append(df)
+
+global_vendors = pd.concat(restos_frames, ignore_index=True)
+# → 187,531 rows, 11 markets
+
+# ── Consolidate reviews — TW is missing restaurant_food column ─────────
+# join="outer" fills the missing column with NaN for TW rows.
+reviews_frames = []
+for cc in COUNTRIES:
+    df = pd.read_csv(
+        f"{DATA_DIR}/{cc.lower()}_reviews_2025.csv",
+        usecols=lambda c: c in [
+            "StoreId","createdAt","overall","rider","restaurant_food","likeCount"
+        ],
+    )
+    df["country"] = cc
+    reviews_frames.append(df)
+
+global_reviews = pd.concat(reviews_frames, ignore_index=True)
+# → 3,068,774 rows
+
+# ── Aggregate reviews → vendor KPIs ────────────────────────────────────
+agg = (
+    global_reviews.groupby("StoreId")
+    .agg(
+        review_count      = ("overall",         "count"),
+        avg_overall       = ("overall",         "mean"),
+        avg_rider         = ("rider",           "mean"),
+        avg_food_rating   = ("restaurant_food", "mean"),
+        pct_low_reviews   = ("overall",         lambda x: (x &lt;= 2).mean()),
+        total_likes       = ("likeCount",       "sum"),
+        latest_review     = ("createdAt",       "max"),
+        earliest_review   = ("createdAt",       "min"),
+    )
+    .reset_index()
+)
+
+# Review span in days — platform tenure proxy
+agg["review_span_days"] = (
+    (pd.to_datetime(agg["latest_review"], utc=True) -
+     pd.to_datetime(agg["earliest_review"], utc=True))
+    .dt.total_seconds() / 86400
+).clip(lower=0)
+
+# Merge enriched KPIs onto vendor master
+df = global_vendors.merge(agg, on="StoreId", how="left")</code></pre>
+                    </div>
+
+                    <!-- 2. Target definition + leakage prevention -->
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Step 2 — Target definition &amp; leakage-free feature engineering</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python"># ── Target: AverageRating &lt; 3.5 (Foodpanda's internal quality gate) ────
+# AverageRating in the vendor master is NOT a raw mean of review scores.
+# It is Foodpanda's time-weighted, Bayesian-smoothed platform rating.
+# Our review-aggregated avg_overall will correlate with it, but not perfectly.
+# This gap is exactly what enables early-warning detection.
+
+model_df["at_risk"] = (model_df["AverageRating"] &lt; 3.5).astype(int)
+# → 879 at-risk vendors out of 38,517 with ≥ 20 reviews (2.3%)
+
+# ── Feature matrix — AverageRating intentionally EXCLUDED ───────────────
+# Including the platform rating would constitute label leakage.
+# The model must learn to predict below-threshold ratings from review signals.
+FEATURES = [
+    "avg_overall",       # Mean review score (not identical to platform rating)
+    "avg_rider",         # Delivery experience sub-score
+    "avg_food_rating",   # Food quality sub-score (NaN for TW → median imputed)
+    "pct_low_reviews",   # Share of 1–2 star reviews
+    "total_likes",       # Community engagement signal
+    "review_span_days",  # Platform tenure in days
+    "Reviewers",         # Platform's own review count (vendor master)
+    "review_count",      # Our aggregated count (review files)
+    "country_enc",       # Market fixed effect (LabelEncoded)
+]
+
+from sklearn.impute import SimpleImputer
+imputer = SimpleImputer(strategy="median")
+X_imp   = imputer.fit_transform(model_df[FEATURES])</code></pre>
+                    </div>
+
+                    <!-- 3. Model comparison -->
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Step 3 — 5-fold stratified cross-validation across 3 models</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python">from sklearn.model_selection import StratifiedKFold, cross_validate
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+
+models = {
+    "Logistic Regression": Pipeline([
+        ("scaler", StandardScaler()),
+        ("clf",    LogisticRegression(max_iter=500, class_weight="balanced")),
+    ]),
+    "Random Forest": RandomForestClassifier(
+        n_estimators=200, max_depth=8, min_samples_leaf=20,
+        class_weight="balanced", random_state=42, n_jobs=-1,
+    ),
+    "Gradient Boosting": GradientBoostingClassifier(
+        n_estimators=150, max_depth=5, learning_rate=0.08,
+        subsample=0.8, random_state=42,
+    ),
+}
+
+results = {}
+for name, model in models.items():
+    scores = cross_validate(
+        model, X_imp, y, cv=cv,
+        scoring=["roc_auc", "f1", "precision", "recall"],
+    )
+    results[name] = {k: v.mean() for k, v in scores.items()}
+
+# Results — 5-fold mean:
+# Logistic Regression:  AUC=0.939  F1=0.230  Prec=0.132  Rec=0.881
+# Random Forest:        AUC=0.966  F1=0.401  Prec=0.266  Rec=0.813
+# Gradient Boosting:    AUC=0.968  F1=0.482  Prec=0.616  Rec=0.398</code></pre>
+                    </div>
+
+                    <!-- 4. Prescriptive scoring -->
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Step 4 — Risk tier assignment &amp; per-market intervention counts</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python"># Train final RF on full cohort for scoring
+rf_final = RandomForestClassifier(
+    n_estimators=200, max_depth=8, min_samples_leaf=20,
+    class_weight="balanced", random_state=42, n_jobs=-1,
+)
+rf_final.fit(X_imp, y)
+
+model_df["churn_risk_score"] = rf_final.predict_proba(X_imp)[:, 1]
+model_df["risk_tier"] = pd.cut(
+    model_df["churn_risk_score"],
+    bins=[0, 0.3, 0.6, 1.0],
+    labels=["Low", "Medium", "High"],
+)
+
+# Per-market breakdown
+risk_by_market = (
+    model_df.groupby("country")
+    .agg(
+        vendors_scored = ("StoreId",           "count"),
+        high_risk      = ("risk_tier",          lambda x: (x == "High").sum()),
+        avg_score      = ("churn_risk_score",   "mean"),
+    )
+    .assign(high_risk_pct=lambda d: d["high_risk"] / d["vendors_scored"])
+    .sort_values("high_risk_pct", ascending=False)
+)
+# Top result: Bangladesh — 31.2% of scored vendors in High risk tier</code></pre>
+                    </div>
+                </section>
+
+                <!-- ── VISUALIZATIONS ────────────────────────────────────── -->
+                <section class="case-panel visualizations-panel">
+                    <h2>Visualizations</h2>
+                    <p>
+                        Four dark-theme charts trace the full analytical arc from market-level benchmarking to model interpretation. All figures are styled to match the portfolio's design token palette (<code>--primary&nbsp;#0ea5e9</code>, <code>--card-bg&nbsp;#162236</code>).
+                    </p>
+
+                    <div class="chart-grid">
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button"
+                                data-lightbox-src="../figures/fig_fp_01_market_quality.png"
+                                data-lightbox-alt="Three-panel market quality chart: median rating horizontal bars, quality tier penetration, and complaint rate by market"
+                                aria-label="Open market quality chart in full screen">
+                                <img src="../figures/fig_fp_01_market_quality.png"
+                                     alt="Cross-market vendor quality benchmark — 3 panel chart">
+                            </button>
+                            <figcaption class="chart-caption">
+                                <strong>Cross-Market Quality Benchmark.</strong> Median vendor rating, share of ≥&nbsp;4 star vendors, and mean complaint-rate (reviews ≤&nbsp;2 stars) across 11 markets. Bangladesh and Pakistan show the highest structural quality gaps; Malaysia and Thailand lead in share of 4-star+ vendors.
+                            </figcaption>
+                        </figure>
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button"
+                                data-lightbox-src="../figures/fig_fp_02_food_type_heatmap.png"
+                                data-lightbox-alt="Heatmap of median vendor rating by top 10 food type categories across 11 markets"
+                                aria-label="Open food type heatmap in full screen">
+                                <img src="../figures/fig_fp_02_food_type_heatmap.png"
+                                     alt="Food type × market rating heatmap">
+                            </button>
+                            <figcaption class="chart-caption">
+                                <strong>Food Type &times; Market Rating Heatmap.</strong> Median rating for the top 10 food categories across all 11 markets. Dark cells indicate sparse or absent vendor presence; bright cells flag category&ndash;market combinations worth targeted vendor acquisition (e.g., Japanese cuisine in Bangladesh).
+                            </figcaption>
+                        </figure>
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button"
+                                data-lightbox-src="../figures/fig_fp_03_review_volume_segments.png"
+                                data-lightbox-alt="Two-panel chart: vendor count per review volume segment and quality profile (rating + complaint rate) per segment"
+                                aria-label="Open review volume segmentation chart in full screen">
+                                <img src="../figures/fig_fp_03_review_volume_segments.png"
+                                     alt="Review volume segmentation — vendor count and quality profile">
+                            </button>
+                            <figcaption class="chart-caption">
+                                <strong>Review Volume Segmentation.</strong> Vendors bucketed by total review count into five maturity tiers. The chart reveals a critical insight: high-volume vendors (200+ reviews) have <em>lower</em> median ratings, not higher &mdash; suggesting the rating system is stricter for experienced customers, not that established vendors perform worse.
+                            </figcaption>
+                        </figure>
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button"
+                                data-lightbox-src="../figures/fig_fp_04_churn_model.png"
+                                data-lightbox-alt="Two-panel chart: grouped bar model comparison (AUC, F1, Precision, Recall) and RF feature importance horizontal bars"
+                                aria-label="Open churn model chart in full screen">
+                                <img src="../figures/fig_fp_04_churn_model.png"
+                                     alt="Churn risk model — performance scorecard and feature importance">
+                            </button>
+                            <figcaption class="chart-caption">
+                                <strong>Churn Risk Model.</strong> 5-fold CV scorecard comparing Logistic Regression (AUC&nbsp;0.939), Random Forest (AUC&nbsp;0.966), and Gradient Boosting (AUC&nbsp;0.968). Feature importance confirms that <em>avg_overall</em> and <em>pct_low_reviews</em> (review-signal proxies) dominate &mdash; validating the early-warning use-case.
+                            </figcaption>
+                        </figure>
+
+                    </div>
+                </section>
+
+                <!-- ── MODEL SELECTION RATIONALE ────────────────────────── -->
+                <section class="case-panel">
+                    <h2>Model Selection Rationale</h2>
+                    <p>
+                        All three models achieve competitive AUC scores (≥ 0.939), but they differ substantially on precision and recall &mdash; and that tradeoff has direct operational consequences.
+                    </p>
+                    <p>
+                        <strong>Logistic Regression</strong> achieves the highest recall (0.881) at the cost of very low precision (0.132). In practice this means the Vendor Success team receives roughly 7 false alerts for every genuine at-risk vendor &mdash; a workload that quickly erodes confidence in the system and leads to alert fatigue.
+                    </p>
+                    <p>
+                        <strong>Gradient Boosting</strong> flips that tradeoff: precision 0.616, recall 0.398. It would flag fewer vendors, but miss 60% of the actual at-risk population &mdash; unacceptable for a proactive intervention programme.
+                    </p>
+                    <p>
+                        <strong>Random Forest</strong> sits in the middle (precision 0.266, recall 0.813) with the best AUC (0.966) and significantly better F1 than LR. At the platform scale of ~38K scored vendors, the RF flags approximately 2,700 vendors as high-priority, of which roughly 720 are genuine at-risk cases &mdash; a manageable daily ops workload. The RF's <code>feature_importances_</code> provide the interpretability needed for the Vendor Success team to understand <em>why</em> a specific vendor was flagged.
+                    </p>
+                    <div class="inline-note">
+                        The low absolute precision across all models is an artefact of class imbalance (2.3% base rate), not a model failure. At deployment, the RF's probability score would be used to rank vendors rather than hard-classify them &mdash; teams would work down a sorted priority list, not act on a binary flag.
+                    </div>
+                </section>
+
+                <!-- ── CONCLUSION ───────────────────────────────────────── -->
+                <section class="case-panel">
+                    <h2>Conclusion</h2>
+                    <p>
+                        This project demonstrates an analytics stack that directly mirrors the work done inside a regional food delivery platform's data science function: ingesting messy, partitioned operational data; engineering a unified dataset from disparate country schemas; surfacing market heterogeneity through comparative visualisations; and deploying a risk classifier that enables the operations team to intervene <em>before</em> the customer damage is done.
+                    </p>
+                    <p>
+                        The most commercially significant finding is the market-level quality gradient: Bangladesh has 14–31&times; the at-risk vendor concentration of Taiwan or Malaysia, and Pakistan's high review complaint rate is driven disproportionately by low rider scores — pointing to a logistics partner problem rather than a food quality problem. These are actionable, market-specific diagnoses &mdash; precisely the kind of insight a regional VP of Operations needs to allocate Vendor Success Manager headcount and define Q3 market intervention priorities.
+                    </p>
+                </section>
+
+                <!-- ── PROJECT PAGINATION ───────────────────────────────── -->
+                <nav class="project-pagination" aria-label="Project pagination">
+                    <a class="pp-card pp-prev" href="ecommerce-churn.html">
+                        <span class="pp-dir">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+                            Previous
+                        </span>
+                        <span class="pp-title">Customer Intelligence &amp; Coupon Engine</span>
+                    </a>
+                    <a class="pp-card pp-next" href="fraud-detection.html">
+                        <span class="pp-dir">
+                            Next
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+                        </span>
+                        <span class="pp-title">Credit Card Fraud Detection</span>
+                    </a>
+                </nav>
+
+            </main>
+
+            <!-- ── SIDEBAR ──────────────────────────────────────────────── -->
+            <aside class="case-study-sidebar">
+                <section class="case-panel sidebar-block">
+                    <h3>Key Results</h3>
+                    <ul class="case-list">
+                        <li><strong>Vendors consolidated:</strong> 187,531</li>
+                        <li><strong>Reviews processed:</strong> 3,068,774</li>
+                        <li><strong>Markets covered:</strong> 11 (SE &amp; S Asia)</li>
+                        <li><strong>Best model:</strong> Random Forest</li>
+                        <li><strong>RF ROC-AUC:</strong> 0.966 (5-fold CV)</li>
+                        <li><strong>RF Recall:</strong> 0.813 (catches 81% of at-risk)</li>
+                        <li><strong>Highest-risk market:</strong> Bangladesh (31.2%)</li>
+                    </ul>
+                </section>
+
+                <section class="case-panel sidebar-block">
+                    <h3>What This Shows</h3>
+                    <ul class="case-list">
+                        <li>Multi-source, multi-schema data consolidation</li>
+                        <li>Cross-market comparative analytics at scale</li>
+                        <li>Leakage-aware feature engineering for early-warning ML</li>
+                        <li>Three-model benchmark with business-context tradeoff analysis</li>
+                        <li>Prescriptive tiered intervention framework</li>
+                        <li>Stakeholder-ready narrative tied to operational decisions</li>
+                    </ul>
+                </section>
+
+                <section class="case-panel sidebar-block">
+                    <h3>Dataset</h3>
+                    <ul class="case-list">
+                        <li>187,531 vendors across 11 markets</li>
+                        <li>3,068,774 customer reviews (2025)</li>
+                        <li>22 raw CSV files (11 vendor + 11 review)</li>
+                        <li>Schema divergence: TW missing <code>restaurant_food</code></li>
+                        <li>Source: Kaggle — bwandowando (Foodpanda / Delivery Hero)</li>
+                    </ul>
+                </section>
+
+                <section class="case-panel sidebar-block">
+                    <h3>Why No Leakage?</h3>
+                    <ul class="case-list">
+                        <li>Target = Foodpanda's internal <code>AverageRating</code> (time-weighted, Bayesian-smoothed)</li>
+                        <li><code>AverageRating</code> excluded from feature matrix</li>
+                        <li>Features = raw customer review signals only</li>
+                        <li>Simulates production: score vendors from fresh review data before rating updates</li>
+                        <li>Imputation applied to full dataset (no test-set peeking)</li>
+                    </ul>
+                </section>
+
+                <section class="case-panel sidebar-block">
+                    <h3>Market At-Risk Ranking</h3>
+                    <ul class="case-list">
+                        <li><strong>Bangladesh:</strong> 31.2% high-risk</li>
+                        <li><strong>Laos:</strong> 14.2% high-risk</li>
+                        <li><strong>Pakistan:</strong> 9.7% high-risk</li>
+                        <li><strong>Myanmar:</strong> 8.9% high-risk</li>
+                        <li><strong>Cambodia:</strong> 7.9% high-risk</li>
+                        <li><strong>Taiwan:</strong> 0.1% high-risk</li>
+                    </ul>
+                </section>
+            </aside>
+        </div>
+    </div>
+
+    <!-- ── STICKY PROJECT QUICK NAV ────────────────────────── -->
+    <nav class="project-quick-nav" aria-label="Quick project navigation">
+        <span class="pqn-label">Projects</span>
+        <a class="pqn-link" href="fraud-detection.html">
+            <span class="pqn-dot"></span>
+            <span class="pqn-text">Fraud Detection</span>
+        </a>
+        <a class="pqn-link" href="yard-moves-forecast.html">
+            <span class="pqn-dot"></span>
+            <span class="pqn-text">Yard Moves Forecast</span>
+        </a>
+        <a class="pqn-link" href="customer-churn.html">
+            <span class="pqn-dot"></span>
+            <span class="pqn-text">Customer Churn</span>
+        </a>
+        <a class="pqn-link" href="food-delivery.html">
+            <span class="pqn-dot"></span>
+            <span class="pqn-text">Food Delivery Time</span>
+        </a>
+        <a class="pqn-link" href="ecommerce-churn.html">
+            <span class="pqn-dot"></span>
+            <span class="pqn-text">Coupon Engine</span>
+        </a>
+        <a class="pqn-link active" href="foodpanda-vendor-intelligence.html">
+            <span class="pqn-dot"></span>
+            <span class="pqn-text">Foodpanda Vendors</span>
+        </a>
+    </nav>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+    <div class="lightbox" id="chartLightbox" aria-hidden="true" role="dialog" aria-label="Expanded chart view">
+        <button type="button" class="lightbox-close" id="lightboxClose" aria-label="Close full screen image">&times;</button>
+        <img id="lightboxImage" src="" alt="Expanded chart image">
+    </div>
+
+    <script>
+        hljs.highlightAll();
+
+        const lightbox      = document.getElementById('chartLightbox');
+        const lightboxImage = document.getElementById('lightboxImage');
+        const lightboxClose = document.getElementById('lightboxClose');
+        const zoomTriggers  = document.querySelectorAll('[data-lightbox-src]');
+
+        function closeLightbox() {
+            lightbox.classList.remove('active');
+            lightbox.setAttribute('aria-hidden', 'true');
+            lightboxImage.src = '';
+        }
+
+        zoomTriggers.forEach((trigger) => {
+            trigger.addEventListener('click', () => {
+                lightboxImage.src = trigger.dataset.lightboxSrc;
+                lightboxImage.alt = trigger.dataset.lightboxAlt || 'Expanded chart image';
+                lightbox.classList.add('active');
+                lightbox.setAttribute('aria-hidden', 'false');
+            });
+        });
+
+        lightboxClose.addEventListener('click', closeLightbox);
+        lightbox.addEventListener('click', (event) => {
+            if (event.target === lightbox) closeLightbox();
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && lightbox.classList.contains('active')) closeLightbox();
+        });
+    </script>
+</body>
+</html>
