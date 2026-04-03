@@ -527,22 +527,7 @@ document.addEventListener('DOMContentLoaded', function () {
 // ========================================
 
 function exploreProjects() {
-    if (window.innerWidth <= 768) {
-        var overlay      = document.getElementById('mobile-menu-overlay');
-        var hamburgerBtn = document.getElementById('hamburger-btn');
-        if (overlay) {
-            clearTimeout(window._mobileMenuCloseTimer);
-            overlay.style.display = '';
-            void overlay.offsetWidth;
-            overlay.classList.add('is-open');
-            hamburgerBtn.classList.add('is-open');
-            hamburgerBtn.setAttribute('aria-expanded', 'true');
-            document.body.style.overflow = 'hidden';
-        }
-    } else {
-        var toggle = document.getElementById('portfolioToggle');
-        if (toggle) toggle.click();
-    }
+    switchTab('projects');
 }
 
 // ========================================

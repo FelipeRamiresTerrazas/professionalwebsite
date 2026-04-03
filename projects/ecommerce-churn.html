@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Delivery Customer Intelligence: RFM, Churn &amp; Coupon Engine | Felipe Ramires Terrazas</title>
+    <meta name="description" content="End-to-end food delivery customer intelligence pipeline covering RFM segmentation, churn propensity modelling with Random Forest, and a prescriptive coupon engine using 350 e-commerce customers reframed as delivery platform data.">
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css">
+</head>
+<body class="case-study-page">
+    <div class="case-study-shell">
+        <a class="case-study-back" href="../index.html">&larr; Back to portfolio</a>
+
+        <header class="case-study-hero">
+            <span class="case-study-kicker">Machine Learning Case Study &mdash; Food Tech / Marketplace</span>
+            <h1>Food Delivery Customer Intelligence: RFM Segmentation, Churn Propensity &amp; Coupon Engine</h1>
+            <p class="case-study-lead">
+                A four-stage analytics pipeline that reframes an e-commerce customer dataset as a food delivery platform (iFood / UberEats / DoorDash style). The project covers domain-driven feature engineering (AOV, Churn target, RFM segmentation), descriptive analytics comparing subscription tiers and coupon efficiency, a Random Forest churn propensity model achieving ROC&#8209;AUC&nbsp;0.992, and a prescriptive coupon engine that prescribes the Next Best Action for 350 customers from &ldquo;aggressive win-back&rdquo; to &ldquo;do not send &mdash; save margin.&rdquo;
+            </p>
+            <div class="case-study-meta">
+                <span class="meta-pill">Python</span>
+                <span class="meta-pill">scikit-learn</span>
+                <span class="meta-pill">Random Forest</span>
+                <span class="meta-pill">RFM Segmentation</span>
+                <span class="meta-pill">Stratified K-Fold CV</span>
+                <span class="meta-pill">Ordinal Encoding</span>
+                <span class="meta-pill">Coupon Engine</span>
+                <span class="meta-pill">Matplotlib / Seaborn</span>
+                <span class="meta-pill">ROC-AUC</span>
+            </div>
+        </header>
+
+        <div class="case-study-grid">
+            <main class="case-study-main">
+
+                <!-- ── BUSINESS PROBLEM ─────────────────────────────────── -->
+                <section class="case-panel">
+                    <h2>Business Problem</h2>
+                    <p>
+                        On a food delivery marketplace, acquiring a new customer costs 5&ndash;7&times; more than retaining an existing one. Yet most platforms still treat every customer the same: blast a coupon to the entire base when monthly GMV dips, regardless of whether those customers were about to churn or would have ordered anyway. The result is double-digit margin dilution with no measurable retention benefit.
+                    </p>
+                    <p>
+                        The goal here is to build the intelligence layer that prevents that. Specifically: segment customers by behavioural health (RFM), understand which subscription tier and coupon patterns signal churn risk, build a model that scores every customer&rsquo;s churn probability without peeking at recency directly, and translate those scores into a prescriptive &ldquo;Next Best Action&rdquo; that the CRM team can execute.
+                    </p>
+                    <div class="inline-note">
+                        Dataset: E-commerce customer behaviour dataset with 350 customers. Columns are remapped to food-delivery domain terminology &mdash; <em>Items Purchased</em> becomes <em>Order Frequency</em>, <em>Total Spend</em> becomes <em>Lifetime GMV</em>, <em>Membership Type</em> becomes <em>Subscription Tier</em>, and so on. The same modelling logic applies directly to any iFood, Rappi, or DoorDash customer table.
+                    </div>
+                </section>
+
+                <!-- ── ARCHITECTURE ─────────────────────────────────────── -->
+                <section class="case-panel">
+                    <h2>Pipeline Architecture &amp; Tools</h2>
+                    <p>
+                        The pipeline runs in four sequential stages, each feeding the next: feature engineering creates the KPIs, descriptive analytics surfaces the business patterns, the model quantifies churn risk, and the coupon engine translates risk scores into actions.
+                    </p>
+                    <div class="tool-stack">
+                        <article class="tool-card">
+                            <strong>Feature Engineering &mdash; AOV, Churn, RFM</strong>
+                            <p>Three engineered constructs power the entire pipeline. <code>aov</code> (Average Order Value = Lifetime GMV &divide; Order Frequency) is the canonical marketplace ticket metric. <code>churn</code> applies the business rule &ldquo;Days Since Last Purchase &gt;&nbsp;30&rdquo; to create a binary target. RFM scoring assigns each customer a 1&ndash;3 tertile on Recency, Frequency, and Monetary value, then maps the composite score to four operational segments: Champions, Loyal, At Risk, and Churned.</p>
+                        </article>
+                        <article class="tool-card">
+                            <strong>Descriptive Analytics &mdash; Tier &amp; Coupon Efficiency</strong>
+                            <p>Two business dashboards answer the key exec questions: Do Gold subscribers order more and churn less? (Yes &mdash; dramatically.) Does sending coupons reduce churn? (Not in the way you&rsquo;d hope &mdash; coupon users churn at 69.7% vs 1.1% for non-coupon users, revealing a classic discount-dependency trap that a naive coupon engine would make worse.)</p>
+                        </article>
+                        <article class="tool-card">
+                            <strong>Churn Propensity Model &mdash; Random Forest</strong>
+                            <p>A scikit-learn <code>Pipeline</code> combines <code>SimpleImputer</code> + <code>OrdinalEncoder</code> for categoricals (preserving tier and satisfaction rank order) with <code>SimpleImputer</code> for numerics. A <code>RandomForestClassifier</code> with <code>max_depth=4</code> and <code>min_samples_leaf=10</code> avoids overfitting on the 350-row dataset. Model performance is evaluated via 5-fold <code>StratifiedKFold</code> cross-validation to preserve the churn rate in every fold.</p>
+                        </article>
+                        <article class="tool-card">
+                            <strong>Coupon Engine &mdash; Next Best Action</strong>
+                            <p>Cross-validated churn probabilities feed a business-rules engine that combines churn risk with coupon sensitivity and subscription tier to prescribe one of four actions: aggressive win-back coupon, subscription upsell (for coupon-averse high-risk customers), light loyalty nudge, or &ldquo;do not send&rdquo; (the most important output &mdash; saving margin on customers who will order regardless).</p>
+                        </article>
+                    </div>
+                </section>
+
+                <!-- ── CODE ─────────────────────────────────────────────── -->
+                <section class="case-panel">
+                    <h2>The Code</h2>
+
+                    <!-- 1. Feature Engineering -->
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Feature engineering — AOV, Churn target, and RFM segmentation</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python"># Remap columns to food-delivery domain language
+df = df.rename(columns={
+    "Items Purchased":          "order_frequency",
+    "Total Spend":              "lifetime_gmv",
+    "Membership Type":          "subscription_tier",
+    "Discount Applied":         "coupon_used",
+    "Days Since Last Purchase": "recency_days",
+    "Satisfaction Level":       "satisfaction",
+})
+
+# AOV (Ticket Médio) — primary marketplace health metric.
+# If AOV drops, customers are ordering smaller / cheaper items → margin warning.
+df["aov"] = df["lifetime_gmv"] / df["order_frequency"]
+
+# Churn target: customer not seen in > 30 days is considered churned.
+# In production this would also integrate explicit cancellations and
+# refund patterns — recency is the strongest leading indicator.
+df["churn"] = (df["recency_days"] > 30).astype(int)
+
+# RFM segmentation — tertile scoring (1-3).
+# Tertiles are appropriate for ~350 rows; production systems use quintiles (1-5).
+def rfm_score(series, ascending=True):
+    labels = [1, 2, 3] if ascending else [3, 2, 1]
+    return pd.qcut(series, q=3, labels=labels, duplicates="drop").astype(int)
+
+df["R"] = rfm_score(df["recency_days"],    ascending=False)  # lower days = better
+df["F"] = rfm_score(df["order_frequency"], ascending=True)
+df["M"] = rfm_score(df["lifetime_gmv"],    ascending=True)
+df["rfm_score"] = df["R"] + df["F"] + df["M"]
+
+def rfm_segment(row):
+    if row["rfm_score"] >= 8:   return "Champions"
+    elif row["rfm_score"] >= 6: return "Loyal"
+    elif row["rfm_score"] >= 4: return "At Risk"
+    else:                        return "Churned"
+
+df["rfm_segment"] = df.apply(rfm_segment, axis=1)</code></pre>
+                    </div>
+
+                    <!-- 2. Preprocessing Pipeline -->
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Preprocessing — OrdinalEncoder inside a leakage-free Pipeline</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python">from sklearn.preprocessing import OrdinalEncoder
+from sklearn.impute import SimpleImputer
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+
+cat_features = ["Gender", "City", "subscription_tier", "satisfaction"]
+num_features  = [c for c in FEATURES if c not in cat_features]
+
+# OrdinalEncoder instead of OHE — we use ordinal encoding here because
+# both subscription_tier and satisfaction have a natural rank order
+# (Bronze < Silver < Gold) and (Unsatisfied < Neutral < Satisfied).
+# Passing that ordering explicitly lets the tree-based model exploit rank
+# relationships in a single column, rather than requiring separate splits
+# across multiple binary indicator columns.
+cat_pipeline = Pipeline([
+    ("impute", SimpleImputer(strategy="most_frequent")),  # 2 missing satisfaction rows
+    ("encode", OrdinalEncoder(
+        categories=[
+            ["Female", "Male"],
+            sorted(df["City"].unique().tolist()),
+            ["Bronze", "Silver", "Gold"],
+            ["Unsatisfied", "Neutral", "Satisfied"],
+        ],
+        handle_unknown="use_encoded_value",
+        unknown_value=-1,
+    )),
+])
+num_pipeline  = Pipeline([("impute", SimpleImputer(strategy="median"))])
+preprocessor  = ColumnTransformer([
+    ("cat", cat_pipeline, cat_features),
+    ("num", num_pipeline, num_features),
+])</code></pre>
+                    </div>
+
+                    <!-- 3. Model Training -->
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Churn model — constrained Random Forest with Stratified K-Fold CV</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python">from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import StratifiedKFold, cross_val_predict
+from sklearn.metrics import roc_auc_score, classification_report
+
+# Why NOT include recency_days as a feature?
+# churn IS (recency_days > 30). Including it gives ~100% accuracy but the model
+# has learned nothing useful — it just thresholds the same column used to define
+# churn. Excluding recency forces the model to learn from BEHAVIOURAL signals:
+# spend patterns, subscription tier, satisfaction, coupon history.
+# That is what a real production churn model does.
+
+clf = RandomForestClassifier(
+    n_estimators     = 200,
+    max_depth        = 4,    # constrained — prevents memorising training split
+    min_samples_leaf = 10,   # every leaf must cover ≥ 10 customers
+    class_weight     = "balanced",   # handles 65%/35% class imbalance
+    random_state     = 42,
+)
+full_pipeline = Pipeline([("prep", preprocessor), ("model", clf)])
+
+# 5-fold Stratified CV preserves the 35.4% churn ratio in every fold
+cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+y_proba_cv = cross_val_predict(
+    full_pipeline, X, y, cv=cv, method="predict_proba"
+)[:, 1]
+
+# Results:
+#               precision  recall  f1-score  support
+# Active           0.97    1.00      0.98      226
+# Churned          1.00    0.94      0.97      124
+# accuracy                           0.98      350
+# ROC-AUC: 0.9924</code></pre>
+                    </div>
+
+                    <!-- 4. Coupon Engine -->
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Coupon engine — Next Best Action from churn probabilities</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python">df["churn_proba"] = cross_val_predict(
+    full_pipeline, X, y, cv=cv, method="predict_proba"
+)[:, 1]
+
+def next_best_action(row):
+    """
+    Prescribe the optimal retention action for each customer.
+
+    Decision logic (business rules informed by the model):
+    ──────────────────────────────────────────────────────
+    HIGH RISK  (p ≥ 0.70) + coupon sensitive  → Aggressive coupon (win-back)
+    HIGH RISK  (p ≥ 0.70) + not coupon user   → Subscription upsell
+    MEDIUM RISK (0.40 ≤ p < 0.70) + Bronze    → Tier upsell (structural fix)
+    MEDIUM RISK (0.40 ≤ p < 0.70) + Gold/Silv → Light coupon (loyalty nudge)
+    LOW RISK   (p < 0.40)                       → DO NOT SEND  ← save margin
+
+    The DO_NOT_SEND branch is as important as any win-back action.
+    Sending a coupon to a customer with p = 0.02 is pure margin dilution —
+    they were going to order regardless. The engine protects 234 customers
+    (66.9% of the base) from unnecessary discount spend.
+    """
+    p, tier, used = row["churn_proba"], row["subscription_tier"], row["coupon_used"]
+    if p >= 0.70:
+        return "SEND_AGGRESSIVE_COUPON" if used else "UPSELL_TO_SUBSCRIPTION"
+    elif p >= 0.40:
+        return "UPSELL_SUBSCRIPTION" if tier == "Bronze" else "SEND_LIGHT_COUPON"
+    else:
+        return "DO_NOT_SEND"
+
+df["nba_action"] = df.apply(next_best_action, axis=1)
+
+# Results:
+#   DO_NOT_SEND               234 customers   avg churn prob: 0.059
+#   SEND_AGGRESSIVE_COUPON    116 customers   avg churn prob: 0.993</code></pre>
+                    </div>
+                </section>
+
+                <!-- ── VISUALIZATIONS ────────────────────────────────────── -->
+                <section class="case-panel visualizations-panel">
+                    <h2>Visualizations</h2>
+                    <p>
+                        Three presentation-ready multi-panel charts walk through the business findings &mdash; from subscription tier performance and coupon efficiency through churn model diagnostics. All figures share the portfolio&rsquo;s dark visual language and are annotated for executive readability.
+                    </p>
+
+                    <div class="chart-grid">
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button"
+                                data-lightbox-src="../figures/fig_ecom_01_tier_kpis.png"
+                                data-lightbox-alt="2x2 panel showing AOV, order frequency, lifetime GMV, and churn rate broken down by Gold, Silver, and Bronze subscription tiers"
+                                aria-label="Open subscription tier KPIs in full screen">
+                                <img src="../figures/fig_ecom_01_tier_kpis.png" alt="Subscription Tier Performance Dashboard — 4-panel KPI comparison">
+                            </button>
+                            <figcaption class="chart-caption"><strong>Subscription Tier Performance Dashboard.</strong> Gold subscribers generate an AOV of R$&nbsp;74.8 vs. R$&nbsp;56.2 for Bronze &mdash; a 33% ticket premium. More strikingly, their churn rate is 5.1% vs. 51.7% for Bronze. This is the business case for investing in the subscription programme: Gold members don&rsquo;t just spend more per order &mdash; they stay. Silver sits at an unexpected 49.6% churn, suggesting the mid-tier offers insufficient perceived value to lock in behaviour.</figcaption>
+                        </figure>
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button"
+                                data-lightbox-src="../figures/fig_ecom_02_coupon_efficiency.png"
+                                data-lightbox-alt="3-panel chart showing churn rate by coupon usage, satisfaction mix stacked bar, and AOV comparison"
+                                aria-label="Open coupon efficiency analysis in full screen">
+                                <img src="../figures/fig_ecom_02_coupon_efficiency.png" alt="Coupon Efficiency Analysis — churn rate, satisfaction mix, and AOV by coupon usage">
+                            </button>
+                            <figcaption class="chart-caption"><strong>Coupon Efficiency Analysis.</strong> The most counterintuitive finding: customers who used coupons churn at 69.7%, while non-coupon customers churn at just 1.1%. This is not evidence that coupons cause churn &mdash; it is a classic causality trap. Churning customers are likely receiving coupons precisely because they are at risk. The coupon is a reactive patch, not a cure. The satisfaction panel confirms the same divide: coupon users skew heavily Unsatisfied, while non-coupon users are overwhelmingly Satisfied. The AOV panel shows coupon users also generate lower ticket médio (R$&nbsp;63.3 vs. R$&nbsp;67.2), eroding margin from both ends.</figcaption>
+                        </figure>
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button"
+                                data-lightbox-src="../figures/fig_ecom_03_churn_model.png"
+                                data-lightbox-alt="2-panel chart: horizontal bar feature importance chart and ROC curve for the Random Forest churn model"
+                                aria-label="Open churn model diagnostics in full screen">
+                                <img src="../figures/fig_ecom_03_churn_model.png" alt="Churn Propensity Model — Feature Importance and ROC Curve">
+                            </button>
+                            <figcaption class="chart-caption"><strong>Churn Propensity Model &mdash; Random Forest.</strong> <code>satisfaction</code> is the single strongest churn driver (0.339 importance), followed by <code>coupon_used</code> (0.225) and <code>lifetime_gmv</code> (0.144). Subscription tier, despite being the starkest descriptive KPI, ranks lower because it is partially collinear with spend and satisfaction inside the tree&rsquo;s information gain calculation. The ROC&nbsp;curve achieves AUC&nbsp;0.992 on 5-fold out-of-fold predictions &mdash; reflecting the dataset&rsquo;s clean synthetic structure where customer archetypes are well-separated.</figcaption>
+                        </figure>
+
+                    </div>
+                </section>
+
+                <!-- ── CONCLUSION ───────────────────────────────────────── -->
+                <section class="case-panel">
+                    <h2>Conclusion</h2>
+                    <p>
+                        The most important lesson from the coupon efficiency analysis is that correlation is not causation &mdash; and acting on correlation is expensive. Coupon users churning at 69.7% does not mean coupons drive churn. It means the platform&rsquo;s current coupon strategy is a reactive fire-fighting tool: discounts are already being sent to at-risk customers, not to healthy ones. A prescriptive engine that scores churn probability <em>before</em> the coupon decision is made inverts this logic &mdash; proactive instead of reactive.
+                    </p>
+                    <p>
+                        The second lesson is about <strong>feature leakage and the recency exclusion</strong>. If <code>recency_days</code> were included as a model feature, the classifier would achieve near-perfect accuracy trivially, because churn is defined directly from that column. Excluding it forces the model to learn from behavioural signals &mdash; satisfaction, spend trajectory, coupon sensitivity &mdash; which are the signals available in real time, before the 30-day window closes. That exclusion is the difference between a demo and a deployable model.
+                    </p>
+                    <p>
+                        Finally, the <strong>DO_NOT_SEND</strong> branch of the coupon engine is its most valuable output. Protecting 234 out of 350 customers from unnecessary discount spend &mdash; 66.9% of the base &mdash; is where margin is recovered. The win-back campaigns get the headline; the saved margin funds them.
+                    </p>
+                </section>
+
+                <!-- ── PROJECT PAGINATION ───────────────────────────────── -->
+                <nav class="project-pagination" aria-label="Project pagination">
+                    <a class="pp-card pp-prev" href="food-delivery.html">
+                        <span class="pp-dir">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+                            Previous
+                        </span>
+                        <span class="pp-title">Food Delivery Time Prediction</span>
+                    </a>
+                    <a class="pp-card pp-next" href="fraud-detection.html">
+                        <span class="pp-dir">
+                            Next
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+                        </span>
+                        <span class="pp-title">Credit Card Fraud Detection</span>
+                    </a>
+                </nav>
+
+            </main>
+
+            <!-- ── SIDEBAR ──────────────────────────────────────────────── -->
+            <aside class="case-study-sidebar">
+                <section class="case-panel sidebar-block">
+                    <h3>Key Results</h3>
+                    <ul class="case-list">
+                        <li><strong>Customers analysed:</strong> 350</li>
+                        <li><strong>Overall churn rate:</strong> 35.4%</li>
+                        <li><strong>Model:</strong> Random Forest (max depth 4)</li>
+                        <li><strong>ROC-AUC (5-fold CV):</strong> 0.992</li>
+                        <li><strong>Accuracy:</strong> 98%</li>
+                        <li><strong>Active precision / recall:</strong> 0.97 / 1.00</li>
+                        <li><strong>Churned precision / recall:</strong> 1.00 / 0.94</li>
+                        <li><strong>Gold churn rate:</strong> 5.1%</li>
+                        <li><strong>Bronze churn rate:</strong> 51.7%</li>
+                        <li><strong>Coupon user churn rate:</strong> 69.7%</li>
+                        <li><strong>Non-coupon churn rate:</strong> 1.1%</li>
+                        <li><strong>Customers saved from redundant coupons:</strong> 234 (66.9%)</li>
+                    </ul>
+                </section>
+
+                <section class="case-panel sidebar-block">
+                    <h3>What This Shows</h3>
+                    <ul class="case-list">
+                        <li>Domain-driven feature engineering (AOV, churn target, RFM)</li>
+                        <li>RFM segmentation with business-meaningful tier labels</li>
+                        <li>Descriptive analytics surfacing counterintuitive coupon dynamics</li>
+                        <li>Leakage-free Pipeline with OrdinalEncoder preserving rank order</li>
+                        <li>Constrained Random Forest for small-dataset churn classification</li>
+                        <li>Stratified K-Fold to preserve class ratios across folds</li>
+                        <li>Prescriptive Next Best Action engine (4 retention actions)</li>
+                        <li>Business framing: margin saved &gt; coupons sent</li>
+                    </ul>
+                </section>
+
+                <section class="case-panel sidebar-block">
+                    <h3>Dataset</h3>
+                    <ul class="case-list">
+                        <li>350 customers reframed as food delivery platform users</li>
+                        <li>Features: age, gender, city, subscription tier, order count, lifetime GMV, avg rating, coupon usage, satisfaction, recency (days)</li>
+                        <li>Target: Churn (Days Since Last Purchase &gt; 30)</li>
+                        <li>2 missing satisfaction values (imputed with mode inside Pipeline)</li>
+                    </ul>
+                </section>
+
+                <section class="case-panel sidebar-block">
+                    <h3>Why Exclude Recency?</h3>
+                    <ul class="case-list">
+                        <li>Churn IS defined as recency_days &gt; 30</li>
+                        <li>Including it gives trivial 100% accuracy — data leakage</li>
+                        <li>The model must learn from behavioural signals available before the 30-day window closes</li>
+                        <li>Those signals (satisfaction, GMV, coupon usage) are actionable in real time</li>
+                    </ul>
+                </section>
+
+                <section class="case-panel sidebar-block">
+                    <h3>Why RFM Tertiles?</h3>
+                    <ul class="case-list">
+                        <li>350 customers &rarr; tertile buckets of ~117 each</li>
+                        <li>Quintiles (1–5) would create buckets of ~70 — too small for reliable segment targeting</li>
+                        <li>Tertiles give stable, actionable segment sizes</li>
+                        <li>Production systems with millions of users use quintiles</li>
+                    </ul>
+                </section>
+
+                <section class="case-panel sidebar-block">
+                    <h3>Why OrdinalEncoder?</h3>
+                    <ul class="case-list">
+                        <li>Subscription tier has a known rank: Bronze &lt; Silver &lt; Gold</li>
+                        <li>Satisfaction has a known rank: Unsatisfied &lt; Neutral &lt; Satisfied</li>
+                        <li>OrdinalEncoder preserves that rank in a single column</li>
+                        <li>OneHotEncoder would lose the ordering and require extra splits for trees to reconstruct it</li>
+                    </ul>
+                </section>
+            </aside>
+        </div>
+    </div>
+
+    <!-- ── STICKY PROJECT QUICK NAV ────────────────────────── -->
+    <nav class="project-quick-nav" aria-label="Quick project navigation">
+        <span class="pqn-label">Projects</span>
+        <a class="pqn-link" href="fraud-detection.html">
+            <span class="pqn-dot"></span>
+            <span class="pqn-text">Fraud Detection</span>
+        </a>
+        <a class="pqn-link" href="yard-moves-forecast.html">
+            <span class="pqn-dot"></span>
+            <span class="pqn-text">Yard Moves Forecast</span>
+        </a>
+        <a class="pqn-link" href="customer-churn.html">
+            <span class="pqn-dot"></span>
+            <span class="pqn-text">Customer Churn</span>
+        </a>
+        <a class="pqn-link" href="food-delivery.html">
+            <span class="pqn-dot"></span>
+            <span class="pqn-text">Food Delivery Time</span>
+        </a>
+        <a class="pqn-link active" href="ecommerce-churn.html">
+            <span class="pqn-dot"></span>
+            <span class="pqn-text">Coupon Engine</span>
+        </a>
+    </nav>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+    <div class="lightbox" id="chartLightbox" aria-hidden="true" role="dialog" aria-label="Expanded chart view">
+        <button type="button" class="lightbox-close" id="lightboxClose" aria-label="Close full screen image">&times;</button>
+        <img id="lightboxImage" src="" alt="Expanded chart image">
+    </div>
+
+    <script>
+        hljs.highlightAll();
+
+        const lightbox      = document.getElementById('chartLightbox');
+        const lightboxImage = document.getElementById('lightboxImage');
+        const lightboxClose = document.getElementById('lightboxClose');
+        const zoomTriggers  = document.querySelectorAll('[data-lightbox-src]');
+
+        function closeLightbox() {
+            lightbox.classList.remove('active');
+            lightbox.setAttribute('aria-hidden', 'true');
+            lightboxImage.src = '';
+        }
+
+        zoomTriggers.forEach((trigger) => {
+            trigger.addEventListener('click', () => {
+                lightboxImage.src = trigger.dataset.lightboxSrc;
+                lightboxImage.alt = trigger.dataset.lightboxAlt || 'Expanded chart image';
+                lightbox.classList.add('active');
+                lightbox.setAttribute('aria-hidden', 'false');
+            });
+        });
+
+        lightboxClose.addEventListener('click', closeLightbox);
+        lightbox.addEventListener('click', (event) => {
+            if (event.target === lightbox) closeLightbox();
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && lightbox.classList.contains('active')) closeLightbox();
+        });
+    </script>
+</body>
+</html>

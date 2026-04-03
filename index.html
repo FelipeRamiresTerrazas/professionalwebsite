@@ -52,31 +52,10 @@
                     <span class="tab-label">Resume / CV</span>
                 </button>
 
-                <div class="portfolio-nav">
-                    <button class="tab-btn portfolio-toggle" id="portfolioToggle" aria-expanded="false">
-                        <span class="tab-icon">🗂️</span>
-                        <span class="tab-label">Projects</span>
-                        <svg class="portfolio-chevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-                    </button>
-                    <div class="portfolio-submenu" id="portfolioSubmenu">
-                        <a class="project-nav-btn" href="projects/fraud-detection.html">
-                            <span class="project-nav-dot"></span>
-                            Credit Card Fraud Detection
-                        </a>
-                        <a class="project-nav-btn" href="projects/yard-moves-forecast.html">
-                            <span class="project-nav-dot"></span>
-                            Yard Moves Forecast
-                        </a>
-                        <a class="project-nav-btn" href="projects/customer-churn.html">
-                            <span class="project-nav-dot"></span>
-                            Customer Churn Prediction
-                        </a>
-                        <a class="project-nav-btn" href="projects/food-delivery.html">
-                            <span class="project-nav-dot"></span>
-                            Food Delivery Time Prediction
-                        </a>
-                    </div>
-                </div>
+                <button class="tab-btn" data-tab="projects">
+                    <span class="tab-icon">🗂️</span>
+                    <span class="tab-label">Projects</span>
+                </button>
             </nav>
 
             <!-- Hamburger button — mobile only -->
@@ -681,6 +660,80 @@
                     </div>
                 </div>
             </section>
+
+            <!-- Projects Tab -->
+            <section id="projects" class="tab-content">
+                <div class="projects-shell">
+                    <header class="projects-header">
+                        <h2 class="section-title">Portfolio Projects</h2>
+                        <p class="projects-subtitle">End-to-end data science case studies spanning machine learning, time-series forecasting, and customer analytics.</p>
+                    </header>
+
+                    <div class="projects-grid">
+
+                        <a class="project-card" href="projects/fraud-detection.html">
+                            <span class="pc-category">Machine Learning</span>
+                            <h3 class="pc-title">Credit Card Fraud Detection</h3>
+                            <p class="pc-desc">Built a fraud detection pipeline on a heavily imbalanced real-world dataset (fraud rate &lt;&nbsp;0.2%). Benchmarked seven models and optimised the precision/recall trade-off to minimise missed fraud without unnecessary customer friction.</p>
+                            <div class="pc-tags">
+                                <span class="pc-tag">Python</span>
+                                <span class="pc-tag">CatBoost</span>
+                                <span class="pc-tag">Scikit-Learn</span>
+                                <span class="pc-tag">SMOTE</span>
+                            </div>
+                        </a>
+
+                        <a class="project-card" href="projects/yard-moves-forecast.html">
+                            <span class="pc-category">Forecasting</span>
+                            <h3 class="pc-title">Logistics Yard Moves Forecast</h3>
+                            <p class="pc-desc">End-to-end forecasting pipeline for logistics yard operations. Pulls live data from Snowflake, trains a Prophet time-series model, and renders business-facing visual forecasts for operational planning.</p>
+                            <div class="pc-tags">
+                                <span class="pc-tag">Python</span>
+                                <span class="pc-tag">Snowflake</span>
+                                <span class="pc-tag">Prophet</span>
+                                <span class="pc-tag">Matplotlib</span>
+                            </div>
+                        </a>
+
+                        <a class="project-card" href="projects/customer-churn.html">
+                            <span class="pc-category">Predictive Modeling</span>
+                            <h3 class="pc-title">Customer Churn Prediction</h3>
+                            <p class="pc-desc">Predictive churn model built in R using tidymodels with seven-dimensional hyperparameter tuning and Latin hypercube search. Surfaces the highest-risk segment &mdash; Month-to-Month&nbsp;+ Fiber Optic &mdash; for proactive retention outreach.</p>
+                            <div class="pc-tags">
+                                <span class="pc-tag">R</span>
+                                <span class="pc-tag">tidymodels</span>
+                                <span class="pc-tag">Random Forest</span>
+                                <span class="pc-tag">SQL</span>
+                            </div>
+                        </a>
+
+                        <a class="project-card" href="projects/food-delivery.html">
+                            <span class="pc-category">Regression</span>
+                            <h3 class="pc-title">Food Delivery Time Prediction</h3>
+                            <p class="pc-desc">Regression pipeline benchmarking seven models including a stacking ensemble. Converts raw GPS coordinates to haversine distance for geographic signal. SLA framing yields an actionable 93.5% promise-accuracy metric.</p>
+                            <div class="pc-tags">
+                                <span class="pc-tag">Python</span>
+                                <span class="pc-tag">LightGBM</span>
+                                <span class="pc-tag">Scikit-Learn</span>
+                                <span class="pc-tag">Haversine</span>
+                            </div>
+                        </a>
+
+                        <a class="project-card" href="projects/ecommerce-churn.html">
+                            <span class="pc-category">Customer Analytics</span>
+                            <h3 class="pc-title">Customer Intelligence &amp; Coupon Engine</h3>
+                            <p class="pc-desc">Full customer intelligence pipeline: RFM segmentation, churn propensity scoring (ROC-AUC&nbsp;0.992), and a prescriptive coupon engine that protects 66.9% of customers from unnecessary discount spend.</p>
+                            <div class="pc-tags">
+                                <span class="pc-tag">Python</span>
+                                <span class="pc-tag">Pandas</span>
+                                <span class="pc-tag">Random Forest</span>
+                                <span class="pc-tag">RFM</span>
+                            </div>
+                        </a>
+
+                    </div>
+                </div>
+            </section>
         </main>
     </div>
 
@@ -701,15 +754,8 @@
                 <button class="mobile-nav-btn" data-tab="experience"><span class="mobile-nav-icon">💼</span> Experience</button>
                 <button class="mobile-nav-btn" data-tab="contact"><span class="mobile-nav-icon">✉️</span> Contact</button>
                 <button class="mobile-nav-btn" data-tab="resume"><span class="mobile-nav-icon">📄</span> Resume / CV</button>
+                <button class="mobile-nav-btn" data-tab="projects"><span class="mobile-nav-icon">🗂️</span> Projects</button>
             </nav>
-            <div class="mobile-menu-divider"></div>
-            <div class="mobile-menu-projects">
-                <p class="mobile-menu-section-label">🗂️ Projects</p>
-                <a class="mobile-nav-link" href="projects/fraud-detection.html">Credit Card Fraud Detection</a>
-                <a class="mobile-nav-link" href="projects/yard-moves-forecast.html">Yard Moves Forecast</a>
-                <a class="mobile-nav-link" href="projects/customer-churn.html">Customer Churn Prediction</a>
-                <a class="mobile-nav-link" href="projects/food-delivery.html">Food Delivery Time Prediction</a>
-            </div>
         </div>
     </div>
 </body>
