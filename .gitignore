@@ -1,5 +1,6 @@
-# Dataset — arquivo grande (>100MB), não pode ser versionado no GitHub
+# Datasets grandes — não podem ser versionados no GitHub (>50MB)
 creditcard.csv
+kaggle/foodpanda/
 
 # Modelo treinado (pode ser grande)
 *.joblib
