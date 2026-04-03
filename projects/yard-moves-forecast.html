@@ -32,8 +32,18 @@
         </header>
 
         <div class="case-study-grid">
+            <nav class="cs-toc" aria-label="Table of contents">
+                <span class="cs-toc-label">On this page</span>
+                <ul class="cs-toc-list">
+                    <li><a class="cs-toc-link" href="#business-problem">Business Problem</a></li>
+                    <li><a class="cs-toc-link" href="#architecture">Architecture &amp; Tools</a></li>
+                    <li><a class="cs-toc-link" href="#the-code">The Code</a></li>
+                    <li><a class="cs-toc-link" href="#visualizations">Visualizations</a></li>
+                    <li><a class="cs-toc-link" href="#conclusion">Conclusion</a></li>
+                </ul>
+            </nav>
             <main class="case-study-main">
-                <section class="case-panel">
+                <section id="business-problem" class="case-panel">
                     <h2>Business Problem</h2>
                     <p>
                         Yard operations create a high volume of repetitive logistics moves that vary by day of week, site profile, and local demand patterns. Planning against raw history is noisy, especially when multiple campuses need to be monitored at once.
@@ -46,7 +56,7 @@
                     </div>
                 </section>
 
-                <section class="case-panel">
+                <section id="architecture" class="case-panel">
                     <h2>Architecture &amp; Tools</h2>
                     <p>
                         The notebook follows a straightforward pipeline: query Snowflake, convert to a Pandas frame, train one Prophet model per campus, then consolidate predictions into a single reporting dataset used for downstream charts.
@@ -71,7 +81,7 @@
                     </div>
                 </section>
 
-                <section class="case-panel">
+                <section id="the-code" class="case-panel">
                     <h2>The Code</h2>
                     <p>
                         The notebook is structured in four logical blocks: data extraction, model training, forecast consolidation, and visual storytelling. For a portfolio page, it is better to show the most decision-relevant slices of code rather than every notebook cell.
@@ -150,7 +160,7 @@ print(f"Success! Forecasted 7 days for {len(campuses)} campuses.")</code></pre>
                     </div>
                 </section>
 
-                <section class="case-panel visualizations-panel">
+                <section id="visualizations" class="case-panel visualizations-panel">
                     <h2>Visualizations</h2>
                     <p>
                         The reporting layer combines overview and prioritization views. The forecast grid shows the full network, the comparison bars simplify executive scanning, and the heatmap highlights where the largest operational load is concentrated over the next week.
@@ -179,7 +189,7 @@ print(f"Success! Forecasted 7 days for {len(campuses)} campuses.")</code></pre>
                     </div>
                 </section>
 
-                <section class="case-panel">
+                <section id="conclusion" class="case-panel">
                     <h2>Conclusion</h2>
                     <p>
                         This case study demonstrates an end-to-end analytics pattern that is common in modern data teams: operational data access, lightweight predictive modeling, and business-facing visualization. The implementation is intentionally pragmatic, favoring quick interpretability and repeatability over unnecessary modeling complexity.
@@ -313,6 +323,28 @@ print(f"Success! Forecasted 7 days for {len(campuses)} campuses.")</code></pre>
                 closeLightbox();
             }
         });
+
+        // ── ToC Scrollspy ──────────────────────────────────────────────────────
+        (function () {
+            const tocLinks = document.querySelectorAll('.cs-toc-link');
+            if (!tocLinks.length) return;
+
+            const sectionIds = Array.from(tocLinks).map(l => l.getAttribute('href').slice(1));
+            const sections   = sectionIds.map(id => document.getElementById(id)).filter(Boolean);
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        tocLinks.forEach(l => l.classList.remove('active'));
+                        const link = document.querySelector(`.cs-toc-link[href="#${entry.target.id}"]`);
+                        if (link) link.classList.add('active');
+                    }
+                });
+            }, { rootMargin: '-15% 0% -75% 0%', threshold: 0 });
+
+            sections.forEach(s => observer.observe(s));
+            if (tocLinks.length) tocLinks[0].classList.add('active');
+        })();
     </script>
 </body>
 </html>

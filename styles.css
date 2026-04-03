@@ -1909,6 +1909,82 @@ a:hover {
 }
 
 /* ========================================
+   CASE STUDY — TABLE OF CONTENTS (ToC)
+   ======================================== */
+
+/* Hidden at all widths by default; the min-width:1200px query
+   reveals it and reshapes the surrounding grid. */
+.cs-toc {
+    display: none;
+}
+
+.cs-toc-label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-light);
+    opacity: 0.55;
+    margin-bottom: 14px;
+}
+
+.cs-toc-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.cs-toc-link {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 10px;
+    border-radius: 8px;
+    border-left: 2px solid transparent;
+    font-size: 0.83rem;
+    line-height: 1.4;
+    color: var(--text-light);
+    text-decoration: none;
+    transition: color 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+
+.cs-toc-link::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+    opacity: 0.35;
+    transition: opacity 0.18s ease, background 0.18s ease;
+}
+
+.cs-toc-link:hover {
+    color: var(--text-dark);
+    background: rgba(14, 165, 233, 0.07);
+}
+
+.cs-toc-link:hover::before {
+    opacity: 0.7;
+}
+
+.cs-toc-link.active {
+    color: var(--secondary);
+    font-weight: 600;
+    border-left-color: var(--secondary);
+    background: rgba(14, 165, 233, 0.09);
+}
+
+.cs-toc-link.active::before {
+    opacity: 1;
+    background: var(--secondary);
+}
+
+/* ========================================
    PROJECTS GRID
    ======================================== */
 
@@ -2129,12 +2205,33 @@ a:hover {
         max-width: min(95vw, 1500px);
     }
 
-    .case-study-grid {
-        grid-template-columns: minmax(0, 2.4fr) minmax(280px, 0.8fr);
+    /* Reveal the ToC column and insert it to the left of the main content */
+    .cs-toc {
+        display: flex;
+        flex-direction: column;
+        position: sticky;
+        top: 36px;
+        max-height: calc(100vh - 72px);
+        overflow-y: auto;
+        scrollbar-width: none;
+        background: linear-gradient(180deg, rgba(255,255,255,0.025) 0%, rgba(255,255,255,0.01) 100%);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 20px 16px;
     }
 
+    .cs-toc::-webkit-scrollbar {
+        display: none;
+    }
+
+    .case-study-grid {
+        grid-template-columns: 190px minmax(0, 2.4fr) minmax(260px, 0.8fr);
+    }
+
+    /* With the ToC column present the main column is already narrower,
+       so the bleed effect is not needed and would push charts into the ToC. */
     .visualizations-panel {
-        --viz-bleed: min(9vw, 130px);
+        --viz-bleed: 0px;
     }
 }
 

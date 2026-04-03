@@ -35,10 +35,20 @@
         </header>
 
         <div class="case-study-grid">
+            <nav class="cs-toc" aria-label="Table of contents">
+                <span class="cs-toc-label">On this page</span>
+                <ul class="cs-toc-list">
+                    <li><a class="cs-toc-link" href="#business-problem">Business Problem</a></li>
+                    <li><a class="cs-toc-link" href="#architecture">Architecture &amp; Tools</a></li>
+                    <li><a class="cs-toc-link" href="#the-code">The Code</a></li>
+                    <li><a class="cs-toc-link" href="#visualizations">Visualizations</a></li>
+                    <li><a class="cs-toc-link" href="#conclusion">Conclusion</a></li>
+                </ul>
+            </nav>
             <main class="case-study-main">
 
                 <!-- ── BUSINESS PROBLEM ─────────────────────────────────── -->
-                <section class="case-panel">
+                <section id="business-problem" class="case-panel">
                     <h2>Business Problem</h2>
                     <p>
                         On a food delivery marketplace, acquiring a new customer costs 5&ndash;7&times; more than retaining an existing one. Yet most platforms still treat every customer the same: blast a coupon to the entire base when monthly GMV dips, regardless of whether those customers were about to churn or would have ordered anyway. The result is double-digit margin dilution with no measurable retention benefit.
@@ -52,7 +62,7 @@
                 </section>
 
                 <!-- ── ARCHITECTURE ─────────────────────────────────────── -->
-                <section class="case-panel">
+                <section id="architecture" class="case-panel">
                     <h2>Pipeline Architecture &amp; Tools</h2>
                     <p>
                         The pipeline runs in four sequential stages, each feeding the next: feature engineering creates the KPIs, descriptive analytics surfaces the business patterns, the model quantifies churn risk, and the coupon engine translates risk scores into actions.
@@ -78,7 +88,7 @@
                 </section>
 
                 <!-- ── CODE ─────────────────────────────────────────────── -->
-                <section class="case-panel">
+                <section id="the-code" class="case-panel">
                     <h2>The Code</h2>
 
                     <!-- 1. Feature Engineering -->
@@ -250,7 +260,7 @@ df["nba_action"] = df.apply(next_best_action, axis=1)
                 </section>
 
                 <!-- ── VISUALIZATIONS ────────────────────────────────────── -->
-                <section class="case-panel visualizations-panel">
+                <section id="visualizations" class="case-panel visualizations-panel">
                     <h2>Visualizations</h2>
                     <p>
                         Three presentation-ready multi-panel charts walk through the business findings &mdash; from subscription tier performance and coupon efficiency through churn model diagnostics. All figures share the portfolio&rsquo;s dark visual language and are annotated for executive readability.
@@ -292,7 +302,7 @@ df["nba_action"] = df.apply(next_best_action, axis=1)
                 </section>
 
                 <!-- ── CONCLUSION ───────────────────────────────────────── -->
-                <section class="case-panel">
+                <section id="conclusion" class="case-panel">
                     <h2>Conclusion</h2>
                     <p>
                         The most important lesson from the coupon efficiency analysis is that correlation is not causation &mdash; and acting on correlation is expensive. Coupon users churning at 69.7% does not mean coupons drive churn. It means the platform&rsquo;s current coupon strategy is a reactive fire-fighting tool: discounts are already being sent to at-risk customers, not to healthy ones. A prescriptive engine that scores churn probability <em>before</em> the coupon decision is made inverts this logic &mdash; proactive instead of reactive.
@@ -467,6 +477,28 @@ df["nba_action"] = df.apply(next_best_action, axis=1)
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape' && lightbox.classList.contains('active')) closeLightbox();
         });
+
+        // ── ToC Scrollspy ────────────────────────────────────────────────────────
+        (function () {
+            const tocLinks = document.querySelectorAll('.cs-toc-link');
+            if (!tocLinks.length) return;
+
+            const sectionIds = Array.from(tocLinks).map(l => l.getAttribute('href').slice(1));
+            const sections   = sectionIds.map(id => document.getElementById(id)).filter(Boolean);
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        tocLinks.forEach(l => l.classList.remove('active'));
+                        const link = document.querySelector(`.cs-toc-link[href="#${entry.target.id}"]`);
+                        if (link) link.classList.add('active');
+                    }
+                });
+            }, { rootMargin: '-15% 0% -75% 0%', threshold: 0 });
+
+            sections.forEach(s => observer.observe(s));
+            if (tocLinks.length) tocLinks[0].classList.add('active');
+        })();
     </script>
 </body>
 </html>

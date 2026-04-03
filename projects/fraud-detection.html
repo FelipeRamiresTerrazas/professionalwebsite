@@ -33,10 +33,20 @@
         </header>
 
         <div class="case-study-grid">
+            <nav class="cs-toc" aria-label="Table of contents">
+                <span class="cs-toc-label">On this page</span>
+                <ul class="cs-toc-list">
+                    <li><a class="cs-toc-link" href="#business-problem">Business Problem</a></li>
+                    <li><a class="cs-toc-link" href="#architecture">Architecture &amp; Tools</a></li>
+                    <li><a class="cs-toc-link" href="#the-code">The Code</a></li>
+                    <li><a class="cs-toc-link" href="#visualizations">Visualizations</a></li>
+                    <li><a class="cs-toc-link" href="#conclusion">Conclusion</a></li>
+                </ul>
+            </nav>
             <main class="case-study-main">
 
                 <!-- ── BUSINESS PROBLEM ─────────────────────────────────── -->
-                <section class="case-panel">
+                <section id="business-problem" class="case-panel">
                     <h2>Business Problem</h2>
                     <p>
                         Credit card fraud accounts for billions of dollars in annual losses worldwide. The core challenge is not technical difficulty — it is data imbalance. Legitimate transactions vastly outnumber fraudulent ones (578:1 in this dataset), which means a naive model that predicts "everything is normal" achieves 99.83% accuracy while catching zero fraud.
@@ -50,7 +60,7 @@
                 </section>
 
                 <!-- ── ARCHITECTURE ─────────────────────────────────────── -->
-                <section class="case-panel">
+                <section id="architecture" class="case-panel">
                     <h2>Pipeline Architecture &amp; Tools</h2>
                     <p>
                         The pipeline is structured in six sequential stages: data loading and EDA, feature scaling, class-imbalance handling, model training, evaluation, and business-impact quantification.
@@ -76,7 +86,7 @@
                 </section>
 
                 <!-- ── CODE ─────────────────────────────────────────────── -->
-                <section class="case-panel">
+                <section id="the-code" class="case-panel">
                     <h2>The Code</h2>
 
                     <!-- 1. Imports -->
@@ -235,7 +245,7 @@ for name, res in results.items():
                 </section>
 
                 <!-- ── VISUALIZATIONS ────────────────────────────────────── -->
-                <section class="case-panel visualizations-panel">
+                <section id="visualizations" class="case-panel visualizations-panel">
                     <h2>Visualizations</h2>
                     <p>
                         Four multi-panel charts walk through each stage of the analysis &mdash; from raw data exploration to model comparison and financial impact. Each figure is built with <code>plt.subplots()</code> and <code>tight_layout()</code> to keep all panels cleanly separated.
@@ -287,7 +297,7 @@ for name, res in results.items():
                 </section>
 
                 <!-- ── CONCLUSION ───────────────────────────────────────── -->
-                <section class="case-panel">
+                <section id="conclusion" class="case-panel">
                     <h2>Conclusion</h2>
                     <p>
                         This project demonstrates that choosing the right evaluation metric is more important than choosing the right model. Using AUPRC instead of accuracy completely reframes what "good performance" means for imbalanced datasets — and leads to very different modeling decisions.
@@ -430,6 +440,28 @@ for name, res in results.items():
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape' && lightbox.classList.contains('active')) closeLightbox();
         });
+
+        // ── ToC Scrollspy ────────────────────────────────────────────────────────
+        (function () {
+            const tocLinks = document.querySelectorAll('.cs-toc-link');
+            if (!tocLinks.length) return;
+
+            const sectionIds = Array.from(tocLinks).map(l => l.getAttribute('href').slice(1));
+            const sections   = sectionIds.map(id => document.getElementById(id)).filter(Boolean);
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        tocLinks.forEach(l => l.classList.remove('active'));
+                        const link = document.querySelector(`.cs-toc-link[href="#${entry.target.id}"]`);
+                        if (link) link.classList.add('active');
+                    }
+                });
+            }, { rootMargin: '-15% 0% -75% 0%', threshold: 0 });
+
+            sections.forEach(s => observer.observe(s));
+            if (tocLinks.length) tocLinks[0].classList.add('active');
+        })();
     </script>
 </body>
 </html>

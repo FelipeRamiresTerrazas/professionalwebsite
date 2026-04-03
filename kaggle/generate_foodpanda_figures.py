@@ -620,7 +620,7 @@ ax4r.set_xlabel("Feature Importance (Gini)", fontsize=10)
 ax4r.set_title("Random Forest Feature Importance\n(Vendor At-Risk Classifier)",
                fontsize=11, fontweight="bold")
 
-fig4.suptitle("Foodpanda Vendor Churn Risk Model  |  Lead Data Scientist Portfolio",
+fig4.suptitle("Foodpanda Vendor Churn Risk Model",
               fontsize=13, fontweight="bold", y=1.01)
 plt.tight_layout()
 plt.savefig(os.path.join(FIG_DIR, "fig_fp_04_churn_model.png"),

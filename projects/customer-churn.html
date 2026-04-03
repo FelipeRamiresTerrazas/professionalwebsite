@@ -33,10 +33,20 @@
         </header>
 
         <div class="case-study-grid">
+            <nav class="cs-toc" aria-label="Table of contents">
+                <span class="cs-toc-label">On this page</span>
+                <ul class="cs-toc-list">
+                    <li><a class="cs-toc-link" href="#business-problem">Business Problem</a></li>
+                    <li><a class="cs-toc-link" href="#architecture">Architecture &amp; Tools</a></li>
+                    <li><a class="cs-toc-link" href="#the-code">The Code</a></li>
+                    <li><a class="cs-toc-link" href="#visualizations">Visualizations</a></li>
+                    <li><a class="cs-toc-link" href="#conclusion">Conclusion</a></li>
+                </ul>
+            </nav>
             <main class="case-study-main">
 
                 <!-- ── BUSINESS PROBLEM ─────────────────────────────────── -->
-                <section class="case-panel">
+                <section id="business-problem" class="case-panel">
                     <h2>Business Problem</h2>
                     <p>
                         Customer churn is one of the most costly challenges in subscription-based industries. In telecom, acquiring a new customer costs 5–25x more than retaining an existing one. A telecom company with 7,000 customers and a 26% annual churn rate is quietly losing a significant share of its recurring revenue each year.
@@ -50,7 +60,7 @@
                 </section>
 
                 <!-- ── ARCHITECTURE ─────────────────────────────────────── -->
-                <section class="case-panel">
+                <section id="architecture" class="case-panel">
                     <h2>Pipeline Architecture &amp; Tools</h2>
                     <p>
                         The pipeline follows the idiomatic tidymodels workflow: define a recipe, specify a model, assemble a workflow, resample with cross-validation, tune, and finalize. This structure makes every step independently testable and composable.
@@ -76,7 +86,7 @@
                 </section>
 
                 <!-- ── CODE ─────────────────────────────────────────────── -->
-                <section class="case-panel">
+                <section id="the-code" class="case-panel">
                     <h2>The Code</h2>
 
                     <!-- 1. Imports -->
@@ -255,7 +265,7 @@ cat("Submission written to:", SUBMISSION_PATH, "\n")</code></pre>
                 </section>
 
                 <!-- ── VISUALIZATIONS ────────────────────────────────────── -->
-                <section class="case-panel visualizations-panel">
+                <section id="visualizations" class="case-panel visualizations-panel">
                     <h2>Visualizations</h2>
                     <p>
                         Four figures walk through each analytical stage &mdash; raw data exploration, model performance, feature importance, and financial impact. Every chart uses the same dark-theme palette as this site.
@@ -307,7 +317,7 @@ cat("Submission written to:", SUBMISSION_PATH, "\n")</code></pre>
                 </section>
 
                 <!-- ── CONCLUSION ───────────────────────────────────────── -->
-                <section class="case-panel">
+                <section id="conclusion" class="case-panel">
                     <h2>Conclusion &amp; Key Insights</h2>
                     <p>
                         The pipeline achieves a ROC AUC above 0.84 with consistent 5-fold cross-validation scores, confirming the model generalize well beyond the training set. More importantly, it surfaces a clear business narrative: the highest-risk customers are those on month-to-month contracts with Fiber Optic plans — they churn at over 40% annually and tend to have the highest monthly charges.
@@ -455,6 +465,28 @@ cat("Submission written to:", SUBMISSION_PATH, "\n")</code></pre>
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape' && lightbox.classList.contains('active')) closeLightbox();
         });
+
+        // ── ToC Scrollspy ────────────────────────────────────────────────────────
+        (function () {
+            const tocLinks = document.querySelectorAll('.cs-toc-link');
+            if (!tocLinks.length) return;
+
+            const sectionIds = Array.from(tocLinks).map(l => l.getAttribute('href').slice(1));
+            const sections   = sectionIds.map(id => document.getElementById(id)).filter(Boolean);
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        tocLinks.forEach(l => l.classList.remove('active'));
+                        const link = document.querySelector(`.cs-toc-link[href="#${entry.target.id}"]`);
+                        if (link) link.classList.add('active');
+                    }
+                });
+            }, { rootMargin: '-15% 0% -75% 0%', threshold: 0 });
+
+            sections.forEach(s => observer.observe(s));
+            if (tocLinks.length) tocLinks[0].classList.add('active');
+        })();
     </script>
 </body>
 </html>
