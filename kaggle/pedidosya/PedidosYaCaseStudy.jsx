@@ -11,34 +11,28 @@
 
 import React from "react";
 
-// ─── Real data extracted by analyze_friction.py (data-driven pipeline) ─────
-// Clusters discovered via Lift Analysis + TF-IDF + KMeans (6 clusters)
+// ─── Real data extracted by analyze_friction.py ────────────────────────────
 const METRICS = {
   totalReviews: 2000,
   negativeReviews: 877,
   negativePct: 43.9,
   scoreDistribution: { "1": 779, "2": 98, "3": 79, "4": 177, "5": 867 },
-  // Auto-discovered clusters: data-driven regex patterns matched against negative reviews
   keywordFreq: {
-    "App não abre / trava":     398,  // cluster: abre — largest friction cluster (45.4%)
-    "Pagamento / erro":         215,  // cluster: erro — payment & transaction failures (24.5%)
-    "App não funciona (ES)":    281,  // cluster: intente — Spanish-language performance (32.0%)
-    "App congela / carrega":    223,  // cluster: carrega — loading & crash loop (25.4%)
-    "Sentimento negativo":      258,  // cluster: péssimo — general dissatisfaction (29.4%)
-    "Frustração extrema":       411,  // cluster: pior — churn-signal cluster (46.9%)
+    trava: 206,
+    endereço: 75,
+    busca: 9,
+    carrinho: 2,
+    filtro: 0,
   },
-  // Top lift-ranked terms (over-indexed in negative vs positive reviews)
   topWords: [
-    { word: "péssimo",     count: 47 },
-    { word: "erro",        count: 28 },
-    { word: "desinstalei", count: 22 },
-    { word: "horrible",    count: 20 },
-    { word: "tarjeta",     count: 15 },
-    { word: "cancelado",   count: 12 },
-    { word: "carrega",     count: 11 },
-    { word: "cupón",       count: 10 },
-    { word: "abrindo",     count: 10 },
-    { word: "crédito",     count:  9 },
+    { word: "abre", count: 138 },
+    { word: "funciona", count: 79 },
+    { word: "ifood", count: 66 },
+    { word: "tela", count: 52 },
+    { word: "pagamento", count: 33 },
+    { word: "entrega", count: 35 },
+    { word: "péssimo", count: 47 },
+    { word: "horrível", count: 32 },
   ],
   quotes: {
     trava: [
