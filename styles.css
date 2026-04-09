@@ -1636,6 +1636,17 @@ a:hover {
     outline-offset: 2px;
 }
 
+/* Case-study inline chart images — constrained width with centre alignment */
+.case-img {
+    display: block;
+    max-width: 680px;
+    width: 100%;
+    height: auto;
+    border-radius: 12px;
+    margin: 0 auto;
+    border: 1px solid rgba(255,255,255,0.07);
+}
+
 .lightbox {
     position: fixed;
     inset: 0;

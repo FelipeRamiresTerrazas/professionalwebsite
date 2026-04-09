@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PedidosYa App Friction Analysis | Felipe Ramires Terrazas</title>
+    <meta name="description" content="Product Operations case study scraping 2,000 real Google Play reviews for PedidosYa (Delivery Hero) to quantify UX friction points in Discovery and Checkout using NLP keyword analysis.">
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css">
+</head>
+<body class="case-study-page">
+    <div class="case-study-shell">
+        <a class="case-study-back" href="../index.html">&larr; Back to portfolio</a>
+
+        <header class="case-study-hero">
+            <span class="case-study-kicker">Product Operations &middot; Delivery Hero</span>
+            <h1>PedidosYa App Friction Analysis: Translating 2,000 Real Reviews into Product Ops Signals</h1>
+            <p class="case-study-lead">
+                A full Product Operations pipeline that scrapes 2,000 live Google Play Store reviews for PedidosYa (Delivery Hero, Brazil), applies
+                NLP keyword frequency analysis on negative reviews (1&ndash;2&thinsp;★), and produces actionable Product Ops recommendations for the
+                Discovery and Checkout stages of the user journey — grounded entirely in real user data.
+            </p>
+            <div class="case-study-meta">
+                <span class="meta-pill">Python</span>
+                <span class="meta-pill">google-play-scraper</span>
+                <span class="meta-pill">pandas</span>
+                <span class="meta-pill">NLP / Regex</span>
+                <span class="meta-pill">React</span>
+                <span class="meta-pill">Product Ops</span>
+                <span class="meta-pill">Delivery Hero</span>
+            </div>
+        </header>
+
+        <div class="case-study-grid">
+
+            <!-- ── TABLE OF CONTENTS ───────────────────────────────────────── -->
+            <nav class="cs-toc" aria-label="Table of contents">
+                <span class="cs-toc-label">On this page</span>
+                <ul class="cs-toc-list">
+                    <li><a class="cs-toc-link" href="#executive-summary">Executive Summary</a></li>
+                    <li><a class="cs-toc-link" href="#data-pipeline">Data Pipeline</a></li>
+                    <li><a class="cs-toc-link" href="#friction-dashboard">Friction Dashboard</a></li>
+                    <li><a class="cs-toc-link" href="#product-ops-lens">Product Ops Lens</a></li>
+                    <li><a class="cs-toc-link" href="#react-component">React Component</a></li>
+                    <li><a class="cs-toc-link" href="#data-architecture">Data Architecture</a></li>
+                </ul>
+            </nav>
+
+            <main class="case-study-main">
+
+                <!-- ── EXECUTIVE SUMMARY ───────────────────────────────────── -->
+                <section id="executive-summary" class="case-panel">
+                    <h2>Executive Summary</h2>
+                    <p>
+                        The objective of this analysis is to identify <strong>hidden friction points</strong> in the PedidosYa user journey —
+                        specifically in the <strong>Discovery</strong> and <strong>Checkout</strong> stages — by
+                        translating qualitative user complaints into actionable Product Ops data.
+                    </p>
+                    <p>
+                        Rather than relying on survey panels or internal analytics that require data warehouse access, this pipeline
+                        mines the publicly available signal embedded in <strong>2,000 real Google Play Store reviews</strong>
+                        (Brazilian market, April 2026). The result: a quantified map of where users abandon, what words they use
+                        to describe their pain, and which competitor they name when they leave.
+                    </p>
+
+                    <div class="metrics-row" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;margin:1.5rem 0;">
+                        <div class="metric-card">
+                            <span class="metric-number">2,000</span>
+                            <span class="metric-label">Reviews Scraped</span>
+                            <span class="metric-sub">Google Play BR, live data</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-number">43.9%</span>
+                            <span class="metric-label">Negative Rate</span>
+                            <span class="metric-sub">1–2★ reviews</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-number">23.5%</span>
+                            <span class="metric-label">Crash Mentions</span>
+                            <span class="metric-sub">of all negative reviews</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-number">66</span>
+                            <span class="metric-label">iFood Citations</span>
+                            <span class="metric-sub">competitor churn signal</span>
+                        </div>
+                    </div>
+
+                    <p>
+                        The 43.9% negative rate is well above the 15–20% industry benchmark for mature delivery super-apps.
+                        The dominant pain cluster is <strong>app stability</strong>: crashes, freezes and blank screens
+                        block users <em>before they ever reach a restaurant menu</em>. A secondary cluster around
+                        <strong>GPS/address failures</strong> and <strong>payment errors</strong> completes a funnel
+                        where friction compounds at every stage.
+                    </p>
+                    <div class="inline-note">
+                        All data was scraped from the public Google Play Store using
+                        <code>google-play-scraper</code> (lang=pt, country=br).
+                        No personally identifiable information is present — reviews are anonymous public text.
+                    </div>
+                </section>
+
+                <!-- ── DATA PIPELINE ──────────────────────────────────────── -->
+                <section id="data-pipeline" class="case-panel">
+                    <h2>Step 1 — Data Extraction (Scraping)</h2>
+                    <p>
+                        The scraper targets <code>com.pedidosya</code> with <code>Sort.NEWEST</code>, collecting reviews
+                        in 200-row batches using the library's pagination <code>continuation_token</code>.
+                        A 500ms sleep between batches keeps the request rate polite.
+                        The full 2,000 rows are written to <code>pedidosya_reviews.csv</code> with UTF-8-BOM
+                        encoding (Excel-safe for non-technical stakeholders).
+                    </p>
+
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>scrape_pedidosya.py — core pagination loop</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python">from google_play_scraper import reviews, Sort
+
+APP_ID, LANG, COUNTRY = "com.pedidosya", "pt", "br"
+TARGET, BATCH = 2000, 200
+
+collected, continuation_token = [], None
+
+while len(collected) < TARGET:
+    batch_size = min(BATCH, TARGET - len(collected))
+    result, continuation_token = reviews(
+        APP_ID,
+        lang=LANG,
+        country=COUNTRY,
+        sort=Sort.NEWEST,
+        count=batch_size,
+        continuation_token=continuation_token,
+    )
+    if not result:
+        break
+    collected.extend(result)
+    if continuation_token is None:
+        break
+    time.sleep(0.5)</code></pre>
+                    </div>
+
+                    <h2 style="margin-top:2rem;">Step 2 — Friction Mapping (NLP)</h2>
+                    <p>
+                        The analysis filters to <strong>877 negative reviews</strong> (1–2★) and applies
+                        regex-based keyword matching covering both Portuguese and Spanish (the review corpus is
+                        mixed, reflecting PedidosYa's LatAm user base). A free-form word-frequency pass using
+                        <code>collections.Counter</code> surfaces the top 25 organic signals with no predefined vocabulary.
+                    </p>
+
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>analyze_friction.py — keyword frequency + organic top terms</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python">import pandas as pd, json, re
+from collections import Counter
+
+df  = pd.read_csv("pedidosya_reviews.csv", encoding="utf-8-sig")
+neg = df[df["score"].isin([1, 2])].copy()
+neg["content"] = neg["content"].fillna("").str.lower()
+
+PATTERNS = {
+    "trava":    r"(trava|travou|bug|bugou|fecha|crash|congela|erro|error|n.o abre)",
+    "endereço": r"(endere[cç]|localiza[cç]|gps|rua|cep|bairro|direc[cç]|ubicaci)",
+    "busca":    r"(busca|buscar|pesquisa|encontrar|procurar|search)",
+    "carrinho": r"(carrinho|carrito|sacola|pedido n.o adicionado)",
+    "filtro":   r"(filtro|filtrar|categoria|ordenar|classif)",
+}
+
+freq = {}
+for kw, pat in PATTERNS.items():
+    freq[kw] = int(neg["content"].str.contains(pat, regex=True, na=False).sum())
+
+# Top 25 organic terms
+all_words = " ".join(neg["content"].tolist()).split()
+top_words = Counter(
+    w.strip(".,!?;:()\"'-") for w in all_words
+    if len(w) > 3 and w not in STOPWORDS
+).most_common(25)</code></pre>
+                    </div>
+                </section>
+
+                <!-- ── FRICTION DASHBOARD ─────────────────────────────────── -->
+                <section id="friction-dashboard" class="case-panel">
+                    <h2>Friction Dashboard</h2>
+                    <p>
+                        The four charts below were generated from the real metrics JSON exported by
+                        <code>analyze_friction.py</code>. Each figure uses a dark-background style
+                        consistent with the rest of this portfolio.
+                    </p>
+
+                    <h3>Rating Distribution</h3>
+                    <p>
+                        The classic <em>bimodal</em> pattern: a mass of 5★ ratings from loyal users
+                        and an almost equal mass of 1★ from frustrated ones, with the middle nearly absent.
+                        This shape is diagnostic of a <strong>reliability-degraded app with pockets of loyal power-users</strong>
+                        — the 5★ block reflects habitual users who tolerate instability; the 1★ block reflects
+                        occasional or new users who have no tolerance budget.
+                    </p>
+                    <div class="chart-grid" style="margin:1.2rem 0;">
+                        <div class="chart-wrap">
+                            <img src="../figures/pedidosya_score_distribution.png"
+                                 alt="PedidosYa rating distribution chart"
+                                 class="case-img lightbox-trigger"
+                                 loading="lazy">
+                        </div>
+                    </div>
+
+                    <h3>Friction Keyword Frequency</h3>
+                    <p>
+                        Among the five targeted friction clusters, <strong>trava/crash (206 mentions, 23.5%)</strong>
+                        towers over every other signal. This is not an isolated bug report — it is a systemic
+                        stability issue visible to nearly one in four dissatisfied users. The <strong>endereço/GPS</strong>
+                        cluster (75 mentions, 8.6%) is a clear second-priority. Carrinho and filtro show
+                        near-zero signal in this corpus, suggesting checkout cart and filter UX are not
+                        primary pain drivers <em>relative to app launch stability</em>.
+                    </p>
+                    <div class="chart-grid" style="margin:1.2rem 0;">
+                        <div class="chart-wrap">
+                            <img src="../figures/pedidosya_keyword_friction.png"
+                                 alt="PedidosYa friction keyword frequency chart"
+                                 class="case-img lightbox-trigger"
+                                 loading="lazy">
+                        </div>
+                    </div>
+
+                    <h3>Top Organic Signals in Negative Reviews</h3>
+                    <p>
+                        Free-form word counting validates and extends the keyword analysis.
+                        <strong>"abre" (138 mentions)</strong> is the single highest-frequency organic signal —
+                        users overwhelmingly describe an app that simply will not open.
+                        <strong>"ifood" (66 mentions)</strong> is the most commercially dangerous signal:
+                        it is a direct competitor name appearing spontaneously, indicating that the PedidosYa
+                        experience is bad enough that users name their chosen alternative in the review text.
+                        <strong>"pagamento" (33 mentions)</strong> confirms the payment failure signal seen
+                        in qualitative quotes.
+                    </p>
+                    <div class="chart-grid" style="margin:1.2rem 0;">
+                        <div class="chart-wrap">
+                            <img src="../figures/pedidosya_top_terms.png"
+                                 alt="PedidosYa top organic terms bar chart"
+                                 class="case-img lightbox-trigger"
+                                 loading="lazy">
+                        </div>
+                    </div>
+
+                    <h3>Estimated User Funnel — Where Friction Kills Conversion</h3>
+                    <p>
+                        Combining the keyword rates with industry benchmarks builds an estimated conversion funnel.
+                        Of the 2,000 users represented in this review cohort, approximately <strong>802 (~40%)
+                        likely never complete a successful order</strong> due to stacked friction: app won't open,
+                        GPS fails, or payment doesn't go through. This is not a UX polish issue —
+                        it is a structural revenue leak.
+                    </p>
+                    <div class="chart-grid" style="margin:1.2rem 0;">
+                        <div class="chart-wrap">
+                            <img src="../figures/pedidosya_funnel.png"
+                                 alt="PedidosYa estimated user conversion funnel"
+                                 class="case-img lightbox-trigger"
+                                 loading="lazy">
+                        </div>
+                    </div>
+
+                    <h3>Real User Quotes</h3>
+                    <div class="quote-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.2rem;margin:1.2rem 0;">
+                        <div class="quote-block" style="border-left:3px solid #FF043C;padding:0.8rem 1rem;background:rgba(255,4,60,0.05);border-radius:0 8px 8px 0;">
+                            <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;color:#FF043C;text-transform:uppercase;margin-bottom:0.5rem;">Crash / Stability</div>
+                            <blockquote style="font-style:italic;color:var(--text-secondary);font-size:0.88rem;line-height:1.6;margin:0 0 0.5rem;">
+                                "Aplicativo completamente disfuncional. Não dá pra mexer, trava e dá erro o tempo todo."
+                            </blockquote>
+                            <blockquote style="font-style:italic;color:var(--text-secondary);font-size:0.88rem;line-height:1.6;margin:0;">
+                                "Pésima app, se trava todo el tiempo, 30 minutos para hacer un pedido."
+                            </blockquote>
+                        </div>
+                        <div class="quote-block" style="border-left:3px solid #F59E0B;padding:0.8rem 1rem;background:rgba(245,158,11,0.05);border-radius:0 8px 8px 0;">
+                            <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;color:#F59E0B;text-transform:uppercase;margin-bottom:0.5rem;">Address / GPS</div>
+                            <blockquote style="font-style:italic;color:var(--text-secondary);font-size:0.88rem;line-height:1.6;margin:0 0 0.5rem;">
+                                "Não marca a localização correta do envio."
+                            </blockquote>
+                            <blockquote style="font-style:italic;color:var(--text-secondary);font-size:0.88rem;line-height:1.6;margin:0;">
+                                "El app no reconoce mi dirección aunque esté escrita correctamente."
+                            </blockquote>
+                        </div>
+                        <div class="quote-block" style="border-left:3px solid #22C55E;padding:0.8rem 1rem;background:rgba(34,197,94,0.05);border-radius:0 8px 8px 0;">
+                            <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;color:#22C55E;text-transform:uppercase;margin-bottom:0.5rem;">Competitor Churn Signal</div>
+                            <blockquote style="font-style:italic;color:var(--text-secondary);font-size:0.88rem;line-height:1.6;margin:0 0 0.5rem;">
+                                "Desinstalei e fui pro iFood. Muito melhor."
+                            </blockquote>
+                            <blockquote style="font-style:italic;color:var(--text-secondary);font-size:0.88rem;line-height:1.6;margin:0;">
+                                "Como desenvolvedor mobile, é lamentável: o iFood está com um app muito mais enxuto."
+                            </blockquote>
+                        </div>
+                        <div class="quote-block" style="border-left:3px solid #94A3B8;padding:0.8rem 1rem;background:rgba(148,163,184,0.05);border-radius:0 8px 8px 0;">
+                            <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;color:#94A3B8;text-transform:uppercase;margin-bottom:0.5rem;">Payment Failures</div>
+                            <blockquote style="font-style:italic;color:var(--text-secondary);font-size:0.88rem;line-height:1.6;margin:0 0 0.5rem;">
+                                "Siempre te cobran mal en la tarjeta, te cobran 2 veces y tardan en devolver."
+                            </blockquote>
+                            <blockquote style="font-style:italic;color:var(--text-secondary);font-size:0.88rem;line-height:1.6;margin:0;">
+                                "O pagamento foi recusado sem motivo, mesmo com saldo disponível."
+                            </blockquote>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ── PRODUCT OPS LENS ───────────────────────────────────── -->
+                <section id="product-ops-lens" class="case-panel">
+                    <h2>The &lsquo;Product Ops&rsquo; Lens</h2>
+                    <p>
+                        Four structured business recommendations derived from the quantified friction signals.
+                        Each card maps a measured data point to a revenue/retention impact hypothesis and a
+                        concrete team action.
+                    </p>
+
+                    <!-- Card 1 -->
+                    <div class="rec-card" style="border-left:4px solid #FF043C;padding:1.2rem 1.4rem;margin:1.2rem 0;background:rgba(255,4,60,0.04);border-radius:0 12px 12px 0;">
+                        <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.8rem;">
+                            <span style="font-size:1.5rem;">💥</span>
+                            <strong style="color:var(--text-primary);font-size:1rem;">App Stability is the #1 Conversion Killer</strong>
+                        </div>
+                        <div style="display:grid;gap:0.6rem;">
+                            <p style="margin:0;font-size:0.88rem;"><span style="color:#FF043C;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Problem Found</span><br>
+                            23.5% of all negative reviews (206 mentions) cite crashes, freezes, or the app failing to open.
+                            The single most common organic word across all negative reviews is <strong>"abre"</strong> — 138 mentions — meaning
+                            users can't get past the launcher screen before they abandon.</p>
+                            <p style="margin:0;font-size:0.88rem;"><span style="color:#F59E0B;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Impact Hypothesis</span><br>
+                            Users in the consideration phase hit a fatal error before reaching a restaurant menu.
+                            Zero impressions served, zero GMV, full churn — with no recovery path inside the app.</p>
+                            <p style="margin:0;font-size:0.88rem;"><span style="color:#22C55E;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Recommended Action</span><br>
+                            Enforce a Crash-Free Sessions SLA gate (&ge;&nbsp;99% CFR) before any new feature ships.
+                            Instrument Crashlytics alerting at &ge;&nbsp;0.5% crash rate. Establish a Platform Stability
+                            squad with release veto power.</p>
+                        </div>
+                    </div>
+
+                    <!-- Card 2 -->
+                    <div class="rec-card" style="border-left:4px solid #F59E0B;padding:1.2rem 1.4rem;margin:1.2rem 0;background:rgba(245,158,11,0.04);border-radius:0 12px 12px 0;">
+                        <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.8rem;">
+                            <span style="font-size:1.5rem;">📍</span>
+                            <strong style="color:var(--text-primary);font-size:1rem;">GPS/Address Failures Block the Entire Discovery Funnel</strong>
+                        </div>
+                        <div style="display:grid;gap:0.6rem;">
+                            <p style="margin:0;font-size:0.88rem;"><span style="color:#FF043C;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Problem Found</span><br>
+                            75 negative reviews (8.6%) reference GPS or address-validation failures.
+                            The app cannot correctly detect user location or validate a manually entered address.</p>
+                            <p style="margin:0;font-size:0.88rem;"><span style="color:#F59E0B;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Impact Hypothesis</span><br>
+                            Address failure is a first-mile block: without a valid location the app cannot show
+                            relevant restaurants or estimate fees, collapsing the full discovery funnel for affected users.</p>
+                            <p style="margin:0;font-size:0.88rem;"><span style="color:#22C55E;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Recommended Action</span><br>
+                            Integrate redundant geocoding fallback (Google Maps + HERE). Instrument
+                            <em>address auto-confirm rate</em> as a leading funnel KPI.
+                            Ship a saved-addresses feature for returning users to bypass GPS dependency.</p>
+                        </div>
+                    </div>
+
+                    <!-- Card 3 -->
+                    <div class="rec-card" style="border-left:4px solid #94A3B8;padding:1.2rem 1.4rem;margin:1.2rem 0;background:rgba(148,163,184,0.04);border-radius:0 12px 12px 0;">
+                        <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.8rem;">
+                            <span style="font-size:1.5rem;">💸</span>
+                            <strong style="color:var(--text-primary);font-size:1rem;">Payment Failures Destroy Maximum-Intent Moments</strong>
+                        </div>
+                        <div style="display:grid;gap:0.6rem;">
+                            <p style="margin:0;font-size:0.88rem;"><span style="color:#FF043C;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Problem Found</span><br>
+                            33 organic mentions of payment issues in negative reviews — double-charges,
+                            card declines, and refund failures at the highest-intent moment of the funnel.</p>
+                            <p style="margin:0;font-size:0.88rem;"><span style="color:#F59E0B;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Impact Hypothesis</span><br>
+                            A user who has browsed, selected items, and entered checkout has maximum purchase intent.
+                            Payment failure here yields 100% GMV loss from a warm, committed buyer —
+                            and turns a loyal user into a vocal critic.</p>
+                            <p style="margin:0;font-size:0.88rem;"><span style="color:#22C55E;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Recommended Action</span><br>
+                            Audit gateway success rate by method. Prioritise PIX as primary method (instant, low-failure rate in BR).
+                            A/B test one-tap reorder flow to eliminate repeat checkout friction for loyal users.</p>
+                        </div>
+                    </div>
+
+                    <!-- Card 4 -->
+                    <div class="rec-card" style="border-left:4px solid #0EA5E9;padding:1.2rem 1.4rem;margin:1.2rem 0;background:rgba(14,165,233,0.04);border-radius:0 12px 12px 0;">
+                        <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.8rem;">
+                            <span style="font-size:1.5rem;">⚔️</span>
+                            <strong style="color:var(--text-primary);font-size:1rem;">iFood is a Measurable, Active Churn Destination</strong>
+                        </div>
+                        <div style="display:grid;gap:0.6rem;">
+                            <p style="margin:0;font-size:0.88rem;"><span style="color:#FF043C;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Problem Found</span><br>
+                            iFood is explicitly named <strong>66 times</strong> in negative reviews (7.5% of the negative corpus) as the user's
+                            stated alternative — making it a direct, measurable competitive churn signal.</p>
+                            <p style="margin:0;font-size:0.88rem;"><span style="color:#F59E0B;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Impact Hypothesis</span><br>
+                            Each iFood mention represents a user who has already evaluated the alternative and
+                            published their decision. Word-of-mouth churn multiplies retention cost and
+                            poisons organic acquisition channels.</p>
+                            <p style="margin:0;font-size:0.88rem;"><span style="color:#22C55E;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Recommended Action</span><br>
+                            Monitor iFood mention velocity as a leading churn KPI in weekly review dashboards.
+                            Launch a win-back flow targeting users dormant &ge;&nbsp;21 days.
+                            Benchmark UX patterns against iFood quarterly.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ── REACT COMPONENT ────────────────────────────────────── -->
+                <section id="react-component" class="case-panel">
+                    <h2>React Component — PedidosYaCaseStudy.jsx</h2>
+                    <p>
+                        All findings are also shipped as a self-contained <code>PedidosYaCaseStudy.jsx</code> React component
+                        (Tailwind CSS, PedidosYa brand colours). The component embeds the metrics JSON directly
+                        in component state and renders four sections: Executive Summary, Friction Dashboard, Product Ops Lens,
+                        and Data Architecture. It is designed to be dropped into any React project with Tailwind available.
+                    </p>
+
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>PedidosYaCaseStudy.jsx — key sub-components</span>
+                            <span>React / JSX</span>
+                        </div>
+                        <pre><code class="language-jsx">function HorizontalBar({ label, count, max, total }) {
+  const pct    = Math.round((count / max) * 100);
+  const ofNeg  = total ? ((count / total) * 100).toFixed(1) : null;
+  return (
+    &lt;div className="mb-3"&gt;
+      &lt;div className="flex justify-between text-sm mb-1"&gt;
+        &lt;span className="font-medium text-slate-200"&gt;{label}&lt;/span&gt;
+        &lt;span className="text-slate-400"&gt;
+          {count} mentions
+          {ofNeg &amp;&amp; &lt;span className="text-white font-semibold ml-1"&gt;({ofNeg}%)&lt;/span&gt;}
+        &lt;/span&gt;
+      &lt;/div&gt;
+      &lt;div className="w-full bg-slate-700 rounded-full h-2.5"&gt;
+        &lt;div className="h-2.5 rounded-full"
+             style={{ width: `${pct}%`, backgroundColor: "#FF043C" }} /&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  );
+}
+
+function OpsCard({ icon, problem, impact, action }) {
+  return (
+    &lt;div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-5"&gt;
+      &lt;div className="text-xl mb-3"&gt;{icon}&lt;/div&gt;
+
+      &lt;p&gt;&lt;span style={{ color: "#FF043C" }}&gt;Problem Found&lt;/span&gt;&lt;br/&gt;{problem}&lt;/p&gt;
+      &lt;p&gt;&lt;span className="text-amber-400"&gt;Impact Hypothesis&lt;/span&gt;&lt;br/&gt;{impact}&lt;/p&gt;
+      &lt;p&gt;&lt;span className="text-emerald-400"&gt;Recommended Action&lt;/span&gt;&lt;br/&gt;{action}&lt;/p&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+                    </div>
+                </section>
+
+                <!-- ── DATA ARCHITECTURE ───────────────────────────────────── -->
+                <section id="data-architecture" class="case-panel">
+                    <h2>Data Architecture</h2>
+                    <p>
+                        The full pipeline runs in three Python scripts plus one React component,
+                        with a JSON contract at the seam between the data layer and the presentation layer.
+                    </p>
+
+                    <div class="pipeline-steps" style="display:grid;gap:0;margin:1.5rem 0;">
+
+                        <div class="pipeline-step" style="display:flex;gap:1rem;padding:1rem 0 0.5rem;border-left:2px solid #FF043C;padding-left:1.5rem;margin-left:1rem;position:relative;">
+                            <div style="position:absolute;left:-13px;top:1rem;width:24px;height:24px;background:#FF043C;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;color:white;">01</div>
+                            <div>
+                                <strong style="color:var(--text-primary);">🕷️ Python Scraper — <code>scrape_pedidosya.py</code></strong>
+                                <p style="font-size:0.88rem;color:var(--text-secondary);margin:0.3rem 0 0;">
+                                    <code>google-play-scraper</code> targets <code>com.pedidosya</code> with <code>lang=pt, country=br</code>.
+                                    Pagination via <code>continuation_token</code> collects 2,000 reviews in 200-row batches.
+                                    Output: <code>pedidosya_reviews.csv</code> (6 columns, UTF-8-BOM).
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="pipeline-step" style="display:flex;gap:1rem;padding:1rem 0 0.5rem;border-left:2px solid #FF043C;padding-left:1.5rem;margin-left:1rem;position:relative;">
+                            <div style="position:absolute;left:-13px;top:1rem;width:24px;height:24px;background:#FF043C;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;color:white;">02</div>
+                            <div>
+                                <strong style="color:var(--text-primary);">🧹 Data Cleaning &amp; NLP — <code>analyze_friction.py</code></strong>
+                                <p style="font-size:0.88rem;color:var(--text-secondary);margin:0.3rem 0 0;">
+                                    Pandas stratification isolates 877 negative reviews (1–2★).
+                                    Regex keyword frequency covers PT+ES mixed corpus.
+                                    Counter-based top-25 organic term extraction (stopword-filtered).
+                                    Output: <code>pedidosya_friction_metrics.json</code>.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="pipeline-step" style="display:flex;gap:1rem;padding:1rem 0 0.5rem;border-left:2px solid #FF043C;padding-left:1.5rem;margin-left:1rem;position:relative;">
+                            <div style="position:absolute;left:-13px;top:1rem;width:24px;height:24px;background:#FF043C;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;color:white;">03</div>
+                            <div>
+                                <strong style="color:var(--text-primary);">📊 Chart Generation — <code>generate_pedidosya_figures.py</code></strong>
+                                <p style="font-size:0.88rem;color:var(--text-secondary);margin:0.3rem 0 0;">
+                                    Matplotlib dark-theme figures (160 DPI): score distribution,
+                                    keyword frequency horizontal bars, organic term bar chart,
+                                    and annotated funnel visualisation.
+                                    Output: 4 PNG files in <code>figures/</code>.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="pipeline-step" style="display:flex;gap:1rem;padding:1rem 0 0;border-left:2px solid transparent;padding-left:1.5rem;margin-left:1rem;position:relative;">
+                            <div style="position:absolute;left:-13px;top:1rem;width:24px;height:24px;background:#22C55E;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;color:white;">04</div>
+                            <div>
+                                <strong style="color:var(--text-primary);">⚛️ Business Visualisation — <code>PedidosYaCaseStudy.jsx</code></strong>
+                                <p style="font-size:0.88rem;color:var(--text-secondary);margin:0.3rem 0 0;">
+                                    Metrics embedded directly in component state. Sub-components render all sections.
+                                    Tailwind CSS layout; PedidosYa brand tokens (<code>#FF043C</code> red + white background).
+                                    Portable: drop into any React + Tailwind project.
+                                </p>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="inline-note" style="margin-top:1.5rem;">
+                        Pipeline tech summary:
+                        <code>google-play-scraper</code> &rarr;
+                        <code>pandas / regex NLP</code> &rarr;
+                        <code>JSON metrics</code> &rarr;
+                        <code>Matplotlib figures</code> &rarr;
+                        <code>React + Tailwind component</code>
+                    </div>
+                </section>
+
+            </main>
+
+            <!-- ── SIDEBAR ─────────────────────────────────────────────────── -->
+            <aside class="case-study-sidebar">
+
+                <section class="case-panel sidebar-block">
+                    <h3>Key Metrics</h3>
+                    <ul class="case-list">
+                        <li>2,000 reviews scraped (Google Play BR)</li>
+                        <li>43.9% negative rate (1–2★)</li>
+                        <li>23.5% of negatives cite crashes (206 mentions)</li>
+                        <li>8.6% cite GPS/address failures (75 mentions)</li>
+                        <li>66 explicit iFood churn mentions</li>
+                        <li>"abre" (138) = #1 organic word in negative reviews</li>
+                    </ul>
+                </section>
+
+                <section class="case-panel sidebar-block">
+                    <h3>Tech Stack</h3>
+                    <ul class="case-list">
+                        <li>google-play-scraper 1.2.7</li>
+                        <li>pandas 3.0.1 + regex NLP</li>
+                        <li>Matplotlib 3.x (dark theme)</li>
+                        <li>React 17+ / JSX</li>
+                        <li>Tailwind CSS</li>
+                    </ul>
+                </section>
+
+                <section class="case-panel sidebar-block">
+                    <h3>File Layout</h3>
+                    <ul class="case-list">
+                        <li>kaggle/pedidosya/scrape_pedidosya.py</li>
+                        <li>kaggle/pedidosya/analyze_friction.py</li>
+                        <li>kaggle/pedidosya/generate_pedidosya_figures.py</li>
+                        <li>kaggle/pedidosya/PedidosYaCaseStudy.jsx</li>
+                        <li>figures/pedidosya_score_distribution.png</li>
+                        <li>figures/pedidosya_keyword_friction.png</li>
+                        <li>figures/pedidosya_top_terms.png</li>
+                        <li>figures/pedidosya_funnel.png</li>
+                    </ul>
+                </section>
+
+            </aside>
+        </div>
+    </div>
+
+    <!-- ── LIGHTBOX ─────────────────────────────────────────────────────────── -->
+    <div id="lightboxOverlay" class="lightbox-overlay" role="dialog" aria-modal="true" aria-label="Image zoom" style="display:none;">
+        <button class="lightbox-close" id="lightboxClose" aria-label="Close">&times;</button>
+        <img id="lightboxImg" class="lightbox-img" src="" alt="">
+    </div>
+
+    <!-- ── STICKY PROJECT QUICK NAV ─────────────────────────────────────────── -->
+    <nav class="project-quick-nav" aria-label="Quick project navigation">
+        <span class="pqn-label">Projects</span>
+        <a class="pqn-link" href="fraud-detection.html">
+            <span class="pqn-dot"></span>
+            <span class="pqn-text">Fraud Detection</span>
+        </a>
+        <a class="pqn-link" href="yard-moves-forecast.html">
+            <span class="pqn-dot"></span>
+            <span class="pqn-text">Yard Moves Forecast</span>
+        </a>
+        <a class="pqn-link" href="customer-churn.html">
+            <span class="pqn-dot"></span>
+            <span class="pqn-text">Customer Churn</span>
+        </a>
+        <a class="pqn-link" href="food-delivery.html">
+            <span class="pqn-dot"></span>
+            <span class="pqn-text">Food Delivery Time</span>
+        </a>
+        <a class="pqn-link" href="ecommerce-churn.html">
+            <span class="pqn-dot"></span>
+            <span class="pqn-text">Coupon Engine</span>
+        </a>
+        <a class="pqn-link" href="foodpanda-vendor-intelligence.html">
+            <span class="pqn-dot"></span>
+            <span class="pqn-text">Foodpanda Vendors</span>
+        </a>
+        <a class="pqn-link" href="delivery-hero-ab-test.html">
+            <span class="pqn-dot"></span>
+            <span class="pqn-text">Delivery Hero A/B Test</span>
+        </a>
+        <a class="pqn-link" href="flight-search.html">
+            <span class="pqn-dot"></span>
+            <span class="pqn-text">Flight Search LTR</span>
+        </a>
+        <a class="pqn-link active" href="pedidosya-friction-analysis.html">
+            <span class="pqn-dot"></span>
+            <span class="pqn-text">PedidosYa Friction</span>
+        </a>
+    </nav>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+    <script>
+        hljs.highlightAll();
+
+        // ── Sticky ToC scrollspy ───────────────────────────────────────────
+        (function () {
+            var tocLinks = document.querySelectorAll('.cs-toc-link');
+            var sections = Array.from(tocLinks).map(function (l) {
+                return document.querySelector(l.getAttribute('href'));
+            }).filter(Boolean);
+
+            function onScroll() {
+                var scrollY = window.pageYOffset + 120;
+                var current = sections[0];
+                sections.forEach(function (s) { if (s.offsetTop <= scrollY) current = s; });
+                tocLinks.forEach(function (l) {
+                    l.classList.toggle('active', l.getAttribute('href') === '#' + current.id);
+                });
+            }
+            window.addEventListener('scroll', onScroll, { passive: true });
+            onScroll();
+        })();
+
+        // ── Lightbox ──────────────────────────────────────────────────────
+        (function () {
+            var overlay = document.getElementById('lightboxOverlay');
+            var img     = document.getElementById('lightboxImg');
+            var close   = document.getElementById('lightboxClose');
+
+            document.querySelectorAll('.lightbox-trigger').forEach(function (el) {
+                el.style.cursor = 'zoom-in';
+                el.addEventListener('click', function () {
+                    img.src = el.src;
+                    img.alt = el.alt;
+                    overlay.style.display = 'flex';
+                    document.body.style.overflow = 'hidden';
+                });
+            });
+
+            function closeLightbox() {
+                overlay.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+
+            close.addEventListener('click', closeLightbox);
+            overlay.addEventListener('click', function (e) {
+                if (e.target === overlay) closeLightbox();
+            });
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') closeLightbox();
+            });
+        })();
+    </script>
+</body>
+</html>

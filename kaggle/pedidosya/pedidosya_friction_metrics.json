@@ -1,0 +1,406 @@
+{
+  "meta": {
+    "total_reviews": 2000,
+    "negative_reviews": 877,
+    "negative_pct": 43.9,
+    "score_distribution": {
+      "1": 779,
+      "2": 98,
+      "3": 79,
+      "4": 177,
+      "5": 867
+    }
+  },
+  "clusters": [
+    {
+      "id": 0,
+      "name": "péssimo",
+      "size": 60,
+      "pct_neg": 6.8,
+      "top_terms": [
+        "brasil",
+        "opção",
+        "opção brasil",
+        "péssimo",
+        "funciona",
+        "espanhol",
+        "aparece",
+        "pro",
+        "sem",
+        "tinha",
+        "baixar",
+        "disponível"
+      ],
+      "pattern": "(?:brasil|opção|péssimo|funciona|espanhol|aparece|tinha|baixar|disponível)"
+    },
+    {
+      "id": 1,
+      "name": "carrega",
+      "size": 57,
+      "pct_neg": 6.5,
+      "top_terms": [
+        "abre",
+        "trava",
+        "gostei",
+        "carrega",
+        "dias",
+        "baixei",
+        "atualização",
+        "nem",
+        "novo",
+        "pro",
+        "simplesmente abre",
+        "instalei"
+      ],
+      "pattern": "(?:abre|trava|gostei|carrega|dias|baixei|atualização|novo|instalei)"
+    },
+    {
+      "id": 2,
+      "name": "erro",
+      "size": 122,
+      "pct_neg": 13.9,
+      "top_terms": [
+        "consigo",
+        "meu",
+        "trava",
+        "pagamento",
+        "erro",
+        "abrir",
+        "online",
+        "sem",
+        "hora",
+        "cartão",
+        "pagamento online",
+        "aceita"
+      ],
+      "pattern": "(?:consigo|trava|pagamento|erro|abrir|online|hora|cartão|aceita)"
+    },
+    {
+      "id": 3,
+      "name": "intente",
+      "size": 62,
+      "pct_neg": 7.1,
+      "top_terms": [
+        "funciona",
+        "péssimo",
+        "funcionando",
+        "nem",
+        "problema",
+        "ifood",
+        "pena",
+        "vezes",
+        "lento",
+        "simplesmente",
+        "intente",
+        "usar"
+      ],
+      "pattern": "(?:funciona|péssimo|funcionando|problema|ifood|pena|vezes|lento|simplesmente|intente)"
+    },
+    {
+      "id": 4,
+      "name": "pior",
+      "size": 25,
+      "pct_neg": 2.9,
+      "top_terms": [
+        "lixo",
+        "tempo",
+        "nem",
+        "pior",
+        "abre",
+        "consegui",
+        "ifood",
+        "funciona",
+        "horrivel",
+        "brasil",
+        "informado",
+        "nenhuma"
+      ],
+      "pattern": "(?:lixo|tempo|pior|abre|consegui|ifood|funciona|horrivel|brasil|informado)"
+    },
+    {
+      "id": 5,
+      "name": "abre",
+      "size": 551,
+      "pct_neg": 62.8,
+      "top_terms": [
+        "ifood",
+        "abre",
+        "entrega",
+        "péssimo",
+        "restaurante",
+        "minha",
+        "tela",
+        "restaurantes",
+        "nem",
+        "fica",
+        "ruim",
+        "aplicación"
+      ],
+      "pattern": "(?:ifood|abre|entrega|péssimo|restaurante|minha|tela|restaurantes|fica|ruim)"
+    }
+  ],
+  "keyword_freq": {
+    "péssimo": 258,
+    "carrega": 223,
+    "erro": 215,
+    "intente": 281,
+    "pior": 411,
+    "abre": 398
+  },
+  "quotes": {
+    "péssimo": [
+      "fazer pedidos para pagar com cartão neste aplicativo é um inferno, 90% das vezes aparece uma mensagem dizendo que não foi possível criar o pedido, sendo que ao trocar pra pagar no dinheiro ele cria o pedido normalmente, muito ruim!!!!!!",
+      "pessima experiência. oferecem cupom de primeiro uso e nao funciona nem mesmo falando com suporte. após isso fiz pedido e entregaram errado. depois de falar com chat e enviar foto do pedido entregue errado me enviam e-mail pedindo um monte de detalhes. péssimo!",
+      "no se realizan reembolsos de suscripción. los pedidos no funcionan en ciudad del este."
+    ],
+    "carrega": [
+      "péssima experiência. não aceitou nenhum tipo de cartão, usamos 4 diferentes, e não conseguimos completar o pedido pelo aplicativo. desinstalei e reinstalei, criamos contas com os dados de três pessoas diferentes durante a viagem pela argentina e nada de o pedido ser completado.",
+      "pésima app, se trava todo el tiempo, 30 minutos para hacer un pedido, y quise pedir en dos lugares diferentes y no me permite, la idea de la app esta excelente, pero.deberia funcionar",
+      "muito instável. uma hora aceita método de pagamento,outra não. desinstalei."
+    ],
+    "erro": [
+      "depois que eu coloquei as informações do meu cartão, me cobraram um valor a mais. não recomendo esse app",
+      "fazer pedidos para pagar com cartão neste aplicativo é um inferno, 90% das vezes aparece uma mensagem dizendo que não foi possível criar o pedido, sendo que ao trocar pra pagar no dinheiro ele cria o pedido normalmente, muito ruim!!!!!!",
+      "péssima experiência. não aceitou nenhum tipo de cartão, usamos 4 diferentes, e não conseguimos completar o pedido pelo aplicativo. desinstalei e reinstalei, criamos contas com os dados de três pessoas diferentes durante a viagem pela argentina e nada de o pedido ser completado."
+    ],
+    "intente": [
+      "fazer pedidos para pagar com cartão neste aplicativo é um inferno, 90% das vezes aparece uma mensagem dizendo que não foi possível criar o pedido, sendo que ao trocar pra pagar no dinheiro ele cria o pedido normalmente, muito ruim!!!!!!",
+      "pessima experiência. oferecem cupom de primeiro uso e nao funciona nem mesmo falando com suporte. após isso fiz pedido e entregaram errado. depois de falar com chat e enviar foto do pedido entregue errado me enviam e-mail pedindo um monte de detalhes. péssimo!",
+      "no se realizan reembolsos de suscripción. los pedidos no funcionan en ciudad del este."
+    ],
+    "pior": [
+      "péssima experiência. não aceitou nenhum tipo de cartão, usamos 4 diferentes, e não conseguimos completar o pedido pelo aplicativo. desinstalei e reinstalei, criamos contas com os dados de três pessoas diferentes durante a viagem pela argentina e nada de o pedido ser completado.",
+      "pessima experiência. oferecem cupom de primeiro uso e nao funciona nem mesmo falando com suporte. após isso fiz pedido e entregaram errado. depois de falar com chat e enviar foto do pedido entregue errado me enviam e-mail pedindo um monte de detalhes. péssimo!",
+      "no se realizan reembolsos de suscripción. los pedidos no funcionan en ciudad del este."
+    ],
+    "abre": [
+      "se for usar, pague em dinheiro e sempre confira o troco. os entregadores vão se aproveitar sempre que possível, e a central de atendimentos não serve pra absolutamente nada além de dizer que a culpa foi sua. além disso, os atendentes parecem ser treinados para ser extremamente mal educados.",
+      "fazer pedidos para pagar com cartão neste aplicativo é um inferno, 90% das vezes aparece uma mensagem dizendo que não foi possível criar o pedido, sendo que ao trocar pra pagar no dinheiro ele cria o pedido normalmente, muito ruim!!!!!!",
+      "pessima experiência. oferecem cupom de primeiro uso e nao funciona nem mesmo falando com suporte. após isso fiz pedido e entregaram errado. depois de falar com chat e enviar foto do pedido entregue errado me enviam e-mail pedindo um monte de detalhes. péssimo!"
+    ]
+  },
+  "top_words": [
+    {
+      "word": "péssimo",
+      "count": 47
+    },
+    {
+      "word": "erro",
+      "count": 28
+    },
+    {
+      "word": "desinstalei",
+      "count": 22
+    },
+    {
+      "word": "horrible",
+      "count": 20
+    },
+    {
+      "word": "infelizmente",
+      "count": 18
+    },
+    {
+      "word": "fiquei",
+      "count": 18
+    },
+    {
+      "word": "compra",
+      "count": 15
+    },
+    {
+      "word": "tarjeta",
+      "count": 15
+    },
+    {
+      "word": "puede",
+      "count": 13
+    },
+    {
+      "word": "inicial",
+      "count": 13
+    },
+    {
+      "word": "error",
+      "count": 12
+    },
+    {
+      "word": "pesos",
+      "count": 12
+    },
+    {
+      "word": "cancelado",
+      "count": 12
+    },
+    {
+      "word": "carrega",
+      "count": 11
+    },
+    {
+      "word": "cupón",
+      "count": 10
+    },
+    {
+      "word": "dinero",
+      "count": 10
+    },
+    {
+      "word": "após",
+      "count": 10
+    },
+    {
+      "word": "última",
+      "count": 10
+    },
+    {
+      "word": "abrindo",
+      "count": 10
+    },
+    {
+      "word": "pésimo",
+      "count": 9
+    },
+    {
+      "word": "dando",
+      "count": 9
+    },
+    {
+      "word": "puedo",
+      "count": 9
+    },
+    {
+      "word": "crédito",
+      "count": 9
+    },
+    {
+      "word": "después",
+      "count": 9
+    },
+    {
+      "word": "tento",
+      "count": 8
+    }
+  ],
+  "top_lift_terms": [
+    {
+      "term": "péssimo",
+      "lift": 5359.18,
+      "count": 47,
+      "score": 36740.68
+    },
+    {
+      "term": "erro",
+      "lift": 3192.7,
+      "count": 28,
+      "score": 16894.193
+    },
+    {
+      "term": "desinstalei",
+      "lift": 2508.55,
+      "count": 22,
+      "score": 11766.151
+    },
+    {
+      "term": "horrible",
+      "lift": 2280.5,
+      "count": 20,
+      "score": 10198.714
+    },
+    {
+      "term": "infelizmente",
+      "lift": 2052.45,
+      "count": 18,
+      "score": 8707.814
+    },
+    {
+      "term": "fiquei",
+      "lift": 2052.45,
+      "count": 18,
+      "score": 8707.814
+    },
+    {
+      "term": "compra",
+      "lift": 1710.38,
+      "count": 15,
+      "score": 6624.259
+    },
+    {
+      "term": "tarjeta",
+      "lift": 1710.38,
+      "count": 15,
+      "score": 6624.259
+    },
+    {
+      "term": "puede",
+      "lift": 1482.33,
+      "count": 13,
+      "score": 5344.603
+    },
+    {
+      "term": "inicial",
+      "lift": 1482.33,
+      "count": 13,
+      "score": 5344.603
+    },
+    {
+      "term": "error",
+      "lift": 1368.3,
+      "count": 12,
+      "score": 4739.934
+    },
+    {
+      "term": "pesos",
+      "lift": 1368.3,
+      "count": 12,
+      "score": 4739.934
+    },
+    {
+      "term": "cancelado",
+      "lift": 1368.3,
+      "count": 12,
+      "score": 4739.934
+    },
+    {
+      "term": "carrega",
+      "lift": 1254.28,
+      "count": 11,
+      "score": 4159.963
+    },
+    {
+      "term": "cupón",
+      "lift": 1140.25,
+      "count": 10,
+      "score": 3605.79
+    },
+    {
+      "term": "dinero",
+      "lift": 1140.25,
+      "count": 10,
+      "score": 3605.79
+    },
+    {
+      "term": "após",
+      "lift": 1140.25,
+      "count": 10,
+      "score": 3605.79
+    },
+    {
+      "term": "última",
+      "lift": 1140.25,
+      "count": 10,
+      "score": 3605.79
+    },
+    {
+      "term": "abrindo",
+      "lift": 1140.25,
+      "count": 10,
+      "score": 3605.79
+    },
+    {
+      "term": "pésimo",
+      "lift": 1026.23,
+      "count": 9,
+      "score": 3078.677
+    }
+  ]
+}
