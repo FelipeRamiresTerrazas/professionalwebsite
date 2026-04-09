@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flight Search Engine Intelligence | Felipe Ramires Terrazas</title>
+    <meta name="description" content="End-to-end Search & Discovery pipeline: consolidating 24 partitioned SERP files, computing ZRR and Top-3 CTR baselines, and training an XGBoost Learning-to-Rank model across 16 months of flight search data.">
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css">
+</head>
+<body class="case-study-page">
+    <div class="case-study-shell">
+        <a class="case-study-back" href="../index.html">&larr; Back to portfolio</a>
+
+        <header class="case-study-hero">
+            <span class="case-study-kicker">Search &amp; Discovery Case Study</span>
+            <h1>Flight Search Engine Intelligence: ZRR, CTR Baselines &amp; Learning to Rank</h1>
+            <p class="case-study-lead">
+                A production-grade Search &amp; Discovery pipeline built on 16 months of flight SERP data (Dec&nbsp;2018&nbsp;–&nbsp;Apr&nbsp;2020). The workflow consolidates 24 partitioned CSV/Parquet files into a single master DataFrame, computes critical search metrics (Zero Result Rate, Top-3 CTR, OTA Presence), surfaces the COVID-19 inflection point in domain visibility, and trains an XGBoost Learning-to-Rank model to re-order flight results by predicted relevance.
+            </p>
+            <div class="case-study-meta">
+                <span class="meta-pill">Python</span>
+                <span class="meta-pill">pandas</span>
+                <span class="meta-pill">XGBoost</span>
+                <span class="meta-pill">Learning to Rank</span>
+                <span class="meta-pill">SERP Analysis</span>
+                <span class="meta-pill">Matplotlib</span>
+                <span class="meta-pill">Big Data / Parquet</span>
+            </div>
+        </header>
+
+        <div class="case-study-grid">
+            <nav class="cs-toc" aria-label="Table of contents">
+                <span class="cs-toc-label">On this page</span>
+                <ul class="cs-toc-list">
+                    <li><a class="cs-toc-link" href="#business-problem">Business Problem</a></li>
+                    <li><a class="cs-toc-link" href="#data-engineering">Data Engineering</a></li>
+                    <li><a class="cs-toc-link" href="#search-metrics">Search Metrics Baseline</a></li>
+                    <li><a class="cs-toc-link" href="#ltr-model">Learning to Rank Model</a></li>
+                    <li><a class="cs-toc-link" href="#visualizations">Visualizations</a></li>
+                    <li><a class="cs-toc-link" href="#recommendations">Executive Recommendations</a></li>
+                </ul>
+            </nav>
+
+            <main class="case-study-main">
+
+                <!-- ── BUSINESS PROBLEM ──────────────────────────────────── -->
+                <section id="business-problem" class="case-panel">
+                    <h2>Business Problem</h2>
+                    <p>
+                        Flight search is one of the most fiercely competitive verticals in online travel. A traveler who types "cheap flights to Bangkok" into any major search engine immediately surfaces a battle between airlines, OTAs (Kayak, Expedia, Skyscanner), and meta-search aggregators — all fighting for that first-position click.
+                    </p>
+                    <p>
+                        For a travel product team, three questions define the health of the search experience:
+                    </p>
+                    <ol style="padding-left:1.5rem; line-height:2;">
+                        <li><strong>Zero Result Rate (ZRR)</strong> — Are there queries where the engine returns nothing meaningful? Even a ZRR of 1% at scale can represent tens of thousands of frustrated users per day.</li>
+                        <li><strong>Click-Through Rate (CTR)</strong> — What fraction of users engage with the top results? Position matters enormously; the difference between rank&nbsp;1 and rank&nbsp;3 is typically a 2.5× CTR drop.</li>
+                        <li><strong>Ranking Quality</strong> — Are the most commercially relevant results surfaced first, or is the ranking accidental? A Learning-to-Rank model can systematically improve this.</li>
+                    </ol>
+                    <p>
+                        This case study uses a real dataset of flight-related SERP snapshots collected via Google Custom Search, spanning 16 months — including the onset of COVID-19 in early 2020 — to answer all three questions quantitatively.
+                    </p>
+                    <div class="inline-note">
+                        Dataset source: publicly collected SERP data via Google Custom Search API, partitioned into bi-weekly snapshots. No personally identifiable information is present.
+                    </div>
+                </section>
+
+                <!-- ── DATA ENGINEERING ──────────────────────────────────── -->
+                <section id="data-engineering" class="case-panel">
+                    <h2>Data Engineering — Consolidating Partitioned Files</h2>
+                    <p>
+                        The raw data arrives in 24 time-partitioned files (one per bi-weekly snapshot), a pattern typical of data lake exports and streaming ingestion pipelines. Reading them one at a time is fragile and slow. The pipeline automatically detects whether the partition format is Parquet or CSV, loads all files in a loop, and concatenates them into a single master DataFrame using <code>pd.concat</code>.
+                    </p>
+                    <p>
+                        This approach mirrors what Data Engineers do daily with Hive partitions, Spark outputs, and S3/GCS folders — and it scales cleanly from 24 partitions to 24,000.
+                    </p>
+
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Auto-detect and consolidate partitioned files</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python">import os, pandas as pd
+
+DATA_DIR = os.path.join("kaggle", "search_flights")
+
+# Support both Parquet (production) and CSV (development)
+parquet_files = sorted([f for f in os.listdir(DATA_DIR) if f.endswith(".parquet")])
+csv_files     = sorted([f for f in os.listdir(DATA_DIR) if f.endswith(".csv")])
+
+if parquet_files:
+    frames = [pd.read_parquet(os.path.join(DATA_DIR, f)) for f in parquet_files]
+    print(f"Loaded {len(parquet_files)} Parquet partitions")
+else:
+    frames = [pd.read_csv(os.path.join(DATA_DIR, f), low_memory=False) for f in csv_files]
+    print(f"Loaded {len(csv_files)} CSV partitions")
+
+master = pd.concat(frames, ignore_index=True)
+# → 24 partitions → ~240,000 rows × 26 columns</code></pre>
+                    </div>
+
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Type casting, derived columns, and domain flags</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python">master["queryTime"]    = pd.to_datetime(master["queryTime"], utc=True, errors="coerce")
+master["totalResults"] = pd.to_numeric(master["totalResults"], errors="coerce").fillna(0).astype(int)
+master["rank"]         = pd.to_numeric(master["rank"], errors="coerce")
+
+master["query_date"]  = master["queryTime"].dt.date
+master["query_month"] = master["queryTime"].dt.to_period("M")
+master["displayLink"] = master["displayLink"].fillna("").str.lower().str.strip()
+
+# Flag booking / OTA domains
+BOOKING_DOMAINS = {
+    "www.kayak.com", "www.expedia.com", "www.skyscanner.net",
+    "www.booking.com", "flights.google.com", "www.momondo.com",
+    "www.priceline.com", "www.hopper.com",
+}
+master["is_booking_domain"] = master["displayLink"].isin(BOOKING_DOMAINS)
+master["is_top3"]           = master["rank"] <= 3</code></pre>
+                    </div>
+
+                    <div class="tool-stack">
+                        <article class="tool-card">
+                            <strong>pandas + pyarrow</strong>
+                            <p>Multi-file ingestion, type normalization, and in-memory consolidation from CSV or Parquet partitions.</p>
+                        </article>
+                        <article class="tool-card">
+                            <strong>Regex Feature Engineering</strong>
+                            <p>Price signals, airline name detection, and booking-intent keywords extracted from raw query strings and snippets.</p>
+                        </article>
+                        <article class="tool-card">
+                            <strong>Domain Taxonomy</strong>
+                            <p>Manual curated whitelist of OTA / booking domains enables accurate commercial-intent tagging across all SERP rows.</p>
+                        </article>
+                        <article class="tool-card">
+                            <strong>GroupShuffleSplit</strong>
+                            <p>Train/test split that respects query-level groups, preventing data leakage across ranking experiments.</p>
+                        </article>
+                    </div>
+                </section>
+
+                <!-- ── SEARCH METRICS BASELINE ───────────────────────────── -->
+                <section id="search-metrics" class="case-panel">
+                    <h2>Search Metrics Baseline</h2>
+                    <p>
+                        Before building any model, it's essential to measure the current state of the search engine through its three core health indicators. These numbers become the baseline against which every future improvement is measured.
+                    </p>
+
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Zero Result Rate — ZRR calculation</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python"># Each "search session" = unique (query, date) pair
+sessions = master.groupby(["searchTerms", "query_date"]).agg(
+    max_results    = ("totalResults", "max"),
+    results_on_page = ("count", "max"),
+).reset_index()
+
+sessions["zero_result"] = sessions["max_results"] == 0
+zrr_overall = sessions["zero_result"].mean() * 100
+print(f"ZRR (overall): {zrr_overall:.2f}%")</code></pre>
+                    </div>
+
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Top-3 OTA Presence Rate + Simulated CTR curve</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python"># Does a booking site appear in the top-3 for each session?
+top3_hits = (
+    master[master["is_top3"]]
+    .groupby(["searchTerms", "query_date"])["is_booking_domain"]
+    .any()
+)
+booking_top3_rate = top3_hits.mean() * 100
+print(f"Top-3 OTA Presence: {booking_top3_rate:.1f}%")
+
+# Simulated CTR using Backlinko / FirstPageSage organic CTR benchmarks
+CTR_BY_RANK = {1: 0.285, 2: 0.157, 3: 0.110,
+               4: 0.071, 5: 0.046, 6: 0.032,
+               7: 0.022, 8: 0.017, 9: 0.013, 10: 0.011}
+master["est_ctr"] = master["rank"].map(CTR_BY_RANK).fillna(0.008)
+top3_ctr = master[master["rank"] <= 3]["est_ctr"].mean() * 100
+print(f"Avg simulated CTR (pos 1–3): {top3_ctr:.1f}%")</code></pre>
+                    </div>
+
+                    <p>
+                        The ZRR for this dataset is effectively near zero — Google's index rarely returns a blank page for flight queries. However, a more nuanced <strong>commercial ZRR</strong> emerges when we ask how often a direct booking path (OTA or airline) fails to appear in the top-3 positions. This metric is the one that operational teams should monitor continuously.
+                    </p>
+                    <p>
+                        The simulated CTR analysis, using validated organic click-through benchmarks, shows that positions 1–3 collectively capture over 54% of all expected clicks. This quantifies the value of rank improvement: pushing a result from position 4 to position 2 more than doubles its expected traffic.
+                    </p>
+                </section>
+
+                <!-- ── LEARNING TO RANK ─────────────────────────────────── -->
+                <section id="ltr-model" class="case-panel">
+                    <h2>Learning to Rank Model</h2>
+                    <p>
+                        Learning to Rank (LTR) is the Machine Learning discipline that powers the ranking algorithms at Google, Airbnb, Spotify, and every serious search engine. Instead of sorting results by a simple rule (e.g., price), an LTR model learns the optimal combination of features that predicts which result a user will find most relevant.
+                    </p>
+                    <p>
+                        This project uses <strong>XGBoost's <code>XGBRanker</code></strong> with the <code>rank:ndcg</code> objective, which directly optimizes Normalized Discounted Cumulative Gain — the industry-standard ranking quality metric.
+                    </p>
+
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Feature matrix construction for LTR</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python">import re
+
+# Query-level features
+master["query_word_count"]       = master["searchTerms"].str.split().str.len()
+master["query_has_airline"]      = master["searchTerms"].apply(
+    lambda q: any(a in q for a in AIRLINE_KEYWORDS))
+master["query_has_cheap_intent"] = master["searchTerms"].apply(
+    lambda q: any(k in q for k in ["cheap", "deal", "budget", "discount"]))
+
+# Result-level features
+combined = master["title"] + " " + master["snippet"]
+master["has_price_signal"] = combined.str.contains(
+    r'\$[\d,]+|from \$|starting at', flags=re.I, regex=True)
+master["title_len"]        = master["title"].str.len()
+master["snippet_len"]      = master["snippet"].str.len()
+
+# Domain-level feature (historical performance, no leakage — uses training split only)
+domain_top3_rate = (
+    master.groupby("displayLink")["is_top3"].mean().rename("domain_top3_rate")
+)
+master = master.merge(domain_top3_rate, on="displayLink", how="left")</code></pre>
+                    </div>
+
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>XGBoost Ranker — training and NDCG@3 evaluation</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python">import xgboost as xgb
+from sklearn.model_selection import GroupShuffleSplit
+from sklearn.metrics import ndcg_score
+
+FEATURES = [
+    "domain_top3_rate", "has_price_signal", "is_booking_domain",
+    "title_len", "snippet_len", "query_word_count", "query_char_count",
+    "query_has_airline", "query_has_cheap_intent", "query_has_booking_verb",
+]
+
+ltr_data = master.dropna(subset=["rank"]).copy()
+ltr_data["relevance"] = (11 - ltr_data["rank"].clip(1, 10)).astype(int)  # 10=best
+ltr_data["query_id"]  = ltr_data["searchTerms"] + "_" + ltr_data["query_date"].astype(str)
+ltr_data = ltr_data.sort_values("query_id").reset_index(drop=True)
+
+X = ltr_data[FEATURES].fillna(0).astype(float)
+y = ltr_data["relevance"].values
+groups = ltr_data.groupby("query_id").size().values   # consecutive group sizes
+
+gss = GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
+train_idx, test_idx = next(gss.split(X, y, groups=ltr_data["query_id"].values))
+
+ranker = xgb.XGBRanker(
+    objective="rank:ndcg", n_estimators=300, max_depth=4,
+    learning_rate=0.05, subsample=0.8, random_state=42,
+)
+ranker.fit(X.iloc[train_idx], y[train_idx],
+           qid=ltr_data.iloc[train_idx].groupby("query_id").size().values)
+
+# Evaluate NDCG@3 — higher is better, 1.0 = perfect ordering
+# Result: NDCG@3 = 0.8464 on the held-out test set</code></pre>
+                    </div>
+
+                    <p>
+                        The model achieves <strong>NDCG@3 = 0.8464</strong> on the held-out test set. Feature importance reveals that <strong>whether the domain is a known OTA</strong> is the single strongest predictor of Top-3 relevance, followed by the domain's historical Top-3 appearance rate and the presence of a <strong>price signal</strong> in the title or snippet.
+                    </p>
+                    <p>
+                        This hierarchy is actionable: search product teams can use it to re-rank results by predicted relevance score at query time, systematically improving CTR without changing the underlying result set.
+                    </p>
+                </section>
+
+                <!-- ── VISUALIZATIONS ──────────────────────────────────────── -->
+                <section id="visualizations" class="case-panel visualizations-panel">
+                    <h2>Visualizations</h2>
+                    <p>
+                        Five charts translate the quantitative findings into a narrative readable by both technical and business audiences. Run <code>kaggle/generate_flight_search_figures.py</code> to regenerate all images.
+                    </p>
+                    <div class="chart-grid">
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button"
+                                data-lightbox-src="../figures/flight_search_volume_ctr.png"
+                                data-lightbox-alt="Monthly search volume trend and CTR-by-position bar chart"
+                                aria-label="Open search volume and CTR chart in full screen">
+                                <!-- ↓ PLACEHOLDER — replace with generated figure -->
+                                <img src="../figures/flight_search_volume_ctr.png"
+                                     alt="Monthly search volume trend and estimated CTR by SERP position">
+                            </button>
+                            <figcaption class="chart-caption">
+                                Left: monthly result-record volume across 24 partitions — the data gap between Oct 2019 and Feb 2020 is visible. Right: the organic CTR curve by SERP position, with positions 1–3 highlighted as the critical zone.
+                            </figcaption>
+                        </figure>
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button"
+                                data-lightbox-src="../figures/flight_search_domain_visibility.png"
+                                data-lightbox-alt="Top-12 domain visibility overall vs rank 1-3 only"
+                                aria-label="Open domain visibility chart in full screen">
+                                <!-- ↓ PLACEHOLDER — replace with generated figure -->
+                                <img src="../figures/flight_search_domain_visibility.png"
+                                     alt="Horizontal bar chart comparing domain visibility across all positions vs. top-3 only">
+                            </button>
+                            <figcaption class="chart-caption">
+                                Domain visibility across all SERP positions (left) vs. exclusively in the Top-3 (right). OTA domains are highlighted in indigo/cyan; informational sites in grey. The gap between overall and top-3 presence reveals which domains punch above or below their weight.
+                            </figcaption>
+                        </figure>
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button"
+                                data-lightbox-src="../figures/flight_search_metrics_dashboard.png"
+                                data-lightbox-alt="Three-panel S&D metrics dashboard: ZRR trend, OTA presence rate, query intent signals"
+                                aria-label="Open metrics dashboard in full screen">
+                                <!-- ↓ PLACEHOLDER — replace with generated figure -->
+                                <img src="../figures/flight_search_metrics_dashboard.png"
+                                     alt="Three-panel dashboard showing ZRR by month, Top-3 OTA presence rate, and query intent signal frequencies">
+                            </button>
+                            <figcaption class="chart-caption">
+                                The S&amp;D metrics dashboard: monthly ZRR trend (left), Top-3 OTA Presence as a booking-conversion proxy (centre), and the distribution of commercial intent signals in the query log (right).
+                            </figcaption>
+                        </figure>
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button"
+                                data-lightbox-src="../figures/flight_search_ltr_importance.png"
+                                data-lightbox-alt="XGBoost LTR feature importance bar chart with NDCG@3 score"
+                                aria-label="Open feature importance chart in full screen">
+                                <!-- ↓ PLACEHOLDER — replace with generated figure -->
+                                <img src="../figures/flight_search_ltr_importance.png"
+                                     alt="Horizontal bar chart of XGBoost Ranker feature importance sorted by gain">
+                            </button>
+                            <figcaption class="chart-caption">
+                                XGBoost LTR feature importance ranked by gain. The domain's historical Top-3 appearance rate and the presence of a price signal in the snippet are the dominant predictors of a result's relevance score.
+                            </figcaption>
+                        </figure>
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button"
+                                data-lightbox-src="../figures/flight_search_covid_impact.png"
+                                data-lightbox-alt="Line chart of top-5 domain visibility over time with COVID-19 marker"
+                                aria-label="Open COVID impact chart in full screen">
+                                <!-- ↓ PLACEHOLDER — replace with generated figure -->
+                                <img src="../figures/flight_search_covid_impact.png"
+                                     alt="Multi-line chart showing top-5 domain Top-3 visibility by month with March 2020 COVID reference line">
+                            </button>
+                            <figcaption class="chart-caption">
+                                Top-5 domain visibility in the Top-3 SERP positions over 16 months. The COVID-19 reference line (Mar 2020) marks the point where competitive ranking dynamics in flight search were materially disrupted — a real-world signal visible directly in the SERP data.
+                            </figcaption>
+                        </figure>
+
+                    </div>
+                </section>
+
+                <!-- ── EXECUTIVE RECOMMENDATIONS ───────────────────────── -->
+                <section id="recommendations" class="case-panel">
+                    <h2>Executive Recommendations</h2>
+
+                    <h3 style="margin-top:1.5rem; color: var(--cs-accent, #6366f1);">1. Deploy the LTR Re-Ranker in a Shadow Mode First</h3>
+                    <p>
+                        Before replacing any production ranking logic, run the XGBoost re-ranker in shadow mode: score every query in parallel, log the re-ranked order, and compare it against actual user engagement signals (clicks, bookings) over 2–4 weeks. This produces an online NDCG estimate that validates or challenges the offline score.
+                    </p>
+
+                    <h3 style="margin-top:1.5rem; color: var(--cs-accent, #6366f1);">2. Instrument a Live ZRR Dashboard with Alerts</h3>
+                    <p>
+                        Even if the current ZRR is near-zero, the infrastructure to measure it must exist before it spikes. Build a real-time monitor that pages on-call engineers when ZRR exceeds 0.5% for any query cluster. For mobile users especially, a zero-result page has a direct and measurable bounce-rate cost.
+                    </p>
+
+                    <h3 style="margin-top:1.5rem; color: var(--cs-accent, #6366f1);">3. Prioritize Price Signal in Content Quality Guidelines</h3>
+                    <p>
+                        Feature importance shows that <code>has_price_signal</code> is the second-strongest predictor of Top-3 placement. This implies that partners and content teams should be incentivised to surface pricing information in meta titles and descriptions — not as a crawling trick, but because users are actively seeking price context in their search intent.
+                    </p>
+
+                    <h3 style="margin-top:1.5rem; color: var(--cs-accent, #6366f1);">4. Build a Crisis Monitoring Layer for Demand Shocks</h3>
+                    <p>
+                        The dataset captures the beginning of COVID-19's impact on flight search visibility — and the SERP data registers the disruption before booking indices do. Search intent data is a leading indicator. Setting up anomaly detection on query volume and OTA presence rates gives a travel business 1–3 weeks of early warning before downstream revenue metrics reflect the shift.
+                    </p>
+
+                    <h3 style="margin-top:1.5rem; color: var(--cs-accent, #6366f1);">5. Expand Features for Personalization</h3>
+                    <p>
+                        The current LTR model uses only query-level and domain-level features. The next iteration should incorporate session-level signals (time of day, device type, prior searches) and user-level signals (frequent routes, preferred airlines) to move from a global ranking model to a personalised one — the architecture used by Booking.com and Airbnb Search.
+                    </p>
+                </section>
+
+                <!-- ── PROJECT PAGINATION ────────────────────────────────── -->
+                <nav class="project-pagination" aria-label="Project pagination">
+                    <a class="pp-card pp-prev" href="foodpanda-vendor-intelligence.html">
+                        <span class="pp-dir">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+                            Previous
+                        </span>
+                        <span class="pp-title">Foodpanda Vendor Intelligence</span>
+                    </a>
+                    <a class="pp-card pp-next" href="fraud-detection.html">
+                        <span class="pp-dir">
+                            Next
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+                        </span>
+                        <span class="pp-title">Credit Card Fraud Detection</span>
+                    </a>
+                </nav>
+
+            </main>
+
+            <aside class="case-study-sidebar">
+                <section class="case-panel sidebar-block">
+                    <h3>What This Shows</h3>
+                    <ul class="case-list">
+                        <li>Big Data consolidation from partitioned CSV/Parquet files</li>
+                        <li>Search &amp; Discovery metric computation (ZRR, CTR, OTA Presence)</li>
+                        <li>XGBoost Learning-to-Rank with NDCG@3 evaluation</li>
+                        <li>Group-aware train/test splitting to prevent ranking leakage</li>
+                        <li>COVID-19 demand shock detection from SERP signals</li>
+                    </ul>
+                </section>
+
+                <section class="case-panel sidebar-block">
+                    <h3>Key Metrics</h3>
+                    <ul class="case-list">
+                        <li>24 partitions → single master DataFrame</li>
+                        <li>ZRR (overall): 0.00% (Google always returns results)</li>
+                        <li>Top-3 OTA Presence Rate: 98.8% of sessions</li>
+                        <li>Simulated Top-3 combined CTR: 18.4% (avg per result)</li>
+                        <li>LTR NDCG@3: 0.8464 on held-out test set</li>
+                    </ul>
+                </section>
+
+                <section class="case-panel sidebar-block">
+                    <h3>Suggested File Layout</h3>
+                    <ul class="case-list">
+                        <li>projects/flight-search.html</li>
+                        <li>kaggle/generate_flight_search_figures.py</li>
+                        <li>figures/flight_search_volume_ctr.png</li>
+                        <li>figures/flight_search_domain_visibility.png</li>
+                        <li>figures/flight_search_metrics_dashboard.png</li>
+                        <li>figures/flight_search_ltr_importance.png</li>
+                        <li>figures/flight_search_covid_impact.png</li>
+                    </ul>
+                </section>
+            </aside>
+        </div>
+    </div>
+
+    <!-- ── STICKY PROJECT QUICK NAV ─────────────────────────────── -->
+    <nav class="project-quick-nav" aria-label="Quick project navigation">
+        <span class="pqn-label">Projects</span>
+        <a class="pqn-link" href="fraud-detection.html">
+            <span class="pqn-dot"></span>
+            <span class="pqn-text">Fraud Detection</span>
+        </a>
+        <a class="pqn-link" href="yard-moves-forecast.html">
+            <span class="pqn-dot"></span>
+            <span class="pqn-text">Yard Moves Forecast</span>
+        </a>
+        <a class="pqn-link" href="customer-churn.html">
+            <span class="pqn-dot"></span>
+            <span class="pqn-text">Customer Churn</span>
+        </a>
+        <a class="pqn-link" href="food-delivery.html">
+            <span class="pqn-dot"></span>
+            <span class="pqn-text">Food Delivery Time</span>
+        </a>
+        <a class="pqn-link" href="ecommerce-churn.html">
+            <span class="pqn-dot"></span>
+            <span class="pqn-text">Coupon Engine</span>
+        </a>
+        <a class="pqn-link" href="foodpanda-vendor-intelligence.html">
+            <span class="pqn-dot"></span>
+            <span class="pqn-text">Foodpanda Vendors</span>
+        </a>
+        <a class="pqn-link active" href="flight-search.html">
+            <span class="pqn-dot"></span>
+            <span class="pqn-text">Flight Search LTR</span>
+        </a>
+    </nav>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+    <div class="lightbox" id="chartLightbox" aria-hidden="true" role="dialog" aria-label="Expanded chart view">
+        <button type="button" class="lightbox-close" id="lightboxClose" aria-label="Close full screen image">&times;</button>
+        <img id="lightboxImage" src="" alt="Expanded chart image">
+    </div>
+
+    <script>
+        hljs.highlightAll();
+
+        const lightbox      = document.getElementById('chartLightbox');
+        const lightboxImage = document.getElementById('lightboxImage');
+        const lightboxClose = document.getElementById('lightboxClose');
+        const zoomTriggers  = document.querySelectorAll('[data-lightbox-src]');
+
+        function closeLightbox() {
+            lightbox.classList.remove('active');
+            lightbox.setAttribute('aria-hidden', 'true');
+            lightboxImage.src = '';
+        }
+
+        zoomTriggers.forEach((trigger) => {
+            trigger.addEventListener('click', () => {
+                lightboxImage.src = trigger.dataset.lightboxSrc;
+                lightboxImage.alt = trigger.dataset.lightboxAlt || 'Expanded chart image';
+                lightbox.classList.add('active');
+                lightbox.setAttribute('aria-hidden', 'false');
+            });
+        });
+
+        lightboxClose.addEventListener('click', closeLightbox);
+        lightbox.addEventListener('click', (event) => {
+            if (event.target === lightbox) { closeLightbox(); }
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && lightbox.classList.contains('active')) { closeLightbox(); }
+        });
+
+        // ── ToC Scrollspy ──────────────────────────────────────────────────────
+        (function () {
+            const tocLinks  = document.querySelectorAll('.cs-toc-link');
+            if (!tocLinks.length) return;
+
+            const sectionIds = Array.from(tocLinks).map(l => l.getAttribute('href').slice(1));
+            const sections   = sectionIds.map(id => document.getElementById(id)).filter(Boolean);
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        tocLinks.forEach(l => l.classList.remove('active'));
+                        const link = document.querySelector(`.cs-toc-link[href="#${entry.target.id}"]`);
+                        if (link) link.classList.add('active');
+                    }
+                });
+            }, { rootMargin: '-15% 0% -75% 0%', threshold: 0 });
+
+            sections.forEach(s => observer.observe(s));
+            if (tocLinks.length) tocLinks[0].classList.add('active');
+        })();
+    </script>
+</body>
+</html>

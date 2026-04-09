@@ -1,6 +1,8 @@
 # Datasets grandes — não podem ser versionados no GitHub (>50MB)
 creditcard.csv
 kaggle/foodpanda/
+kaggle/search_flights/
+kaggle/test_a-b_delivery_hero
 
 # Modelo treinado (pode ser grande)
 *.joblib
