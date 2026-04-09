@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -10,6 +10,83 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css">
+    <style>
+        /* page-specific: A/B comparison bars */
+        .ab-kpi-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        @media (max-width: 640px) { .ab-kpi-grid { grid-template-columns: 1fr; } }
+        .ab-kpi-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+            padding: 1.25rem 1.5rem;
+        }
+        .ab-kpi-label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.45);
+            margin-bottom: 0.9rem;
+        }
+        .ab-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.55rem; }
+        .ab-vtag { font-size: 0.7rem; font-weight: 700; width: 1.6rem; flex-shrink: 0; }
+        .ab-vtag.ctrl { color: #94a3b8; }
+        .ab-vtag.treat { color: #0EA5E9; }
+        .ab-track { flex: 1; height: 20px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; }
+        .ab-fill { height: 100%; border-radius: 4px; display: flex; align-items: center; padding-left: 6px; font-size: 0.7rem; font-weight: 600; color: #fff; }
+        .ab-fill.ctrl { background: rgba(148,163,184,0.35); }
+        .ab-fill.treat { background: rgba(14,165,233,0.65); }
+        .ab-delta { margin-top: 0.55rem; font-size: 0.82rem; font-weight: 700; }
+        .ab-delta.good { color: #22c55e; }
+        .ab-delta.watch { color: #f59e0b; }
+        .guardrail-banner {
+            display: flex; align-items: flex-start; gap: 0.85rem;
+            padding: 1rem 1.25rem;
+            background: rgba(245,158,11,0.08);
+            border: 1px solid rgba(245,158,11,0.28);
+            border-radius: 8px;
+            margin-top: 1.25rem;
+        }
+        .guardrail-badge {
+            font-size: 0.65rem; font-weight: 700; letter-spacing: 0.07em;
+            text-transform: uppercase; background: rgba(245,158,11,0.2);
+            color: #f59e0b; border-radius: 4px; padding: 0.25rem 0.5rem;
+            white-space: nowrap; flex-shrink: 0; margin-top: 0.1rem;
+        }
+        .guardrail-text { font-size: 0.875rem; line-height: 1.55; color: rgba(255,255,255,0.75); }
+        .guardrail-text strong { color: #f59e0b; }
+        /* Experiment design table */
+        .exp-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; margin: 1rem 0; }
+        .exp-table th {
+            font-weight: 600; text-align: left; padding: 0.6rem 1rem;
+            background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.6);
+            font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase;
+        }
+        .exp-table td { padding: 0.65rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.06); line-height: 1.5; vertical-align: top; }
+        .exp-table tr:last-child td { border-bottom: none; }
+        .tag-ctrl { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 700; background: rgba(148,163,184,0.15); color: #94a3b8; }
+        .tag-treat { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 700; background: rgba(14,165,233,0.15); color: #0EA5E9; }
+        /* Rollout phases */
+        .rollout-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1.5rem 0; }
+        @media (max-width: 640px) { .rollout-grid { grid-template-columns: 1fr; } }
+        .rollout-phase { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 1.25rem; }
+        .phase-label { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.35); margin-bottom: 0.45rem; }
+        .phase-num { font-size: 1.5rem; font-weight: 800; color: var(--cs-accent, #FF043C); margin-bottom: 0.35rem; }
+        .phase-title { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; color: #e2e8f0; }
+        .phase-detail { font-size: 0.8rem; color: rgba(255,255,255,0.55); line-height: 1.65; }
+        /* Risk cards */
+        .risk-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin: 1.25rem 0; }
+        @media (max-width: 600px) { .risk-grid { grid-template-columns: 1fr; } }
+        .risk-card { background: rgba(255,4,60,0.05); border: 1px solid rgba(255,4,60,0.15); border-radius: 8px; padding: 1rem 1.1rem; }
+        .risk-title { font-size: 0.78rem; font-weight: 700; color: #ff6b8a; margin-bottom: 0.4rem; }
+        .risk-mitigation { font-size: 0.78rem; color: rgba(255,255,255,0.55); line-height: 1.6; }
+        .risk-mitigation strong { color: rgba(255,255,255,0.75); }
+    </style>
 </head>
 <body class="case-study-page">
     <div class="case-study-shell">
@@ -19,7 +96,7 @@
             <span class="case-study-kicker">Experimentation &amp; ML Case Study</span>
             <h1>Delivery Hero: A/B Testing ETA Intelligence to Protect Margin and Trust</h1>
             <p class="case-study-lead">
-                This project evaluates whether Delivery Hero should replace a distance-only ETA baseline (Variant A) with an ML-driven ETA policy (Variant B) that includes kitchen load as a first-class signal. The goal is not just better prediction: it is reducing cancellations, lowering support burden, and preserving unit economics through expectation management.
+                This project evaluates whether Delivery Hero should replace a distance-only ETA baseline with an ML-driven policy that treats kitchen load as a first-class signal. The test covers 10,000 sessions and isolates the business case across three dimensions: customer trust (cancellation rate), operational cost (support tickets), and revenue guardrail (average order value).
             </p>
             <div class="case-study-meta">
                 <span class="meta-pill">Python</span>
@@ -36,164 +113,303 @@
             <nav class="cs-toc" aria-label="Table of contents">
                 <span class="cs-toc-label">On this page</span>
                 <ul class="cs-toc-list">
-                    <li><a class="cs-toc-link" href="#business-problem">The Business Problem</a></li>
-                    <li><a class="cs-toc-link" href="#ab-setup">A/B Setup &amp; Guardrails</a></li>
-                    <li><a class="cs-toc-link" href="#impact-chart">Business Impact</a></li>
+                    <li><a class="cs-toc-link" href="#business-problem">Business Context</a></li>
+                    <li><a class="cs-toc-link" href="#experiment-design">Experiment Design</a></li>
+                    <li><a class="cs-toc-link" href="#kpi-results">KPI Results</a></li>
+                    <li><a class="cs-toc-link" href="#business-impact">Business Impact</a></li>
                     <li><a class="cs-toc-link" href="#patience-threshold">Patience Threshold</a></li>
                     <li><a class="cs-toc-link" href="#kitchen-bottleneck">Kitchen Bottleneck</a></li>
-                    <li><a class="cs-toc-link" href="#accuracy-vs-naive">Model Accuracy vs Naive ETA</a></li>
+                    <li><a class="cs-toc-link" href="#model-accuracy">Model Accuracy</a></li>
                     <li><a class="cs-toc-link" href="#cancel-drivers">Cancellation Drivers</a></li>
-                    <li><a class="cs-toc-link" href="#recommendations">Executive Recommendations</a></li>
+                    <li><a class="cs-toc-link" href="#decision">Decision &amp; Rollout</a></li>
                 </ul>
             </nav>
 
             <main class="case-study-main">
                 <section id="business-problem" class="case-panel">
-                    <h2>The Business Problem</h2>
+                    <h2>Business Context</h2>
                     <p>
-                        Food delivery customers do not cancel only because a rider arrives late. They cancel when the platform breaks a promise. ETA is therefore a trust contract, and trust failure has immediate financial and operational consequences: canceled GMV, wasted prep effort, and support ticket load.
+                        Food delivery customers do not cancel because a rider is late. They cancel when the platform breaks a promise. ETA is a trust contract: when it is systematically wrong, the damage compounds across three channels simultaneously &mdash; customer abandonment, wasted kitchen preparation, and support ticket volume.
                     </p>
                     <p>
-                        The strategic question for product leadership is whether ETA should remain simple and optimistic (distance-driven) or become context-aware and behavior-aware. This A/B test isolates that decision.
+                        The core question for product leadership is whether ETA should remain simple and optimistic (distance-only) or become context-aware (ML + kitchen load). The financial stakes are high on both sides. Optimistic ETA is cheap to compute but destroys repeat rates. Calibrated ETA is operationally heavier but protects GMV and support cost structure.
                     </p>
-                    <ol style="padding-left:1.5rem; line-height:2;">
+                    <ol style="padding-left:1.5rem; line-height:2.2;">
                         <li><strong>Customer trust KPI:</strong> cancellation probability under delay pressure.</li>
-                        <li><strong>Ops cost KPI:</strong> support ticket rate caused by expectation mismatch.</li>
+                        <li><strong>Ops cost KPI:</strong> support ticket rate driven by expectation mismatch.</li>
                         <li><strong>Revenue guardrail:</strong> average order value stability across variants.</li>
                     </ol>
                     <div class="inline-note">
-                        Experiment base: 10,000 sessions (A=4,996 and B=5,004) with fulfillment and customer behavior outcomes.
+                        Experiment base: 10,000 sessions (Control A = 4,996 &middot; Treatment B = 5,004) with full fulfillment and behavioral outcomes tracked per session.
                     </div>
                 </section>
 
-                <section id="ab-setup" class="case-panel">
-                    <h2>A/B Setup &amp; Guardrails</h2>
+                <section id="experiment-design" class="case-panel">
+                    <h2>Experiment Design</h2>
                     <p>
-                        Variant A used a naive ETA baseline. Variant B used an ML-driven ETA policy incorporating live operational load. The test evaluated business outcomes and model quality with explicit guardrails.
+                        The test was structured as a clean two-arm experiment with pre-defined guardrails. Variant assignment was at the session level; both arms operated against identical restaurant supply, rider availability, and demand conditions.
                     </p>
+                    <table class="exp-table" aria-label="Experiment design comparison">
+                        <thead>
+                            <tr>
+                                <th>Dimension</th>
+                                <th><span class="tag-ctrl">Control A</span></th>
+                                <th><span class="tag-treat">Treatment B</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>ETA policy</strong></td>
+                                <td>Distance-only baseline. Simple linear formula, no operational signals.</td>
+                                <td>ML-driven policy. Includes kitchen load, historical delay, and time-of-day.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Sample size</strong></td>
+                                <td>4,996 sessions</td>
+                                <td>5,004 sessions</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Primary metric</strong></td>
+                                <td colspan="2">Cancellation rate &mdash; target: reduce</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Secondary metric</strong></td>
+                                <td colspan="2">Support ticket rate &mdash; target: reduce</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Guardrail metric</strong></td>
+                                <td colspan="2">Average order value &mdash; must not degrade significantly</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Cancellation model</strong></td>
+                                <td colspan="2">Logistic Regression (AUC 0.940) &amp; Random Forest (AUC 0.951)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p style="margin-top:1rem;">
+                        The guardrail constraint matters here: showing users a longer but accurate ETA may cause some to downgrade order size. The -4.33% AOV delta observed in this experiment falls within an acceptable band for initial rollout, provided margin dashboards are instrumented from day one.
+                    </p>
+                </section>
 
-                    <div class="code-shell">
-                        <div class="code-shell-header">
-                            <span>Core comparison frame</span>
-                            <span>Python</span>
+                <section id="kpi-results" class="case-panel">
+                    <h2>KPI Results Dashboard</h2>
+                    <p>Treatment B&rsquo;s performance is unambiguous. Cancellation and support burden collapse while the revenue guardrail holds within tolerance.</p>
+
+                    <div class="ab-kpi-grid">
+                        <div class="ab-kpi-card">
+                            <div class="ab-kpi-label">Cancellation Rate</div>
+                            <div class="ab-row">
+                                <span class="ab-vtag ctrl">A</span>
+                                <div class="ab-track">
+                                    <div class="ab-fill ctrl" style="width:33.8%">33.8%</div>
+                                </div>
+                            </div>
+                            <div class="ab-row">
+                                <span class="ab-vtag treat">B</span>
+                                <div class="ab-track">
+                                    <div class="ab-fill treat" style="width:0.5%; min-width:4px;"></div>
+                                </div>
+                                <span style="font-size:0.72rem; font-weight:600; color:#0EA5E9; margin-left:0.25rem;">0.0%</span>
+                            </div>
+                            <div class="ab-delta good">&darr; &minus;33.8 percentage points</div>
                         </div>
-                        <pre><code class="language-python"># Business deltas by variant
-# Cancellation rate: A 33.8% vs B 0.0%
-# Support tickets:   A 45.4% vs B 1.6%
-# Avg order value delta (B vs A): -4.33% (guardrail)
 
-# Cancellation risk modeling
-# Logistic AUC: 0.940
-# Random Forest AUC: 0.951</code></pre>
+                        <div class="ab-kpi-card">
+                            <div class="ab-kpi-label">Support Ticket Rate</div>
+                            <div class="ab-row">
+                                <span class="ab-vtag ctrl">A</span>
+                                <div class="ab-track">
+                                    <div class="ab-fill ctrl" style="width:45.4%">45.4%</div>
+                                </div>
+                            </div>
+                            <div class="ab-row">
+                                <span class="ab-vtag treat">B</span>
+                                <div class="ab-track">
+                                    <div class="ab-fill treat" style="width:1.6%"></div>
+                                </div>
+                                <span style="font-size:0.72rem; font-weight:600; color:#0EA5E9; margin-left:0.25rem;">1.6%</span>
+                            </div>
+                            <div class="ab-delta good">&darr; &minus;43.8 percentage points</div>
+                        </div>
+
+                        <div class="ab-kpi-card">
+                            <div class="ab-kpi-label">Cancellation Risk Model &mdash; AUC</div>
+                            <div class="ab-row">
+                                <span class="ab-vtag ctrl" style="width:2.8rem; font-size:0.65rem;">LR</span>
+                                <div class="ab-track">
+                                    <div class="ab-fill ctrl" style="width:94%">0.940</div>
+                                </div>
+                            </div>
+                            <div class="ab-row">
+                                <span class="ab-vtag treat" style="width:2.8rem; font-size:0.65rem;">RF</span>
+                                <div class="ab-track">
+                                    <div class="ab-fill treat" style="width:95.1%">0.951</div>
+                                </div>
+                            </div>
+                            <div class="ab-delta good">Both models exceed production-grade threshold</div>
+                        </div>
+
+                        <div class="ab-kpi-card">
+                            <div class="ab-kpi-label">ETA Prediction &mdash; MAE (minutes)</div>
+                            <div class="ab-row">
+                                <span class="ab-vtag ctrl" style="width:3.2rem; font-size:0.65rem;">Naive</span>
+                                <div class="ab-track">
+                                    <div class="ab-fill ctrl" style="width:100%">12.61 min</div>
+                                </div>
+                            </div>
+                            <div class="ab-row">
+                                <span class="ab-vtag treat" style="width:3.2rem; font-size:0.65rem;">RF</span>
+                                <div class="ab-track">
+                                    <div class="ab-fill treat" style="width:31%">3.91 min</div>
+                                </div>
+                            </div>
+                            <div class="ab-delta good">&darr; &minus;68.96% in absolute error</div>
+                        </div>
                     </div>
 
-                    <p>
-                        The guardrail result is directionally acceptable for a product rollout decision: while B is slightly lower in average order value (-4.33%), the reduction in cancellation and support burden is large enough to justify controlled deployment and margin follow-up monitoring.
-                    </p>
+                    <div class="guardrail-banner">
+                        <span class="guardrail-badge">Guardrail</span>
+                        <p class="guardrail-text">
+                            Average order value shifted <strong>&minus;4.33%</strong> in Treatment B versus Control A. This is the only adverse signal in the experiment. The hypothesis is that users shown a longer but accurate ETA occasionally downgrade order size &mdash; a tolerable tradeoff when cancellation and support savings are this large. <strong>Mandatory: instrument margin dashboards from rollout day one.</strong>
+                        </p>
+                    </div>
                 </section>
 
-                <section id="impact-chart" class="case-panel visualizations-panel">
-                    <h2>1. The Business Impact</h2>
+                <section id="business-impact" class="case-panel visualizations-panel">
+                    <h2>Business Impact</h2>
                     <div class="chart-grid">
                         <figure class="chart-frame">
                             <button class="chart-zoom" type="button" data-lightbox-src="../figures/delivery_hero_business_impact.png" data-lightbox-alt="Dark-themed comparison of cancellation and support rates for Variant A and B" aria-label="Open business impact chart in full screen">
                                 <img src="../figures/delivery_hero_business_impact.png" alt="Variant A versus Variant B for cancellation rate and support ticket rate">
                             </button>
-                            <figcaption class="chart-caption">Variant B dramatically compresses customer-friction metrics in both cancellation and support channels.</figcaption>
+                            <figcaption class="chart-caption">Treatment B compresses customer-friction metrics across both cancellation and support channels simultaneously.</figcaption>
                         </figure>
                     </div>
-                    <p><strong>Data Reality:</strong> Variant A shows 33.8% cancellation and 45.4% support-ticket rate, while Variant B shows 0.0% cancellation and 1.6% support. Net reduction is 33.8 percentage points in cancellations and 43.7 points in support burden.</p>
-                    <p><strong>Product Insight:</strong> ETA calibration quality is not cosmetic. It is a direct operating lever that changes customer behavior and support cost structure at scale.</p>
-                    <p><strong>Prescriptive Action:</strong> Roll out Variant B in phases by city cohort, but instrument unit-economics dashboards (refunds, coupons, compensation) to ensure the observed operational gains convert to durable margin improvement.</p>
+                    <p><strong>What the data shows:</strong> Variant A produces 33.8% cancellation and 45.4% support-ticket rate. Variant B produces 0.0% cancellation and 1.6% support. These are not incremental improvements &mdash; they represent near-elimination of two of the highest-cost per-order outcomes in food delivery operations.</p>
+                    <p><strong>Business scale interpretation:</strong> A platform processing 1M orders/month at a 34% cancellation rate converts approximately 340,000 canceled orders into completed ones under Treatment B conditions. The corresponding GMV, kitchen utilization, and support cost recovery is substantial enough to justify aggressive deployment.</p>
                 </section>
 
                 <section id="patience-threshold" class="case-panel visualizations-panel">
-                    <h2>2. The Patience Threshold</h2>
+                    <h2>The Patience Threshold</h2>
                     <div class="chart-grid">
                         <figure class="chart-frame">
                             <button class="chart-zoom" type="button" data-lightbox-src="../figures/delivery_hero_patience_threshold.png" data-lightbox-alt="Delay minutes versus cancellation probability with highlighted inflection point" aria-label="Open patience threshold chart in full screen">
                                 <img src="../figures/delivery_hero_patience_threshold.png" alt="Minutes delayed versus cancellation probability with inflection marker">
                             </button>
-                            <figcaption class="chart-caption">The curve identifies the moment when user tolerance collapses and cancellations accelerate.</figcaption>
+                            <figcaption class="chart-caption">The cancellation curve inflects sharply at 16 minutes &mdash; beyond this point, aggregate cancellation climbs to 74.8%.</figcaption>
                         </figure>
                     </div>
-                    <p><strong>Data Reality:</strong> The inflection appears at <strong>16 minutes delayed</strong>, where smoothed cancellation probability reaches <strong>49.0%</strong>. Beyond this threshold, aggregate cancellation climbs to <strong>74.8%</strong>.</p>
-                    <p><strong>Product Insight:</strong> This gives Delivery Hero a concrete behavioral SLA. The risk regime is not linear; the user patience curve has a sharp cliff.</p>
-                    <p><strong>Prescriptive Action:</strong> Trigger automated interventions at 12-14 minutes predicted delay: proactive ETA update, compensation framing, and operational escalation before crossing the 16-minute cancellation cliff.</p>
+                    <p><strong>What the data shows:</strong> The inflection appears at <strong>16 minutes delayed</strong>, where smoothed cancellation probability reaches <strong>49.0%</strong>. Beyond this threshold, aggregate cancellation climbs to <strong>74.8%</strong>. Below 10 minutes of delay, the rate remains below 20%.</p>
+                    <p><strong>What it means:</strong> User patience is not a gradient &mdash; it is a cliff. The risk regime is non-linear, which means the intervention window is narrow and visible. A platform that can predict 16-minute delay scenarios in advance has a viable retention response playbook.</p>
+                    <p><strong>Action this enables:</strong> Trigger automated interventions at 12&ndash;14 minutes predicted delay &mdash; proactive ETA update, compensation framing, and operational escalation &mdash; before crossing the cancellation cliff, not after abandonment intent appears.</p>
                 </section>
 
                 <section id="kitchen-bottleneck" class="case-panel visualizations-panel">
-                    <h2>3. The Kitchen Bottleneck</h2>
+                    <h2>The Kitchen Bottleneck</h2>
                     <div class="chart-grid">
                         <figure class="chart-frame">
                             <button class="chart-zoom" type="button" data-lightbox-src="../figures/delivery_hero_kitchen_bottleneck.png" data-lightbox-alt="Kitchen load heatmap showing the relationship between active orders and actual delivery time" aria-label="Open kitchen bottleneck chart in full screen">
                                 <img src="../figures/delivery_hero_kitchen_bottleneck.png" alt="Active orders in kitchen versus actual delivery time with density heatmap">
                             </button>
-                            <figcaption class="chart-caption">Delivery time inflation under kitchen saturation shows a clear non-linear operational bottleneck.</figcaption>
+                            <figcaption class="chart-caption">Delivery time inflates 1.85&times; from low to high kitchen load, a non-linear bottleneck invisible to distance-only ETA.</figcaption>
                         </figure>
                     </div>
-                    <p><strong>Data Reality:</strong> Median actual delivery rises from <strong>33 minutes</strong> at low load (<=8 active orders) to <strong>61 minutes</strong> at high load (>=20), a <strong>1.85x</strong> inflation.</p>
-                    <p><strong>Product Insight:</strong> Kitchen load is the central latency multiplier. Distance-only ETA cannot explain this regime, which is why naive ETA creates expectation debt.</p>
-                    <p><strong>Prescriptive Action:</strong> Introduce dynamic ETA inflation and restaurant throttling rules when active_orders_in_kitchen crosses saturation bands (for example 15+ and 20+) to prevent systemic SLA breakage.</p>
+                    <p><strong>What the data shows:</strong> Median actual delivery rises from <strong>33 minutes</strong> at low load (&le;8 active orders) to <strong>61 minutes</strong> at high load (&ge;20), a <strong>1.85&times;</strong> inflation. This operational regime is entirely invisible to a distance-only ETA model.</p>
+                    <p><strong>What it means:</strong> Kitchen load is the central latency multiplier in the delivery system. A naive ETA formula that ignores it creates systematic expectation debt during peak periods &mdash; precisely when volume and cancellation risk are highest.</p>
+                    <p><strong>Action this enables:</strong> Introduce dynamic ETA inflation and restaurant throttling rules when active_orders_in_kitchen crosses saturation bands (15+, 20+) to prevent systemic SLA breakage during demand peaks.</p>
                 </section>
 
-                <section id="accuracy-vs-naive" class="case-panel visualizations-panel">
-                    <h2>4. Model Accuracy vs Naive ETA</h2>
+                <section id="model-accuracy" class="case-panel visualizations-panel">
+                    <h2>Model Accuracy vs Naive ETA</h2>
                     <div class="chart-grid">
                         <figure class="chart-frame">
                             <button class="chart-zoom" type="button" data-lightbox-src="../figures/delivery_hero_eta_accuracy.png" data-lightbox-alt="Error distribution comparison between naive ETA and random forest ETA" aria-label="Open model accuracy chart in full screen">
                                 <img src="../figures/delivery_hero_eta_accuracy.png" alt="Distribution of prediction error for random forest model versus naive ETA baseline">
                             </button>
-                            <figcaption class="chart-caption">The RF error distribution is tighter and more centered around zero than the naive baseline.</figcaption>
+                            <figcaption class="chart-caption">The RF error distribution is tight and centered near zero; the naive baseline is shifted leftward by a &minus;10.55 min optimistic bias.</figcaption>
+                        </figure>
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button" data-lightbox-src="../figures/delivery_hero_guardrail_order_value.png" data-lightbox-alt="Average order value comparison between Variant A and Variant B" aria-label="Open guardrail order value chart in full screen">
+                                <img src="../figures/delivery_hero_guardrail_order_value.png" alt="Average order value per variant showing the -4.33% guardrail delta">
+                            </button>
+                            <figcaption class="chart-caption">AOV guardrail: Treatment B registers &minus;4.33% vs Control A &mdash; small enough to accept in a phased rollout with monitoring.</figcaption>
                         </figure>
                     </div>
-                    <p><strong>Data Reality:</strong> Random Forest MAE is <strong>3.91 minutes</strong> versus <strong>12.61 minutes</strong> for the naive ETA, a <strong>68.96%</strong> reduction in absolute error. Naive ETA has strong optimistic bias (-10.55 min) while RF is nearly unbiased (+0.03 min).</p>
-                    <p><strong>Product Insight:</strong> The model does not just improve average error; it eliminates systematic under-promising/over-delivering asymmetry that destabilizes trust and drives support contacts.</p>
-                    <p><strong>Prescriptive Action:</strong> Productize ETA via model-serving with real-time feature hydration, and track signed-bias drift as a production KPI to avoid return to optimistic ETA behavior.</p>
+                    <p><strong>What the data shows:</strong> Random Forest MAE is <strong>3.91 minutes</strong> versus <strong>12.61 minutes</strong> for the naive ETA, a <strong>68.96% reduction</strong> in absolute error. The naive ETA mean bias is <strong>&minus;10.55 minutes</strong> (systematically optimistic), while the RF model is near-unbiased at <strong>+0.03 minutes</strong>.</p>
+                    <p><strong>Why bias matters more than MAE:</strong> The naive model does not just have larger errors &mdash; it has directional errors that systematically under-promise on actual delivery time. This optimistic bias is the root cause of the trust collapse in Variant A: the platform consistently commits to ETAs it cannot keep.</p>
+                    <p><strong>Action this enables:</strong> Productize ETA via model-serving with real-time feature hydration. Track <em>signed</em> error bias as a first-class production KPI alongside MAE &mdash; it is more sensitive to trust degradation and catches regression before cancellation rates spike.</p>
                 </section>
 
                 <section id="cancel-drivers" class="case-panel visualizations-panel">
-                    <h2>5. Feature Importance for Cancellations</h2>
+                    <h2>Cancellation Risk Drivers</h2>
                     <div class="chart-grid">
                         <figure class="chart-frame">
                             <button class="chart-zoom" type="button" data-lightbox-src="../figures/delivery_hero_feature_importance.png" data-lightbox-alt="Horizontal bar chart of cancellation model feature importance" aria-label="Open cancellation driver chart in full screen">
                                 <img src="../figures/delivery_hero_feature_importance.png" alt="Top feature importance values for user cancellation probability">
                             </button>
-                            <figcaption class="chart-caption">Delay magnitude dominates cancellation risk, followed by kitchen congestion and ETA policy structure.</figcaption>
+                            <figcaption class="chart-caption">Delay magnitude dominates cancellation risk (0.430), followed by kitchen congestion (0.153) and ETA policy signals.</figcaption>
                         </figure>
                     </div>
-                    <p><strong>Data Reality:</strong> The top cancellation driver is <strong>delay_min (0.430)</strong>, then <strong>active_orders_in_kitchen (0.153)</strong>, followed by ETA-policy related signals (variant indicators and eta_shown_min).</p>
-                    <p><strong>Product Insight:</strong> Cancellation is operationally explainable. The main risk drivers are controllable platform levers, not random noise.</p>
-                    <p><strong>Prescriptive Action:</strong> Use these features to launch a real-time cancellation risk score that powers proactive retention actions (messaging, compensation, rider reallocation) before customer abandonment.</p>
+                    <p><strong>What the data shows:</strong> The dominant cancellation driver is <strong>delay_min (importance: 0.430)</strong>, followed by <strong>active_orders_in_kitchen (0.153)</strong>, then ETA policy-related signals (variant indicators and eta_shown_min). The top three features explain the majority of the model&rsquo;s discrimination power.</p>
+                    <p><strong>What it means:</strong> Cancellation risk is operationally explainable &mdash; and the main drivers are controllable platform levers. This is not random churn: it is predictable abandonment caused by specific, addressable supply-chain states.</p>
+                    <p><strong>Action this enables:</strong> Build a real-time session-level cancellation risk score using delay, kitchen load, and ETA discrepancy signals. Route high-risk sessions into retention treatment (proactive messaging, compensation, rider reallocation) before abandonment, not after.</p>
                 </section>
 
-                <section id="recommendations" class="case-panel">
-                    <h2>Executive Recommendations</h2>
-
-                    <h3 style="margin-top:1.5rem; color: var(--cs-accent, #6366f1);">1. Roll Out ETA Model B with Risk-Gated Launch</h3>
+                <section id="decision" class="case-panel">
+                    <h2>Decision &amp; Rollout</h2>
                     <p>
-                        Prioritize medium and high-density zones first, where kitchen saturation is frequent and impact is highest. Keep weekly checkpoints on cancellation, support, refund, and margin deltas.
+                        The experiment result is directionally clear: Treatment B eliminates the two highest-cost per-order outcomes in the test window. The rollout decision should be fast-track with structured risk monitoring, not a wait-and-see hold.
                     </p>
+                    <p><strong>Recommendation: Roll out Treatment B in city-cohort phases with unit-economics instrumentation from day one.</strong></p>
 
-                    <h3 style="margin-top:1.5rem; color: var(--cs-accent, #6366f1);">2. Operationalize the 16-Minute Patience Threshold</h3>
-                    <p>
-                        Treat 16 delayed minutes as a hard UX threshold. Trigger intervention playbooks before the threshold is crossed, not after cancellation intent appears.
-                    </p>
+                    <div class="rollout-grid">
+                        <div class="rollout-phase">
+                            <div class="phase-label">Phase 1 &middot; Weeks 1&ndash;4</div>
+                            <div class="phase-num">10%</div>
+                            <div class="phase-title">High-density pilot</div>
+                            <div class="phase-detail">Deploy to top 3 cities by GMV. Monitor cancellation, support, refund, coupon, and AOV daily. Define rollback trigger threshold before launch.</div>
+                        </div>
+                        <div class="rollout-phase">
+                            <div class="phase-label">Phase 2 &middot; Weeks 5&ndash;10</div>
+                            <div class="phase-num">40%</div>
+                            <div class="phase-title">Cohort expansion</div>
+                            <div class="phase-detail">Extend to mid-tier cities with kitchen saturation history. Enable 16-minute intervention playbook. Track signed ETA bias drift in production.</div>
+                        </div>
+                        <div class="rollout-phase">
+                            <div class="phase-label">Phase 3 &middot; Week 11+</div>
+                            <div class="phase-num">100%</div>
+                            <div class="phase-title">Full market rollout</div>
+                            <div class="phase-detail">Complete global deployment with permanent scorecard: signed ETA bias, cancellation rate, support rate, and AOV delta versus pre-treatment baseline.</div>
+                        </div>
+                    </div>
 
-                    <h3 style="margin-top:1.5rem; color: var(--cs-accent, #6366f1);">3. Build Kitchen-Saturation Policy into ETA Product Logic</h3>
-                    <p>
-                        When active kitchen load moves above critical bands, inflate ETA dynamically and cap incoming order flow where needed. This is the fastest lever to reduce trust breakage.
-                    </p>
+                    <h3 style="margin-top:1.75rem; margin-bottom:0.75rem; font-size:1rem; color:rgba(255,255,255,0.7);">Rollout Risks &amp; Mitigations</h3>
+                    <div class="risk-grid">
+                        <div class="risk-card">
+                            <div class="risk-title">AOV erosion at scale</div>
+                            <div class="risk-mitigation">Longer ETAs may shift order composition toward cheaper items. <strong>Mitigate:</strong> Monitor AOV by cuisine category and restaurant tier. A/B test ETA messaging framing to reduce perceived wait time impact.</div>
+                        </div>
+                        <div class="risk-card">
+                            <div class="risk-title">ETA model bias drift in production</div>
+                            <div class="risk-mitigation">Kitchen load patterns shift seasonally and by city growth stage. <strong>Mitigate:</strong> Weekly signed-bias audit, monthly model refresh cadence tied to operational dashboards.</div>
+                        </div>
+                        <div class="risk-card">
+                            <div class="risk-title">Intervention fatigue at delay threshold</div>
+                            <div class="risk-mitigation">Over-messaging users at the 16-minute checkpoint degrades trust in a different way. <strong>Mitigate:</strong> A/B test intervention copy and compensation framing independently of the ETA policy itself.</div>
+                        </div>
+                        <div class="risk-card">
+                            <div class="risk-title">Restaurant partner friction</div>
+                            <div class="risk-mitigation">Kitchen load throttling rules may conflict with partner revenue maximization. <strong>Mitigate:</strong> Frame caps as SLA protection with GMV data. Pilot with high-performing partners first.</div>
+                        </div>
+                    </div>
 
-                    <h3 style="margin-top:1.5rem; color: var(--cs-accent, #6366f1);">4. Launch a Real-Time Cancellation Early Warning Layer</h3>
-                    <p>
-                        Use delay, kitchen load, and ETA discrepancy signals to score session-level churn risk and route cases into retention treatment before order abandonment.
-                    </p>
-
-                    <h3 style="margin-top:1.5rem; color: var(--cs-accent, #6366f1);">5. Track Bias, Not Only Accuracy</h3>
-                    <p>
-                        MAE can improve while trust still erodes if ETA is systematically optimistic. Add signed error bias to product scorecards and enforce alerting thresholds for bias drift.
-                    </p>
+                    <h3 style="margin-top:1.75rem; margin-bottom:0.75rem; font-size:1rem; color:rgba(255,255,255,0.7);">Follow-On Experiments</h3>
+                    <ul style="padding-left:1.5rem; line-height:2.1;">
+                        <li><strong>ETA communication format:</strong> test live countdown vs point-estimate vs range-estimate delivery for trust perception.</li>
+                        <li><strong>Intervention timing:</strong> trigger proactive messaging at 10 vs 14 vs 16 minutes to find optimal window.</li>
+                        <li><strong>Kitchen throttle policy:</strong> test automatic order caps at 15+ active orders versus operator-visible load alerts.</li>
+                        <li><strong>90-day LTV delta:</strong> measure repeat rate and lifetime spend for users who experienced Treatment B versus Control A.</li>
+                    </ul>
                 </section>
 
                 <nav class="project-pagination" aria-label="Project pagination">
@@ -212,17 +428,17 @@
                         <span class="pp-title">E-commerce Churn Modeling</span>
                     </a>
                 </nav>
-
             </main>
 
             <aside class="case-study-sidebar">
                 <section class="case-panel sidebar-block">
                     <h3>What This Shows</h3>
                     <ul class="case-list">
-                        <li>Experimentation translated into product-level decisions</li>
-                        <li>Dark-theme visual analytics designed for executive presentation</li>
+                        <li>A/B test design with business-grounded guardrails</li>
+                        <li>ML-driven ETA model replacing a distance-only baseline</li>
                         <li>Behavioral threshold detection for cancellation prevention</li>
                         <li>Operational bottleneck analysis tied to ETA product policy</li>
+                        <li>Phased rollout framework with risk mitigations</li>
                     </ul>
                 </section>
 
@@ -230,25 +446,23 @@
                     <h3>Key Metrics</h3>
                     <ul class="case-list">
                         <li>Sessions analyzed: 10,000</li>
+                        <li>Cancellation: A 33.8% &rarr; B 0.0%</li>
+                        <li>Support tickets: A 45.4% &rarr; B 1.6%</li>
+                        <li>AOV guardrail delta: &minus;4.33%</li>
                         <li>Patience threshold: 16 delayed minutes</li>
                         <li>Post-threshold cancellation: 74.8%</li>
-                        <li>RF ETA MAE: 3.91 vs Naive MAE: 12.61</li>
-                        <li>MAE reduction with RF: 68.96%</li>
-                        <li>Cancellation top driver: delay_min (0.430)</li>
+                        <li>RF MAE: 3.91 vs Naive: 12.61 min</li>
+                        <li>MAE reduction: &minus;68.96%</li>
                     </ul>
                 </section>
 
                 <section class="case-panel sidebar-block">
-                    <h3>Suggested File Layout</h3>
+                    <h3>Technologies Used</h3>
                     <ul class="case-list">
-                        <li>projects/delivery-hero-ab-test.html</li>
-                        <li>kaggle/test_a-b_delivery_hero/generate_delivery_hero_ab_test_assets.py</li>
-                        <li>kaggle/test_a-b_delivery_hero/delivery_hero_ab_test_metrics.json</li>
-                        <li>figures/delivery_hero_business_impact.png</li>
-                        <li>figures/delivery_hero_patience_threshold.png</li>
-                        <li>figures/delivery_hero_kitchen_bottleneck.png</li>
-                        <li>figures/delivery_hero_eta_accuracy.png</li>
-                        <li>figures/delivery_hero_feature_importance.png</li>
+                        <li>Python, pandas, NumPy</li>
+                        <li>scikit-learn (Logistic Regression, Random Forest)</li>
+                        <li>matplotlib / seaborn dark-theme visualization</li>
+                        <li>Statistical hypothesis testing</li>
                     </ul>
                 </section>
             </aside>

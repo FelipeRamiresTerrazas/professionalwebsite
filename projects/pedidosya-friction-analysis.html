@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PedidosYa App Friction Analysis | Felipe Ramires Terrazas</title>
-    <meta name="description" content="Product Operations case study scraping 2,000 real Google Play reviews for PedidosYa (Delivery Hero) to quantify UX friction points in Discovery and Checkout using NLP keyword analysis.">
+    <meta name="description" content="Multi-market Product Ops case study scraping 3,438 Google Play reviews across PedidosYa Brazil and LATAM ES markets to quantify UX friction using NLP keyword analysis.">
     <link rel="stylesheet" href="../styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,19 +16,21 @@
         <a class="case-study-back" href="../index.html">&larr; Back to portfolio</a>
 
         <header class="case-study-hero">
-            <span class="case-study-kicker">Product Operations &middot; Delivery Hero</span>
-            <h1>PedidosYa App Friction Analysis: Translating 2,000 Real Reviews into Product Ops Signals</h1>
+            <span class="case-study-kicker">Product Operations &middot; Delivery Hero &middot; Multi-Market</span>
+            <h1>PedidosYa App Friction Analysis: 3,438 Real Reviews Across BR &amp; LATAM ES</h1>
             <p class="case-study-lead">
-                A full Product Operations pipeline that scrapes 2,000 live Google Play Store reviews for PedidosYa (Delivery Hero, Brazil), applies
-                NLP keyword frequency analysis on negative reviews (1&ndash;2&thinsp;★), and produces actionable Product Ops recommendations for the
-                Discovery and Checkout stages of the user journey — grounded entirely in real user data.
+                A multi-market Product Operations pipeline that scrapes 3,438 live Google Play Store negative reviews
+                for PedidosYa (Delivery Hero) across Brazil (PT) and LATAM ES (Bolivia + Argentina), applies
+                language-aware NLP keyword analysis per market, and surfaces a sharp divergence in pain-point hierarchy:
+                <strong>technical instability</strong> dominates BR while <strong>financial trust failure</strong> dominates LATAM ES &mdash;
+                two different root causes hiding behind one product.
             </p>
             <div class="case-study-meta">
                 <span class="meta-pill">Python</span>
                 <span class="meta-pill">google-play-scraper</span>
                 <span class="meta-pill">pandas</span>
                 <span class="meta-pill">NLP / Regex</span>
-                <span class="meta-pill">React</span>
+                <span class="meta-pill">Multi-Market</span>
                 <span class="meta-pill">Product Ops</span>
                 <span class="meta-pill">Delivery Hero</span>
             </div>
@@ -36,610 +38,548 @@
 
         <div class="case-study-grid">
 
-            <!-- ── TABLE OF CONTENTS ───────────────────────────────────────── -->
+            <!-- TABLE OF CONTENTS -->
             <nav class="cs-toc" aria-label="Table of contents">
                 <span class="cs-toc-label">On this page</span>
                 <ul class="cs-toc-list">
                     <li><a class="cs-toc-link" href="#executive-summary">Executive Summary</a></li>
-                    <li><a class="cs-toc-link" href="#data-pipeline">Data Pipeline</a></li>
                     <li><a class="cs-toc-link" href="#friction-dashboard">Friction Dashboard</a></li>
-                    <li><a class="cs-toc-link" href="#product-ops-lens">Product Ops Lens</a></li>
-                    <li><a class="cs-toc-link" href="#voc-cross-border">Voice of the Customer</a></li>
-                    <li><a class="cs-toc-link" href="#react-component">React Component</a></li>
-                    <li><a class="cs-toc-link" href="#data-architecture">Data Architecture</a></li>
+                    <li><a class="cs-toc-link" href="#br-deep-dive">BR Deep-Dive</a></li>
+                    <li><a class="cs-toc-link" href="#product-ops">Product Ops Recommendations</a></li>
+                    <li><a class="cs-toc-link" href="#data-pipeline">Data Pipeline</a></li>
                 </ul>
             </nav>
 
             <main class="case-study-main">
 
-                <!-- ── EXECUTIVE SUMMARY ───────────────────────────────────── -->
+                <!-- EXECUTIVE SUMMARY -->
                 <section id="executive-summary" class="case-panel">
                     <h2>Executive Summary</h2>
                     <p>
-                        The objective of this analysis is to identify <strong>hidden friction points</strong> in the PedidosYa user journey —
-                        specifically in the <strong>Discovery</strong> and <strong>Checkout</strong> stages — by
-                        translating qualitative user complaints into actionable Product Ops data.
-                    </p>
-                    <p>
-                        Rather than relying on survey panels or internal analytics that require data warehouse access, this pipeline
-                        mines the publicly available signal embedded in <strong>2,000 real Google Play Store reviews</strong>
-                        (Brazilian market, April 2026). The result: a quantified map of where users abandon, what words they use
-                        to describe their pain, and which competitor they name when they leave.
+                        Rather than relying on internal analytics or survey panels, this pipeline mines the
+                        publicly available signal in <strong>3,438 real Google Play Store negative reviews</strong>
+                        (1&#8209;2&#9733;) across two language markets (April 2026).
+                        Reviews were scraped using separate <code>filter_score_with=1</code> and
+                        <code>filter_score_with=2</code> passes to maximise corpus depth, then deduplicated by
+                        <code>reviewId</code>. The NLP pass uses language-matched stopwords &mdash; Portuguese for BR,
+                        Spanish for LATAM ES &mdash; ensuring organic term frequency reflects genuine signal, not stopword noise.
                     </p>
 
                     <div class="metrics-row" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;margin:1.5rem 0;">
                         <div class="metric-card">
-                            <span class="metric-number">2,000</span>
+                            <span class="metric-number">3,438</span>
                             <span class="metric-label">Reviews Scraped</span>
-                            <span class="metric-sub">Google Play BR, live data</span>
+                            <span class="metric-sub">1,438 BR &middot; 2,000 LATAM ES</span>
                         </div>
                         <div class="metric-card">
-                            <span class="metric-number">43.9%</span>
-                            <span class="metric-label">Negative Rate</span>
-                            <span class="metric-sub">1–2★ reviews</span>
+                            <span class="metric-number">22.9%</span>
+                            <span class="metric-label">BR Crash Rate</span>
+                            <span class="metric-sub">330 neg. reviews cite instability</span>
                         </div>
                         <div class="metric-card">
-                            <span class="metric-number">23.5%</span>
-                            <span class="metric-label">Crash Mentions</span>
-                            <span class="metric-sub">of all negative reviews</span>
+                            <span class="metric-number">29.8%</span>
+                            <span class="metric-label">ES Payment Rate</span>
+                            <span class="metric-sub">595 neg. reviews cite billing failures</span>
                         </div>
                         <div class="metric-card">
-                            <span class="metric-number">66</span>
-                            <span class="metric-label">iFood Citations</span>
-                            <span class="metric-sub">competitor churn signal</span>
+                            <span class="metric-number">2</span>
+                            <span class="metric-label">Root Causes</span>
+                            <span class="metric-sub">Technical (BR) vs Financial (ES)</span>
                         </div>
                     </div>
 
-                    <p>
-                        The 43.9% negative rate is well above the 15–20% industry benchmark for mature delivery super-apps.
-                        The dominant pain cluster is <strong>app stability</strong>: crashes, freezes and blank screens
-                        block users <em>before they ever reach a restaurant menu</em>. A secondary cluster around
-                        <strong>GPS/address failures</strong> and <strong>payment errors</strong> completes a funnel
-                        where friction compounds at every stage.
-                    </p>
                     <div class="inline-note">
-                        All data was scraped from the public Google Play Store using
-                        <code>google-play-scraper</code> (lang=pt, country=br).
-                        No personally identifiable information is present — reviews are anonymous public text.
+                        The <strong>43.9% negative rate</strong> in the BR cohort is well above the 15&ndash;20% industry
+                        benchmark for mature delivery super-apps. iFood is explicitly named <strong>66 times</strong> in
+                        BR negative reviews &mdash; a direct, measurable competitive churn signal in the raw review text.
                     </div>
                 </section>
 
-                <!-- ── DATA PIPELINE ──────────────────────────────────────── -->
-                <section id="data-pipeline" class="case-panel">
-                    <h2>Step 1 — Data Extraction (Scraping)</h2>
-                    <p>
-                        The scraper targets <code>com.pedidosya</code> with <code>Sort.NEWEST</code>, collecting reviews
-                        in 200-row batches using the library's pagination <code>continuation_token</code>.
-                        A 500ms sleep between batches keeps the request rate polite.
-                        The full 2,000 rows are written to <code>pedidosya_reviews.csv</code> with UTF-8-BOM
-                        encoding (Excel-safe for non-technical stakeholders).
-                    </p>
-
-                    <div class="code-shell">
-                        <div class="code-shell-header">
-                            <span>scrape_pedidosya.py — core pagination loop</span>
-                            <span>Python</span>
-                        </div>
-                        <pre><code class="language-python">from google_play_scraper import reviews, Sort
-
-APP_ID, LANG, COUNTRY = "com.pedidosya", "pt", "br"
-TARGET, BATCH = 2000, 200
-
-collected, continuation_token = [], None
-
-while len(collected) < TARGET:
-    batch_size = min(BATCH, TARGET - len(collected))
-    result, continuation_token = reviews(
-        APP_ID,
-        lang=LANG,
-        country=COUNTRY,
-        sort=Sort.NEWEST,
-        count=batch_size,
-        continuation_token=continuation_token,
-    )
-    if not result:
-        break
-    collected.extend(result)
-    if continuation_token is None:
-        break
-    time.sleep(0.5)</code></pre>
-                    </div>
-
-                    <h2 style="margin-top:2rem;">Step 2 — Friction Mapping (NLP)</h2>
-                    <p>
-                        The analysis filters to <strong>877 negative reviews</strong> (1–2★) and applies
-                        regex-based keyword matching covering both Portuguese and Spanish (the review corpus is
-                        mixed, reflecting PedidosYa's LatAm user base). A free-form word-frequency pass using
-                        <code>collections.Counter</code> surfaces the top 25 organic signals with no predefined vocabulary.
-                    </p>
-
-                    <div class="code-shell">
-                        <div class="code-shell-header">
-                            <span>analyze_friction.py — keyword frequency + organic top terms</span>
-                            <span>Python</span>
-                        </div>
-                        <pre><code class="language-python">import pandas as pd, json, re
-from collections import Counter
-
-df  = pd.read_csv("pedidosya_reviews.csv", encoding="utf-8-sig")
-neg = df[df["score"].isin([1, 2])].copy()
-neg["content"] = neg["content"].fillna("").str.lower()
-
-PATTERNS = {
-    "trava":    r"(trava|travou|bug|bugou|fecha|crash|congela|erro|error|n.o abre)",
-    "endereço": r"(endere[cç]|localiza[cç]|gps|rua|cep|bairro|direc[cç]|ubicaci)",
-    "busca":    r"(busca|buscar|pesquisa|encontrar|procurar|search)",
-    "carrinho": r"(carrinho|carrito|sacola|pedido n.o adicionado)",
-    "filtro":   r"(filtro|filtrar|categoria|ordenar|classif)",
-}
-
-freq = {}
-for kw, pat in PATTERNS.items():
-    freq[kw] = int(neg["content"].str.contains(pat, regex=True, na=False).sum())
-
-# Top 25 organic terms
-all_words = " ".join(neg["content"].tolist()).split()
-top_words = Counter(
-    w.strip(".,!?;:\"'-") for w in all_words
-    if len(w) > 3 and w not in STOPWORDS
-).most_common(25)</code></pre>
-                    </div>
-                </section>
-
-                <!-- ── FRICTION DASHBOARD ─────────────────────────────────── -->
+                <!-- FRICTION DASHBOARD -->
                 <section id="friction-dashboard" class="case-panel">
-                    <h2>Friction Dashboard</h2>
+                    <h2>Cross-Market Friction Dashboard</h2>
                     <p>
-                        The four charts below were generated from the real metrics JSON exported by
-                        <code>analyze_friction.py</code>. Each figure uses a dark-background style
-                        consistent with the rest of this portfolio.
+                        Applying language-aware regex PATTERNS across both corpora reveals that BR and LATAM ES users
+                        are frustrated by <em>structurally different problems</em>. The two market cards below each show
+                        all five friction categories, with bar widths normalised to each market&rsquo;s dominant signal.
+                    </p>
+
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.4rem;margin:1.6rem 0;">
+
+                        <!-- BR card -->
+                        <div style="background:rgba(255,4,60,0.04);border:1px solid rgba(255,4,60,0.2);border-radius:12px;padding:1.4rem;">
+                            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem;">
+                                <span style="font-size:1.4rem;">&#127463;&#127479;</span>
+                                <strong style="color:var(--text-primary);font-size:0.95rem;">Brazil (BR) &mdash; PT</strong>
+                                <span style="margin-left:auto;font-size:0.7rem;color:#94A3B8;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;">1,438 neg. reviews</span>
+                            </div>
+                            <p style="margin:0 0 1rem;font-size:0.78rem;color:#64748B;">Top organic terms: <em>abre, funciona, ifood, fica, p&eacute;ssimo</em></p>
+                            <div style="display:grid;gap:0.65rem;">
+                                <div>
+                                    <div style="display:flex;justify-content:space-between;margin-bottom:0.25rem;">
+                                        <span style="font-size:0.8rem;font-weight:600;color:#FF043C;">App crash / n&atilde;o abre</span>
+                                        <span style="font-size:0.75rem;color:#94A3B8;">330 &mdash; 22.9%</span>
+                                    </div>
+                                    <div style="background:#1E293B;border-radius:4px;height:9px;"><div style="width:100%;height:9px;background:#FF043C;border-radius:4px;"></div></div>
+                                    <p style="margin:0.25rem 0 0;font-size:0.75rem;color:#64748B;font-style:italic;">&ldquo;O app trava e n&atilde;o abre mais, tive que desinstalar.&rdquo;</p>
+                                </div>
+                                <div>
+                                    <div style="display:flex;justify-content:space-between;margin-bottom:0.25rem;">
+                                        <span style="font-size:0.8rem;font-weight:600;color:var(--text-primary);">Entrega / pedido</span>
+                                        <span style="font-size:0.75rem;color:#94A3B8;">139 &mdash; 9.7%</span>
+                                    </div>
+                                    <div style="background:#1E293B;border-radius:4px;height:9px;"><div style="width:42%;height:9px;background:#F59E0B;border-radius:4px;"></div></div>
+                                </div>
+                                <div>
+                                    <div style="display:flex;justify-content:space-between;margin-bottom:0.25rem;">
+                                        <span style="font-size:0.8rem;font-weight:600;color:var(--text-primary);">Pagamento / cobran&ccedil;as</span>
+                                        <span style="font-size:0.75rem;color:#94A3B8;">135 &mdash; 9.4%</span>
+                                    </div>
+                                    <div style="background:#1E293B;border-radius:4px;height:9px;"><div style="width:41%;height:9px;background:#F59E0B;border-radius:4px;"></div></div>
+                                </div>
+                                <div>
+                                    <div style="display:flex;justify-content:space-between;margin-bottom:0.25rem;">
+                                        <span style="font-size:0.8rem;font-weight:600;color:var(--text-primary);">GPS / endere&ccedil;o</span>
+                                        <span style="font-size:0.75rem;color:#94A3B8;">127 &mdash; 8.8%</span>
+                                    </div>
+                                    <div style="background:#1E293B;border-radius:4px;height:9px;"><div style="width:38%;height:9px;background:#0EA5E9;border-radius:4px;"></div></div>
+                                </div>
+                                <div>
+                                    <div style="display:flex;justify-content:space-between;margin-bottom:0.25rem;">
+                                        <span style="font-size:0.8rem;font-weight:600;color:var(--text-primary);">Suporte / atendimento</span>
+                                        <span style="font-size:0.75rem;color:#94A3B8;">127 &mdash; 8.8%</span>
+                                    </div>
+                                    <div style="background:#1E293B;border-radius:4px;height:9px;"><div style="width:38%;height:9px;background:#0EA5E9;border-radius:4px;"></div></div>
+                                </div>
+                            </div>
+                            <div style="margin-top:1rem;padding-top:0.8rem;border-top:1px solid rgba(255,255,255,0.08);font-size:0.75rem;color:#64748B;">
+                                <strong style="color:#FF043C;">Technical</strong> friction dominates &mdash; iFood named as escape hatch
+                            </div>
+                        </div>
+
+                        <!-- LATAM ES card -->
+                        <div style="background:rgba(245,158,11,0.04);border:1px solid rgba(245,158,11,0.18);border-radius:12px;padding:1.4rem;">
+                            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem;">
+                                <span style="font-size:1.4rem;">&#127758;</span>
+                                <strong style="color:var(--text-primary);font-size:0.95rem;">LATAM ES (BO + AR) &mdash; ES</strong>
+                                <span style="margin-left:auto;font-size:0.7rem;color:#94A3B8;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;">2,000 neg. reviews</span>
+                            </div>
+                            <p style="margin:0 0 1rem;font-size:0.78rem;color:#64748B;">Top organic terms: <em>dinero, pagar, tarjeta, pago, deja</em></p>
+                            <div style="display:grid;gap:0.65rem;">
+                                <div>
+                                    <div style="display:flex;justify-content:space-between;margin-bottom:0.25rem;">
+                                        <span style="font-size:0.8rem;font-weight:600;color:#FF043C;">Pagamento / cobros</span>
+                                        <span style="font-size:0.75rem;color:#94A3B8;">595 &mdash; 29.8%</span>
+                                    </div>
+                                    <div style="background:#1E293B;border-radius:4px;height:9px;"><div style="width:100%;height:9px;background:#FF043C;border-radius:4px;"></div></div>
+                                    <p style="margin:0.25rem 0 0;font-size:0.75rem;color:#64748B;font-style:italic;">&ldquo;Me cobraron dos veces y no me devolvieron el dinero.&rdquo;</p>
+                                </div>
+                                <div>
+                                    <div style="display:flex;justify-content:space-between;margin-bottom:0.25rem;">
+                                        <span style="font-size:0.8rem;font-weight:600;color:var(--text-primary);">Soporte / atenci&oacute;n</span>
+                                        <span style="font-size:0.75rem;color:#94A3B8;">289 &mdash; 14.4%</span>
+                                    </div>
+                                    <div style="background:#1E293B;border-radius:4px;height:9px;"><div style="width:49%;height:9px;background:#F59E0B;border-radius:4px;"></div></div>
+                                </div>
+                                <div>
+                                    <div style="display:flex;justify-content:space-between;margin-bottom:0.25rem;">
+                                        <span style="font-size:0.8rem;font-weight:600;color:var(--text-primary);">App crash / no abre</span>
+                                        <span style="font-size:0.75rem;color:#94A3B8;">239 &mdash; 11.9%</span>
+                                    </div>
+                                    <div style="background:#1E293B;border-radius:4px;height:9px;"><div style="width:40%;height:9px;background:#F59E0B;border-radius:4px;"></div></div>
+                                </div>
+                                <div>
+                                    <div style="display:flex;justify-content:space-between;margin-bottom:0.25rem;">
+                                        <span style="font-size:0.8rem;font-weight:600;color:var(--text-primary);">Entrega / pedido</span>
+                                        <span style="font-size:0.75rem;color:#94A3B8;">238 &mdash; 11.9%</span>
+                                    </div>
+                                    <div style="background:#1E293B;border-radius:4px;height:9px;"><div style="width:40%;height:9px;background:#0EA5E9;border-radius:4px;"></div></div>
+                                </div>
+                                <div>
+                                    <div style="display:flex;justify-content:space-between;margin-bottom:0.25rem;">
+                                        <span style="font-size:0.8rem;font-weight:600;color:var(--text-primary);">GPS / direcci&oacute;n</span>
+                                        <span style="font-size:0.75rem;color:#94A3B8;">76 &mdash; 3.8%</span>
+                                    </div>
+                                    <div style="background:#1E293B;border-radius:4px;height:9px;"><div style="width:13%;height:9px;background:#22C55E;border-radius:4px;"></div></div>
+                                </div>
+                            </div>
+                            <div style="margin-top:1rem;padding-top:0.8rem;border-top:1px solid rgba(255,255,255,0.08);font-size:0.75rem;color:#64748B;">
+                                <strong style="color:#FF043C;">Financial</strong> friction dominates &mdash; payment trust gap across Andean markets
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="inline-note" style="border-left-color:#0EA5E9;">
+                        <strong>Key divergence:</strong> Brazil&rsquo;s dominant friction is <em>technical</em> (app instability, 22.9%);
+                        LATAM ES markets&rsquo; dominant friction is <em>financial</em> (payment failures + refund loops, 29.8%).
+                        A single global roadmap item cannot address both &mdash; this is a geo-split prioritisation problem.
+                        The Play Store API returns a unified ES corpus across Andean markets, so BO + AR are reported as one segment.
+                    </div>
+                </section>
+
+                <!-- BR DEEP-DIVE -->
+                <section id="br-deep-dive" class="case-panel">
+                    <h2>Brazil Market: Deep-Dive Figures</h2>
+                    <p>
+                        The four charts below were generated from a detailed BR single-market pass on <code>com.pedidosya</code>
+                        (lang=pt, country=br), providing granular breakdown of rating distribution, keyword frequency,
+                        organic signal terms, and estimated conversion funnel impact.
                     </p>
 
                     <h3>Rating Distribution</h3>
                     <p>
-                        The classic <em>bimodal</em> pattern: a mass of 5★ ratings from loyal users
-                        and an almost equal mass of 1★ from frustrated ones, with the middle nearly absent.
+                        The classic <em>bimodal</em> pattern: a mass of 5&#9733; ratings from loyal users and
+                        an almost equal mass of 1&#9733; from frustrated ones, with the middle nearly absent.
                         This shape is diagnostic of a <strong>reliability-degraded app with pockets of loyal power-users</strong>
-                        — the 5★ block reflects habitual users who tolerate instability; the 1★ block reflects
-                        occasional or new users who have no tolerance budget.
+                        &mdash; the 5&#9733; block reflects habitual users who tolerate instability;
+                        the 1&#9733; block reflects occasional users with no tolerance budget.
                     </p>
                     <div class="chart-grid" style="margin:1.2rem 0;">
                         <div class="chart-wrap">
                             <img src="../figures/pedidosya_score_distribution.png"
                                  alt="PedidosYa rating distribution chart"
-                                 class="case-img lightbox-trigger"
-                                 loading="lazy">
+                                 class="case-img lightbox-trigger" loading="lazy">
                         </div>
                     </div>
 
                     <h3>Friction Keyword Frequency</h3>
                     <p>
-                        Among the five targeted friction clusters, <strong>trava/crash (206 mentions, 23.5%)</strong>
-                        towers over every other signal. This is not an isolated bug report — it is a systemic
-                        stability issue visible to nearly one in four dissatisfied users. The <strong>endereço/GPS</strong>
-                        cluster (75 mentions, 8.6%) is a clear second-priority. Carrinho and filtro show
-                        near-zero signal in this corpus, suggesting checkout cart and filter UX are not
-                        primary pain drivers <em>relative to app launch stability</em>.
+                        Among the five targeted friction clusters, <strong>trava/crash towers over every other signal</strong>.
+                        This is not an isolated bug report &mdash; it is a systemic stability issue visible to nearly
+                        one in four dissatisfied users. The <strong>endere&ccedil;o/GPS</strong> cluster is a clear
+                        second-priority. Carrinho and filtro show near-zero signal, confirming that checkout cart
+                        and filter UX are not primary pain drivers <em>relative to app launch stability</em>.
                     </p>
                     <div class="chart-grid" style="margin:1.2rem 0;">
                         <div class="chart-wrap">
                             <img src="../figures/pedidosya_keyword_friction.png"
                                  alt="PedidosYa friction keyword frequency chart"
-                                 class="case-img lightbox-trigger"
-                                 loading="lazy">
+                                 class="case-img lightbox-trigger" loading="lazy">
                         </div>
                     </div>
 
                     <h3>Top Organic Signals in Negative Reviews</h3>
                     <p>
                         Free-form word counting validates and extends the keyword analysis.
-                        <strong>"abre" (138 mentions)</strong> is the single highest-frequency organic signal —
+                        <strong>&ldquo;abre&rdquo;</strong> is the single highest-frequency organic signal &mdash;
                         users overwhelmingly describe an app that simply will not open.
-                        <strong>"ifood" (66 mentions)</strong> is the most commercially dangerous signal:
-                        it is a direct competitor name appearing spontaneously, indicating that the PedidosYa
-                        experience is bad enough that users name their chosen alternative in the review text.
-                        <strong>"pagamento" (33 mentions)</strong> confirms the payment failure signal seen
-                        in qualitative quotes.
+                        <strong>&ldquo;ifood&rdquo; (66 mentions)</strong> is the most commercially dangerous signal:
+                        a direct competitor name appearing spontaneously, indicating the PedidosYa experience
+                        is bad enough that users name their chosen alternative in the review text.
                     </p>
                     <div class="chart-grid" style="margin:1.2rem 0;">
                         <div class="chart-wrap">
                             <img src="../figures/pedidosya_top_terms.png"
                                  alt="PedidosYa top organic terms bar chart"
-                                 class="case-img lightbox-trigger"
-                                 loading="lazy">
+                                 class="case-img lightbox-trigger" loading="lazy">
                         </div>
                     </div>
 
-                    <h3>Estimated User Funnel — Where Friction Kills Conversion</h3>
+                    <h3>Estimated Conversion Funnel</h3>
                     <p>
-                        Combining the keyword rates with industry benchmarks builds an estimated conversion funnel.
-                        Of the 2,000 users represented in this review cohort, approximately <strong>802 (~40%)
-                        likely never complete a successful order</strong> due to stacked friction: app won't open,
-                        GPS fails, or payment doesn't go through. This is not a UX polish issue —
-                        it is a structural revenue leak.
+                        Combining keyword rates with industry benchmarks builds an estimated conversion funnel.
+                        Of the users represented in the BR cohort, approximately <strong>~40% likely never complete
+                        a successful order</strong> due to stacked friction: app won&rsquo;t open, GPS fails,
+                        or payment doesn&rsquo;t go through. This is a structural revenue leak, not a UX polish issue.
                     </p>
                     <div class="chart-grid" style="margin:1.2rem 0;">
                         <div class="chart-wrap">
                             <img src="../figures/pedidosya_funnel.png"
                                  alt="PedidosYa estimated user conversion funnel"
-                                 class="case-img lightbox-trigger"
-                                 loading="lazy">
+                                 class="case-img lightbox-trigger" loading="lazy">
                         </div>
                     </div>
 
                     <h3>Real User Quotes</h3>
                     <div class="quote-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.2rem;margin:1.2rem 0;">
-                        <div class="quote-block" style="border-left:3px solid #FF043C;padding:0.8rem 1rem;background:rgba(255,4,60,0.05);border-radius:0 8px 8px 0;">
+                        <div style="border-left:3px solid #FF043C;padding:0.8rem 1rem;background:rgba(255,4,60,0.05);border-radius:0 8px 8px 0;">
                             <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;color:#FF043C;text-transform:uppercase;margin-bottom:0.5rem;">Crash / Stability</div>
                             <blockquote style="font-style:italic;color:var(--text-secondary);font-size:0.88rem;line-height:1.6;margin:0 0 0.5rem;">
-                                "Aplicativo completamente disfuncional. Não dá pra mexer, trava e dá erro o tempo todo."
+                                &ldquo;Aplicativo completamente disfuncional. N&atilde;o d&aacute; pra mexer, trava e d&aacute; erro o tempo todo.&rdquo;
                             </blockquote>
                             <blockquote style="font-style:italic;color:var(--text-secondary);font-size:0.88rem;line-height:1.6;margin:0;">
-                                "Pésima app, se trava todo el tiempo, 30 minutos para hacer un pedido."
+                                &ldquo;P&eacute;sima app, se trava todo el tiempo, 30 minutos para hacer un pedido.&rdquo;
                             </blockquote>
                         </div>
-                        <div class="quote-block" style="border-left:3px solid #F59E0B;padding:0.8rem 1rem;background:rgba(245,158,11,0.05);border-radius:0 8px 8px 0;">
+                        <div style="border-left:3px solid #F59E0B;padding:0.8rem 1rem;background:rgba(245,158,11,0.05);border-radius:0 8px 8px 0;">
                             <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;color:#F59E0B;text-transform:uppercase;margin-bottom:0.5rem;">Address / GPS</div>
                             <blockquote style="font-style:italic;color:var(--text-secondary);font-size:0.88rem;line-height:1.6;margin:0 0 0.5rem;">
-                                "Não marca a localização correta do envio."
+                                &ldquo;N&atilde;o marca a localiza&ccedil;&atilde;o correta do envio.&rdquo;
                             </blockquote>
                             <blockquote style="font-style:italic;color:var(--text-secondary);font-size:0.88rem;line-height:1.6;margin:0;">
-                                "El app no reconoce mi dirección aunque esté escrita correctamente."
+                                &ldquo;El app no reconoce mi direcci&oacute;n aunque est&eacute; escrita correctamente.&rdquo;
                             </blockquote>
                         </div>
-                        <div class="quote-block" style="border-left:3px solid #22C55E;padding:0.8rem 1rem;background:rgba(34,197,94,0.05);border-radius:0 8px 8px 0;">
+                        <div style="border-left:3px solid #22C55E;padding:0.8rem 1rem;background:rgba(34,197,94,0.05);border-radius:0 8px 8px 0;">
                             <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;color:#22C55E;text-transform:uppercase;margin-bottom:0.5rem;">Competitor Churn Signal</div>
                             <blockquote style="font-style:italic;color:var(--text-secondary);font-size:0.88rem;line-height:1.6;margin:0 0 0.5rem;">
-                                "Desinstalei e fui pro iFood. Muito melhor."
+                                &ldquo;Desinstalei e fui pro iFood. Muito melhor.&rdquo;
                             </blockquote>
                             <blockquote style="font-style:italic;color:var(--text-secondary);font-size:0.88rem;line-height:1.6;margin:0;">
-                                "Como desenvolvedor mobile, é lamentável: o iFood está com um app muito mais enxuto."
+                                &ldquo;Como desenvolvedor mobile, &eacute; lament&aacute;vel: o iFood est&aacute; com um app muito mais enxuto.&rdquo;
                             </blockquote>
                         </div>
-                        <div class="quote-block" style="border-left:3px solid #94A3B8;padding:0.8rem 1rem;background:rgba(148,163,184,0.05);border-radius:0 8px 8px 0;">
-                            <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;color:#94A3B8;text-transform:uppercase;margin-bottom:0.5rem;">Payment Failures</div>
+                        <div style="border-left:3px solid #94A3B8;padding:0.8rem 1rem;background:rgba(148,163,184,0.05);border-radius:0 8px 8px 0;">
+                            <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;color:#94A3B8;text-transform:uppercase;margin-bottom:0.5rem;">LATAM ES &mdash; Payment Failures</div>
                             <blockquote style="font-style:italic;color:var(--text-secondary);font-size:0.88rem;line-height:1.6;margin:0 0 0.5rem;">
-                                "Siempre te cobran mal en la tarjeta, te cobran 2 veces y tardan en devolver."
+                                &ldquo;Siempre te cobran mal en la tarjeta, te cobran 2 veces y tardan en devolver.&rdquo;
                             </blockquote>
                             <blockquote style="font-style:italic;color:var(--text-secondary);font-size:0.88rem;line-height:1.6;margin:0;">
-                                "O pagamento foi recusado sem motivo, mesmo com saldo disponível."
+                                &ldquo;Me cobraron dos veces y nunca me devolvieron el dinero. Soporte no responde.&rdquo;
                             </blockquote>
                         </div>
                     </div>
                 </section>
 
-                <!-- ── PRODUCT OPS LENS ───────────────────────────────────── -->
-                <section id="product-ops-lens" class="case-panel">
-                    <h2>The &lsquo;Product Ops&rsquo; Lens</h2>
+                <!-- PRODUCT OPS RECOMMENDATIONS -->
+                <section id="product-ops" class="case-panel">
+                    <h2>Product Ops Recommendations</h2>
                     <p>
-                        Four structured business recommendations derived from the quantified friction signals.
-                        Each card maps a measured data point to a revenue/retention impact hypothesis and a
-                        concrete team action.
+                        Five structured recommendations derived from the multi-market friction signals.
+                        Each card maps a quantified data point to a revenue/retention impact hypothesis and a concrete team action.
                     </p>
 
-                    <!-- Card 1 -->
+                    <!-- BR: Crash -->
                     <div class="rec-card" style="border-left:4px solid #FF043C;padding:1.2rem 1.4rem;margin:1.2rem 0;background:rgba(255,4,60,0.04);border-radius:0 12px 12px 0;">
                         <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.8rem;">
-                            <span style="font-size:1.5rem;">💥</span>
-                            <strong style="color:var(--text-primary);font-size:1rem;">App Stability is the #1 Conversion Killer</strong>
+                            <span style="font-size:1.5rem;">&#128165;</span>
+                            <strong style="color:var(--text-primary);font-size:1rem;">BR &mdash; App Stability is the #1 Conversion Killer</strong>
                         </div>
                         <div style="display:grid;gap:0.6rem;">
                             <p style="margin:0;font-size:0.88rem;"><span style="color:#FF043C;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Problem Found</span><br>
-                            23.5% of all negative reviews (206 mentions) cite crashes, freezes, or the app failing to open.
-                            The single most common organic word across all negative reviews is <strong>"abre"</strong> — 138 mentions — meaning
-                            users can't get past the launcher screen before they abandon.</p>
+                            22.9% of BR negative reviews (330 mentions) cite crashes, freezes, or the app failing to open.
+                            &ldquo;abre&rdquo; is the #1 organic word in the BR corpus &mdash; users can&rsquo;t get past the launcher screen.</p>
                             <p style="margin:0;font-size:0.88rem;"><span style="color:#F59E0B;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Impact Hypothesis</span><br>
-                            Users in the consideration phase hit a fatal error before reaching a restaurant menu.
-                            Zero impressions served, zero GMV, full churn — with no recovery path inside the app.</p>
+                            Users in the consideration phase hit a fatal error before reaching a restaurant menu:
+                            zero impressions served, zero GMV, full churn with no recovery path.</p>
                             <p style="margin:0;font-size:0.88rem;"><span style="color:#22C55E;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Recommended Action</span><br>
                             Enforce a Crash-Free Sessions SLA gate (&ge;&nbsp;99% CFR) before any new feature ships.
-                            Instrument Crashlytics alerting at &ge;&nbsp;0.5% crash rate. Establish a Platform Stability
-                            squad with release veto power.</p>
+                            Instrument Crashlytics alerting at &ge;&nbsp;0.5% crash rate. Establish a Platform Stability squad with release veto power.</p>
                         </div>
                     </div>
 
-                    <!-- Card 2 -->
+                    <!-- BR: GPS -->
                     <div class="rec-card" style="border-left:4px solid #F59E0B;padding:1.2rem 1.4rem;margin:1.2rem 0;background:rgba(245,158,11,0.04);border-radius:0 12px 12px 0;">
                         <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.8rem;">
-                            <span style="font-size:1.5rem;">📍</span>
-                            <strong style="color:var(--text-primary);font-size:1rem;">GPS/Address Failures Block the Entire Discovery Funnel</strong>
+                            <span style="font-size:1.5rem;">&#128205;</span>
+                            <strong style="color:var(--text-primary);font-size:1rem;">BR &mdash; GPS/Address Failures Block the Entire Discovery Funnel</strong>
                         </div>
                         <div style="display:grid;gap:0.6rem;">
                             <p style="margin:0;font-size:0.88rem;"><span style="color:#FF043C;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Problem Found</span><br>
-                            75 negative reviews (8.6%) reference GPS or address-validation failures.
+                            127 BR negative reviews (8.8%) reference GPS or address-validation failures.
                             The app cannot correctly detect user location or validate a manually entered address.</p>
                             <p style="margin:0;font-size:0.88rem;"><span style="color:#F59E0B;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Impact Hypothesis</span><br>
                             Address failure is a first-mile block: without a valid location the app cannot show
-                            relevant restaurants or estimate fees, collapsing the full discovery funnel for affected users.</p>
+                            relevant restaurants or estimate fees, collapsing the full discovery funnel.</p>
                             <p style="margin:0;font-size:0.88rem;"><span style="color:#22C55E;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Recommended Action</span><br>
-                            Integrate redundant geocoding fallback (Google Maps + HERE). Instrument
-                            <em>address auto-confirm rate</em> as a leading funnel KPI.
-                            Ship a saved-addresses feature for returning users to bypass GPS dependency.</p>
+                            Integrate redundant geocoding fallback (Google Maps + HERE).
+                            Instrument <em>address auto-confirm rate</em> as a leading funnel KPI.
+                            Ship saved-addresses for returning users to bypass GPS dependency.</p>
                         </div>
                     </div>
 
-                    <!-- Card 3 -->
-                    <div class="rec-card" style="border-left:4px solid #94A3B8;padding:1.2rem 1.4rem;margin:1.2rem 0;background:rgba(148,163,184,0.04);border-radius:0 12px 12px 0;">
-                        <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.8rem;">
-                            <span style="font-size:1.5rem;">💸</span>
-                            <strong style="color:var(--text-primary);font-size:1rem;">Payment Failures Destroy Maximum-Intent Moments</strong>
-                        </div>
-                        <div style="display:grid;gap:0.6rem;">
-                            <p style="margin:0;font-size:0.88rem;"><span style="color:#FF043C;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Problem Found</span><br>
-                            33 organic mentions of payment issues in negative reviews — double-charges,
-                            card declines, and refund failures at the highest-intent moment of the funnel.</p>
-                            <p style="margin:0;font-size:0.88rem;"><span style="color:#F59E0B;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Impact Hypothesis</span><br>
-                            A user who has browsed, selected items, and entered checkout has maximum purchase intent.
-                            Payment failure here yields 100% GMV loss from a warm, committed buyer —
-                            and turns a loyal user into a vocal critic.</p>
-                            <p style="margin:0;font-size:0.88rem;"><span style="color:#22C55E;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Recommended Action</span><br>
-                            Audit gateway success rate by method. Prioritise PIX as primary method (instant, low-failure rate in BR).
-                            A/B test one-tap reorder flow to eliminate repeat checkout friction for loyal users.</p>
-                        </div>
-                    </div>
-
-                    <!-- Card 4 -->
+                    <!-- BR: iFood churn -->
                     <div class="rec-card" style="border-left:4px solid #0EA5E9;padding:1.2rem 1.4rem;margin:1.2rem 0;background:rgba(14,165,233,0.04);border-radius:0 12px 12px 0;">
                         <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.8rem;">
-                            <span style="font-size:1.5rem;">⚔️</span>
-                            <strong style="color:var(--text-primary);font-size:1rem;">iFood is a Measurable, Active Churn Destination</strong>
+                            <span style="font-size:1.5rem;">&#9876;&#65039;</span>
+                            <strong style="color:var(--text-primary);font-size:1rem;">BR &mdash; iFood is a Measurable, Active Churn Destination</strong>
                         </div>
                         <div style="display:grid;gap:0.6rem;">
                             <p style="margin:0;font-size:0.88rem;"><span style="color:#FF043C;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Problem Found</span><br>
-                            iFood is explicitly named <strong>66 times</strong> in negative reviews (7.5% of the negative corpus) as the user's
-                            stated alternative — making it a direct, measurable competitive churn signal.</p>
+                            iFood is explicitly named <strong>66 times</strong> in BR negative reviews (organic term,
+                            not prompted) &mdash; a direct churn destination that users name voluntarily in review text.</p>
                             <p style="margin:0;font-size:0.88rem;"><span style="color:#F59E0B;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Impact Hypothesis</span><br>
                             Each iFood mention represents a user who has already evaluated the alternative and
                             published their decision. Word-of-mouth churn multiplies retention cost and
                             poisons organic acquisition channels.</p>
                             <p style="margin:0;font-size:0.88rem;"><span style="color:#22C55E;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Recommended Action</span><br>
-                            Monitor iFood mention velocity as a leading churn KPI in weekly review dashboards.
+                            Monitor iFood mention velocity as a leading churn KPI in weekly dashboards.
                             Launch a win-back flow targeting users dormant &ge;&nbsp;21 days.
                             Benchmark UX patterns against iFood quarterly.</p>
                         </div>
                     </div>
-                </section>
 
-                <!-- ── VOC CROSS-BORDER ───────────────────────────────────── -->
-                <section id="voc-cross-border" class="case-panel">
-                    <h2>Voice of the Customer: Cross-Border Friction Analysis</h2>
-                    <p>
-                        Extending the NLP pipeline across PedidosYa's <strong>two language markets</strong>
-                        — Brazil&nbsp;(PT,&nbsp;1,438 reviews) and Latam&nbsp;ES&nbsp;(2,000 reviews) —
-                        reveals a <strong>sharp divergence in pain-point hierarchy</strong> between Portuguese-speaking
-                        BR and Spanish-speaking LATAM. Reviews were scraped from Google Play (1★ + 2★ bands,
-                        deduplicated by&nbsp;reviewId); the Play Store API serves a unified ES corpus
-                        across Andean markets, so BO+AR are reported as a single Latam&nbsp;ES segment.
-                    </p>
-
-                    <!-- ── Market comparison grid ── -->
-                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.4rem;margin:1.6rem 0;">
-
-                        <!-- BR -->
-                        <div style="background:rgba(255,4,60,0.04);border:1px solid rgba(255,4,60,0.2);border-radius:12px;padding:1.4rem;">
-                            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;">
-                                <span style="font-size:1.4rem;">🇧🇷</span>
-                                <strong style="color:var(--text-primary);font-size:0.95rem;">Brazil (BR) &mdash; PT</strong>
-                                <span style="margin-left:auto;font-size:0.7rem;color:#94A3B8;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;">1,438 neg. reviews</span>
-                            </div>
-                            <ol style="margin:0;padding-left:1.2rem;display:grid;gap:0.8rem;">
-                                <li style="font-size:0.875rem;">
-                                    <span style="color:#FF043C;font-weight:700;">#1 App crash&nbsp;/&nbsp;não abre</span>
-                                    <br><span style="color:#94A3B8;font-size:0.8rem;">330 mentions &mdash; 22.9% of negative reviews</span>
-                                    <br><em style="color:#64748B;font-size:0.78rem;">&ldquo;O app trava e não abre mais, tive que desinstalar.&rdquo;</em>
-                                </li>
-                                <li style="font-size:0.875rem;">
-                                    <span style="color:#F59E0B;font-weight:700;">#2 Entrega&nbsp;/&nbsp;pedido</span>
-                                    <br><span style="color:#94A3B8;font-size:0.8rem;">139 mentions &mdash; 9.7% of negative reviews</span>
-                                </li>
-                                <li style="font-size:0.875rem;">
-                                    <span style="color:#22C55E;font-weight:700;">#3 Pagamento&nbsp;/&nbsp;cobranças</span>
-                                    <br><span style="color:#94A3B8;font-size:0.8rem;">135 mentions &mdash; 9.4% of negative reviews</span>
-                                </li>
-                            </ol>
-                            <div style="margin-top:1rem;padding-top:0.8rem;border-top:1px solid rgba(255,255,255,0.08);font-size:0.75rem;color:#64748B;">
-                                Top terms: <strong style="color:#94A3B8;">abre, funciona, ifood, fica, péssimo</strong> — iFood named as escape hatch
-                            </div>
-                        </div>
-
-                        <!-- LATAM ES -->
-                        <div style="background:rgba(245,158,11,0.04);border:1px solid rgba(245,158,11,0.18);border-radius:12px;padding:1.4rem;">
-                            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;">
-                                <span style="font-size:1.4rem;">🌎</span>
-                                <strong style="color:var(--text-primary);font-size:0.95rem;">Latam ES (BO + AR) &mdash; ES</strong>
-                                <span style="margin-left:auto;font-size:0.7rem;color:#94A3B8;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;">2,000 neg. reviews</span>
-                            </div>
-                            <ol style="margin:0;padding-left:1.2rem;display:grid;gap:0.8rem;">
-                                <li style="font-size:0.875rem;">
-                                    <span style="color:#FF043C;font-weight:700;">#1 Pagamento&nbsp;/&nbsp;cobros</span>
-                                    <br><span style="color:#94A3B8;font-size:0.8rem;">595 mentions &mdash; 29.8% of negative reviews</span>
-                                    <br><em style="color:#64748B;font-size:0.78rem;">&ldquo;Me cobraron dos veces y no me devolvieron el dinero.&rdquo;</em>
-                                </li>
-                                <li style="font-size:0.875rem;">
-                                    <span style="color:#F59E0B;font-weight:700;">#2 Soporte&nbsp;/&nbsp;atención</span>
-                                    <br><span style="color:#94A3B8;font-size:0.8rem;">289 mentions &mdash; 14.4% of negative reviews</span>
-                                </li>
-                                <li style="font-size:0.875rem;">
-                                    <span style="color:#22C55E;font-weight:700;">#3 App crash&nbsp;/&nbsp;no abre</span>
-                                    <br><span style="color:#94A3B8;font-size:0.8rem;">239 mentions &mdash; 11.9% of negative reviews</span>
-                                </li>
-                            </ol>
-                            <div style="margin-top:1rem;padding-top:0.8rem;border-top:1px solid rgba(255,255,255,0.08);font-size:0.75rem;color:#64748B;">
-                                Top terms: <strong style="color:#94A3B8;">dinero, pagar, tarjeta, pago, deja</strong> — financial trust gap dominates
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- ── Key insight callout ── -->
-                    <div class="inline-note" style="border-left-color:#0EA5E9;">
-                        <strong>Cross-market divergence:</strong> Brazil's dominant friction is <em>technical</em>
-                        (app instability, 22.9%); Latam ES markets' dominant friction is <em>financial</em>
-                        (payment failures + refund loops, 29.8%).
-                        Engineering fixes that solve the BR problem (crash-free session SLA gate) will
-                        <em>not</em> move the needle in ES markets, which require a payment gateway audit
-                        and a self-service refund flow.
-                        A single global roadmap item cannot address both — this is a geo-split prioritisation problem.
-                    </div>
-
-                    <!-- ── Product Ops Lens: VoC card ── -->
-                    <h3 style="margin-top:2rem;">Product Ops Lens: Cross-Border VoC Hypothesis</h3>
-
-                    <div class="rec-card" style="border-left:4px solid #0EA5E9;padding:1.2rem 1.4rem;margin:1.2rem 0;background:rgba(14,165,233,0.04);border-radius:0 12px 12px 0;">
+                    <!-- ES: Payment -->
+                    <div class="rec-card" style="border-left:4px solid #FF043C;padding:1.2rem 1.4rem;margin:1.2rem 0;background:rgba(255,4,60,0.04);border-radius:0 12px 12px 0;">
                         <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.8rem;">
-                            <span style="font-size:1.5rem;">🌎</span>
-                            <strong style="color:var(--text-primary);font-size:1rem;">BR vs LATAM ES: Two Different Products Hiding Behind One App</strong>
+                            <span style="font-size:1.5rem;">&#128184;</span>
+                            <strong style="color:var(--text-primary);font-size:1rem;">LATAM ES &mdash; Payment Failures Destroy Maximum-Intent Moments</strong>
                         </div>
                         <div style="display:grid;gap:0.6rem;">
-                            <p style="margin:0;font-size:0.88rem;"><span style="color:#FF043C;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Business Hypothesis</span><br>
-                            Brazilian users interact with a technically unstable app version — the Play Store BR binary
-                            likely receives features ahead of LATAM due to Delivery Hero's geo-rollout strategy.
-                            Latam ES users, by contrast, encounter a more stable app but face a <strong>financial trust deficit</strong>:
-                            payment failures (29.8%), refund loops, and coupon non-application are the primary churn drivers.
-                            The shared pain point across both language markets — <strong>Suporte / atendimento</strong> (8.8% BR, 14.4% ES) — signals
-                            that <em>no market has a functional self-serve recovery path</em> after a bad experience.</p>
-                            <p style="margin:0;font-size:0.88rem;"><span style="color:#F59E0B;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Engineering Recommendation</span><br>
-                            <strong>BR:</strong> Enforce crash-free session SLA gate (&ge;&nbsp;99% CFR) before any feature ship. Instrument app open funnel with session replay.<br>
-                            <strong>Latam ES:</strong> Audit payment gateway success rate per PSP. Introduce instant self-service refund flow (no agent required) — this alone would deflect the majority of Support contacts in these markets.<br>
-                            <strong>All markets:</strong> Implement in-app &ldquo;What went wrong?&rdquo; micro-survey at the 24-hour post-order mark to capture structured friction data without relying on public Play Store reviews.</p>
+                            <p style="margin:0;font-size:0.88rem;"><span style="color:#FF043C;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Problem Found</span><br>
+                            29.8% of LATAM ES negative reviews (595 mentions) cite payment failures: double-charges,
+                            card declines, coupon non-application, and refund loops. Top organic terms are
+                            <em>dinero, tarjeta, cobrar, pago</em>.</p>
+                            <p style="margin:0;font-size:0.88rem;"><span style="color:#F59E0B;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Impact Hypothesis</span><br>
+                            A user who has browsed, selected items, and entered checkout has maximum purchase intent.
+                            Payment failure here yields 100% GMV loss from a warm, committed buyer
+                            and turns a loyal user into a vocal critic.</p>
+                            <p style="margin:0;font-size:0.88rem;"><span style="color:#22C55E;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Recommended Action</span><br>
+                            Audit gateway success rate per PSP (Bolivia: QR/mobile wallet; Argentina: tarjeta + Mercado Pago).
+                            Introduce instant self-service refund flow (no agent required) &mdash; this alone would deflect
+                            the bulk of the Support/atenci&oacute;n volume (14.4%) in ES markets.</p>
+                        </div>
+                    </div>
+
+                    <!-- All markets: Support -->
+                    <div class="rec-card" style="border-left:4px solid #94A3B8;padding:1.2rem 1.4rem;margin:1.2rem 0;background:rgba(148,163,184,0.04);border-radius:0 12px 12px 0;">
+                        <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.8rem;">
+                            <span style="font-size:1.5rem;">&#128172;</span>
+                            <strong style="color:var(--text-primary);font-size:1rem;">All Markets &mdash; No Market Has a Functional Self-Serve Recovery Path</strong>
+                        </div>
+                        <div style="display:grid;gap:0.6rem;">
+                            <p style="margin:0;font-size:0.88rem;"><span style="color:#FF043C;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Problem Found</span><br>
+                            Support/atendimento appears in the top-3 friction signals in both language markets &mdash;
+                            8.8% in BR (127 mentions), 14.4% in LATAM ES (289 mentions).
+                            Users consistently describe an experience where no recovery path exists after a bad order.</p>
+                            <p style="margin:0;font-size:0.88rem;"><span style="color:#22C55E;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Recommended Action</span><br>
+                            Implement an in-app &ldquo;What went wrong?&rdquo; micro-survey at the 24-hour post-order mark.
+                            Surface a one-tap self-service resolution flow for the top 3 complaint types
+                            (wrong/missing item, payment failure, estimated time exceeded) before routing to a human agent.</p>
                         </div>
                     </div>
                 </section>
 
-                <!-- ── REACT COMPONENT ────────────────────────────────────── -->
-                <section id="react-component" class="case-panel">
-                    <h2>React Component — PedidosYaCaseStudy.jsx</h2>
+                <!-- DATA PIPELINE -->
+                <section id="data-pipeline" class="case-panel">
+                    <h2>Data Pipeline</h2>
                     <p>
-                        All findings are also shipped as a self-contained <code>PedidosYaCaseStudy.jsx</code> React component
-                        (Tailwind CSS, PedidosYa brand colours). The component embeds the metrics JSON directly
-                        in component state and renders four sections: Executive Summary, Friction Dashboard, Product Ops Lens,
-                        and Data Architecture. It is designed to be dropped into any React project with Tailwind available.
-                    </p>
-
-                    <div class="code-shell">
-                        <div class="code-shell-header">
-                            <span>PedidosYaCaseStudy.jsx — key sub-components</span>
-                            <span>React / JSX</span>
-                        </div>
-                        <pre><code class="language-jsx">function HorizontalBar({ label, count, max, total }) {
-  const pct    = Math.round((count / max) * 100);
-  const ofNeg  = total ? ((count / total) * 100).toFixed(1) : null;
-  return (
-    &lt;div className="mb-3"&gt;
-      &lt;div className="flex justify-between text-sm mb-1"&gt;
-        &lt;span className="font-medium text-slate-200"&gt;{label}&lt;/span&gt;
-        &lt;span className="text-slate-400"&gt;
-          {count} mentions
-          {ofNeg &amp;&amp; &lt;span className="text-white font-semibold ml-1"&gt;({ofNeg}%)&lt;/span&gt;}
-        &lt;/span&gt;
-      &lt;/div&gt;
-      &lt;div className="w-full bg-slate-700 rounded-full h-2.5"&gt;
-        &lt;div className="h-2.5 rounded-full"
-             style={{ width: `${pct}%`, backgroundColor: "#FF043C" }} /&gt;
-      &lt;/div&gt;
-    &lt;/div&gt;
-  );
-}
-
-function OpsCard({ icon, problem, impact, action }) {
-  return (
-    &lt;div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-5"&gt;
-      &lt;div className="text-xl mb-3"&gt;{icon}&lt;/div&gt;
-
-      &lt;p&gt;&lt;span style={{ color: "#FF043C" }}&gt;Problem Found&lt;/span&gt;&lt;br/&gt;{problem}&lt;/p&gt;
-      &lt;p&gt;&lt;span className="text-amber-400"&gt;Impact Hypothesis&lt;/span&gt;&lt;br/&gt;{impact}&lt;/p&gt;
-      &lt;p&gt;&lt;span className="text-emerald-400"&gt;Recommended Action&lt;/span&gt;&lt;br/&gt;{action}&lt;/p&gt;
-    &lt;/div&gt;
-  );
-}</code></pre>
-                    </div>
-                </section>
-
-                <!-- ── DATA ARCHITECTURE ───────────────────────────────────── -->
-                <section id="data-architecture" class="case-panel">
-                    <h2>Data Architecture</h2>
-                    <p>
-                        The full pipeline runs in three Python scripts plus one React component,
-                        with a JSON contract at the seam between the data layer and the presentation layer.
+                        The multi-market pipeline runs two Python scripts with a JSON contract at the seam between
+                        the data layer and the NLP layer. Reviews are scraped in two separate score bands per market
+                        to maximise corpus depth, then analysis uses language-matched stopword sets.
                     </p>
 
                     <div class="pipeline-steps" style="display:grid;gap:0;margin:1.5rem 0;">
 
-                        <div class="pipeline-step" style="display:flex;gap:1rem;padding:1rem 0 0.5rem;border-left:2px solid #FF043C;padding-left:1.5rem;margin-left:1rem;position:relative;">
+                        <div style="display:flex;gap:1rem;padding:1rem 0 0.5rem;border-left:2px solid #FF043C;padding-left:1.5rem;margin-left:1rem;position:relative;">
                             <div style="position:absolute;left:-13px;top:1rem;width:24px;height:24px;background:#FF043C;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;color:white;">01</div>
                             <div>
-                                <strong style="color:var(--text-primary);">🕷️ Python Scraper — <code>scrape_pedidosya.py</code></strong>
-                                <p style="font-size:0.88rem;color:var(--text-secondary);margin:0.3rem 0 0;">
-                                    <code>google-play-scraper</code> targets <code>com.pedidosya</code> with <code>lang=pt, country=br</code>.
-                                    Pagination via <code>continuation_token</code> collects 2,000 reviews in 200-row batches.
-                                    Output: <code>pedidosya_reviews.csv</code> (6 columns, UTF-8-BOM).
+                                <strong style="color:var(--text-primary);">&#128375; Scraper &mdash; <code>scrape_delivery_hero_global.py</code></strong>
+                                <p style="font-size:0.88rem;color:var(--text-secondary);margin:0.3rem 0 0.6rem;">
+                                    Targets <code>com.pedidosya</code> per market (BR: lang=pt; BO/AR: lang=es).
+                                    Fetches <code>filter_score_with=1</code> and <code>filter_score_with=2</code> in separate passes
+                                    (200-row batches, up to 60 calls per band), then deduplicates by <code>reviewId</code>.
+                                    Output: <code>reviews_delivery_hero_global.json</code>.
                                 </p>
                             </div>
                         </div>
 
-                        <div class="pipeline-step" style="display:flex;gap:1rem;padding:1rem 0 0.5rem;border-left:2px solid #FF043C;padding-left:1.5rem;margin-left:1rem;position:relative;">
+                        <div style="display:flex;gap:1rem;padding:1rem 0 0.5rem;border-left:2px solid #FF043C;padding-left:1.5rem;margin-left:1rem;position:relative;">
                             <div style="position:absolute;left:-13px;top:1rem;width:24px;height:24px;background:#FF043C;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;color:white;">02</div>
-                            <div>
-                                <strong style="color:var(--text-primary);">🧹 Data Cleaning &amp; NLP — <code>analyze_friction.py</code></strong>
-                                <p style="font-size:0.88rem;color:var(--text-secondary);margin:0.3rem 0 0;">
-                                    Pandas stratification isolates 877 negative reviews (1–2★).
-                                    Regex keyword frequency covers PT+ES mixed corpus.
-                                    Counter-based top-25 organic term extraction (stopword-filtered).
-                                    Output: <code>pedidosya_friction_metrics.json</code>.
+                            <div style="width:100%">
+                                <strong style="color:var(--text-primary);">&#129504; NLP Analysis &mdash; <code>analyze_voc_global.py</code></strong>
+                                <p style="font-size:0.88rem;color:var(--text-secondary);margin:0.3rem 0 0.6rem;">
+                                    Loads each market&rsquo;s corpus, applies language-matched stopwords (PT for BR, ES for LATAM ES),
+                                    runs bilingual regex PATTERNS, and extracts top-20 organic terms via <code>Counter</code>.
+                                    Output: <code>voc_analysis_results.json</code>.
                                 </p>
                             </div>
                         </div>
 
-                        <div class="pipeline-step" style="display:flex;gap:1rem;padding:1rem 0 0.5rem;border-left:2px solid #FF043C;padding-left:1.5rem;margin-left:1rem;position:relative;">
-                            <div style="position:absolute;left:-13px;top:1rem;width:24px;height:24px;background:#FF043C;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;color:white;">03</div>
+                        <div style="display:flex;gap:1rem;padding:1rem 0 0;border-left:2px solid transparent;padding-left:1.5rem;margin-left:1rem;position:relative;">
+                            <div style="position:absolute;left:-13px;top:1rem;width:24px;height:24px;background:#22C55E;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;color:white;">03</div>
                             <div>
-                                <strong style="color:var(--text-primary);">📊 Chart Generation — <code>generate_pedidosya_figures.py</code></strong>
+                                <strong style="color:var(--text-primary);">&#128202; Visualisation &mdash; HTML / Matplotlib</strong>
                                 <p style="font-size:0.88rem;color:var(--text-secondary);margin:0.3rem 0 0;">
-                                    Matplotlib dark-theme figures (160 DPI): score distribution,
-                                    keyword frequency horizontal bars, organic term bar chart,
-                                    and annotated funnel visualisation.
-                                    Output: 4 PNG files in <code>figures/</code>.
+                                    Cross-market bar charts rendered directly in HTML from the JSON results.
+                                    Detailed BR figures (score distribution, keyword frequency, organic terms, funnel)
+                                    generated by Matplotlib dark-theme at 160 DPI.
+                                    Output: this page + 4 PNG files in <code>figures/</code>.
                                 </p>
                             </div>
                         </div>
-
-                        <div class="pipeline-step" style="display:flex;gap:1rem;padding:1rem 0 0;border-left:2px solid transparent;padding-left:1.5rem;margin-left:1rem;position:relative;">
-                            <div style="position:absolute;left:-13px;top:1rem;width:24px;height:24px;background:#22C55E;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;color:white;">04</div>
-                            <div>
-                                <strong style="color:var(--text-primary);">⚛️ Business Visualisation — <code>PedidosYaCaseStudy.jsx</code></strong>
-                                <p style="font-size:0.88rem;color:var(--text-secondary);margin:0.3rem 0 0;">
-                                    Metrics embedded directly in component state. Sub-components render all sections.
-                                    Tailwind CSS layout; PedidosYa brand tokens (<code>#FF043C</code> red + white background).
-                                    Portable: drop into any React + Tailwind project.
-                                </p>
-                            </div>
-                        </div>
-
                     </div>
 
-                    <div class="inline-note" style="margin-top:1.5rem;">
-                        Pipeline tech summary:
-                        <code>google-play-scraper</code> &rarr;
-                        <code>pandas / regex NLP</code> &rarr;
-                        <code>JSON metrics</code> &rarr;
-                        <code>Matplotlib figures</code> &rarr;
-                        <code>React + Tailwind component</code>
+                    <div class="code-shell" style="margin-top:1.5rem;">
+                        <div class="code-shell-header">
+                            <span>scrape_delivery_hero_global.py &mdash; dual-band scrape + dedup</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python">TARGET_NEG = 2000
+MAX_CALLS  = 60
+BATCH      = 200
+
+def scrape_score_band(app_id, lang, country, score, label, target):
+    collected, token = [], None
+    for _ in range(MAX_CALLS):
+        if len(collected) >= target:
+            break
+        result, token = reviews(
+            app_id, lang=lang, country=country,
+            sort=Sort.NEWEST, count=BATCH,
+            filter_score_with=score,
+            continuation_token=token,
+        )
+        if not result:
+            break
+        collected.extend(result)
+        if token is None:
+            break
+        time.sleep(0.4)
+    return collected
+
+def scrape_market(app_id, lang, country, label, target=TARGET_NEG):
+    per_band = (target + 1) // 2
+    band1 = scrape_score_band(app_id, lang, country, 1, label, per_band)
+    band2 = scrape_score_band(app_id, lang, country, 2, label, per_band)
+    seen, merged = set(), []
+    for r in band1 + band2:
+        if r["reviewId"] not in seen:
+            seen.add(r["reviewId"])
+            merged.append(r)
+    return merged</code></pre>
+                    </div>
+
+                    <div class="code-shell" style="margin-top:1rem;">
+                        <div class="code-shell-header">
+                            <span>analyze_voc_global.py &mdash; language-aware PATTERNS pass</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python">MARKET_STOPWORDS = {
+    "pedidosya_BR": [STOP_PT, STOP_EN],   # Brazilian Portuguese
+    "pedidosya_BO": [STOP_ES, STOP_EN],   # Spanish (Andean)
+    "pedidosya_AR": [STOP_ES, STOP_EN],   # Spanish (Andean)
+    "foodpanda_BD": [STOP_EN],            # English
+}
+
+def analyze_market(reviews_list, patterns, stopword_sets, label):
+    texts = [str(r.get("content") or "").lower() for r in reviews_list]
+    stopwords = set().union(*stopword_sets)
+
+    freq = {kw: sum(bool(re.search(pat, t)) for t in texts)
+            for kw, pat in patterns.items()}
+
+    all_words = " ".join(texts).split()
+    top_words = Counter(
+        w.strip(".,!?;:()") for w in all_words
+        if len(w) > 3 and w not in stopwords
+    ).most_common(20)
+    return {"total": len(texts), "freq": freq, "top_words": top_words}</code></pre>
+                    </div>
+
+                    <div class="inline-note" style="margin-top:1rem;">
+                        Pipeline: <code>google-play-scraper</code> (dual-band) &rarr;
+                        <code>JSON corpus</code> &rarr;
+                        <code>language-aware NLP</code> &rarr;
+                        <code>voc_analysis_results.json</code> &rarr;
+                        <code>HTML visualisation</code> + <code>Matplotlib figures</code>
                     </div>
                 </section>
 
             </main>
 
-            <!-- ── SIDEBAR ─────────────────────────────────────────────────── -->
+            <!-- SIDEBAR -->
             <aside class="case-study-sidebar">
 
                 <section class="case-panel sidebar-block">
                     <h3>Key Metrics</h3>
                     <ul class="case-list">
-                        <li>2,000 reviews scraped (Google Play BR)</li>
-                        <li>43.9% negative rate (1–2★)</li>
-                        <li>23.5% of negatives cite crashes (206 mentions)</li>
-                        <li>8.6% cite GPS/address failures (75 mentions)</li>
-                        <li>66 explicit iFood churn mentions</li>
-                        <li>"abre" (138) = #1 organic word in negative reviews</li>
+                        <li>3,438 total negative reviews scraped</li>
+                        <li>BR: 1,438 reviews (1&#9733; + 2&#9733; dual-band)</li>
+                        <li>LATAM ES: 2,000 reviews (BO + AR unified)</li>
+                        <li>BR #1 pain: crash/no abre &mdash; 22.9%</li>
+                        <li>ES #1 pain: payment/cobros &mdash; 29.8%</li>
+                        <li>66 iFood mentions in BR corpus</li>
                     </ul>
                 </section>
 
@@ -648,19 +588,19 @@ function OpsCard({ icon, problem, impact, action }) {
                     <ul class="case-list">
                         <li>google-play-scraper 1.2.7</li>
                         <li>pandas 3.0.1 + regex NLP</li>
+                        <li>PT + ES + EN stopwords</li>
                         <li>Matplotlib 3.x (dark theme)</li>
-                        <li>React 17+ / JSX</li>
-                        <li>Tailwind CSS</li>
+                        <li>filter_score_with dual-band dedup</li>
                     </ul>
                 </section>
 
                 <section class="case-panel sidebar-block">
                     <h3>File Layout</h3>
                     <ul class="case-list">
-                        <li>kaggle/pedidosya/scrape_pedidosya.py</li>
-                        <li>kaggle/pedidosya/analyze_friction.py</li>
-                        <li>kaggle/pedidosya/generate_pedidosya_figures.py</li>
-                        <li>kaggle/pedidosya/PedidosYaCaseStudy.jsx</li>
+                        <li>kaggle/scrape_delivery_hero_global.py</li>
+                        <li>kaggle/analyze_voc_global.py</li>
+                        <li>kaggle/reviews_delivery_hero_global.json</li>
+                        <li>kaggle/voc_analysis_results.json</li>
                         <li>figures/pedidosya_score_distribution.png</li>
                         <li>figures/pedidosya_keyword_friction.png</li>
                         <li>figures/pedidosya_top_terms.png</li>
@@ -672,58 +612,30 @@ function OpsCard({ icon, problem, impact, action }) {
         </div>
     </div>
 
-    <!-- ── LIGHTBOX ─────────────────────────────────────────────────────────── -->
+    <!-- LIGHTBOX -->
     <div id="lightboxOverlay" class="lightbox-overlay" role="dialog" aria-modal="true" aria-label="Image zoom" style="display:none;">
         <button class="lightbox-close" id="lightboxClose" aria-label="Close">&times;</button>
         <img id="lightboxImg" class="lightbox-img" src="" alt="">
     </div>
 
-    <!-- ── STICKY PROJECT QUICK NAV ─────────────────────────────────────────── -->
+    <!-- STICKY PROJECT QUICK NAV -->
     <nav class="project-quick-nav" aria-label="Quick project navigation">
         <span class="pqn-label">Projects</span>
-        <a class="pqn-link" href="fraud-detection.html">
-            <span class="pqn-dot"></span>
-            <span class="pqn-text">Fraud Detection</span>
-        </a>
-        <a class="pqn-link" href="yard-moves-forecast.html">
-            <span class="pqn-dot"></span>
-            <span class="pqn-text">Yard Moves Forecast</span>
-        </a>
-        <a class="pqn-link" href="customer-churn.html">
-            <span class="pqn-dot"></span>
-            <span class="pqn-text">Customer Churn</span>
-        </a>
-        <a class="pqn-link" href="food-delivery.html">
-            <span class="pqn-dot"></span>
-            <span class="pqn-text">Food Delivery Time</span>
-        </a>
-        <a class="pqn-link" href="ecommerce-churn.html">
-            <span class="pqn-dot"></span>
-            <span class="pqn-text">Coupon Engine</span>
-        </a>
-        <a class="pqn-link" href="foodpanda-vendor-intelligence.html">
-            <span class="pqn-dot"></span>
-            <span class="pqn-text">Foodpanda Vendors</span>
-        </a>
-        <a class="pqn-link" href="delivery-hero-ab-test.html">
-            <span class="pqn-dot"></span>
-            <span class="pqn-text">Delivery Hero A/B Test</span>
-        </a>
-        <a class="pqn-link" href="flight-search.html">
-            <span class="pqn-dot"></span>
-            <span class="pqn-text">Flight Search LTR</span>
-        </a>
-        <a class="pqn-link active" href="pedidosya-friction-analysis.html">
-            <span class="pqn-dot"></span>
-            <span class="pqn-text">PedidosYa Friction</span>
-        </a>
+        <a class="pqn-link" href="fraud-detection.html"><span class="pqn-dot"></span><span class="pqn-text">Fraud Detection</span></a>
+        <a class="pqn-link" href="yard-moves-forecast.html"><span class="pqn-dot"></span><span class="pqn-text">Yard Moves Forecast</span></a>
+        <a class="pqn-link" href="customer-churn.html"><span class="pqn-dot"></span><span class="pqn-text">Customer Churn</span></a>
+        <a class="pqn-link" href="food-delivery.html"><span class="pqn-dot"></span><span class="pqn-text">Food Delivery Time</span></a>
+        <a class="pqn-link" href="ecommerce-churn.html"><span class="pqn-dot"></span><span class="pqn-text">Coupon Engine</span></a>
+        <a class="pqn-link" href="foodpanda-vendor-intelligence.html"><span class="pqn-dot"></span><span class="pqn-text">Foodpanda Vendors</span></a>
+        <a class="pqn-link" href="delivery-hero-ab-test.html"><span class="pqn-dot"></span><span class="pqn-text">Delivery Hero A/B Test</span></a>
+        <a class="pqn-link" href="flight-search.html"><span class="pqn-dot"></span><span class="pqn-text">Flight Search LTR</span></a>
+        <a class="pqn-link active" href="pedidosya-friction-analysis.html"><span class="pqn-dot"></span><span class="pqn-text">PedidosYa Friction</span></a>
     </nav>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
     <script>
         hljs.highlightAll();
 
-        // ── Sticky ToC scrollspy ───────────────────────────────────────────
         (function () {
             var tocLinks = document.querySelectorAll('.cs-toc-link');
             var sections = Array.from(tocLinks).map(function (l) {
@@ -742,7 +654,6 @@ function OpsCard({ icon, problem, impact, action }) {
             onScroll();
         })();
 
-        // ── Lightbox ──────────────────────────────────────────────────────
         (function () {
             var overlay = document.getElementById('lightboxOverlay');
             var img     = document.getElementById('lightboxImg');
@@ -764,12 +675,8 @@ function OpsCard({ icon, problem, impact, action }) {
             }
 
             close.addEventListener('click', closeLightbox);
-            overlay.addEventListener('click', function (e) {
-                if (e.target === overlay) closeLightbox();
-            });
-            document.addEventListener('keydown', function (e) {
-                if (e.key === 'Escape') closeLightbox();
-            });
+            overlay.addEventListener('click', function (e) { if (e.target === overlay) closeLightbox(); });
+            document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeLightbox(); });
         })();
     </script>
 </body>
