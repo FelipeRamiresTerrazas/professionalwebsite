@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delivery Hero A/B Test | Felipe Ramires Terrazas</title>
+    <meta name="description" content="ML-driven A/B test analysis for ETA accuracy, cancellation reduction, and support ticket reduction in food delivery operations.">
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css">
+</head>
+<body class="case-study-page">
+    <div class="case-study-shell">
+        <a class="case-study-back" href="../index.html">&larr; Back to portfolio</a>
+
+        <header class="case-study-hero">
+            <span class="case-study-kicker">Experimentation &amp; ML Case Study</span>
+            <h1>Delivery Hero: ML-Driven ETA A/B Test to Cut Cancellations and Support Load</h1>
+            <p class="case-study-lead">
+                This case study evaluates a controlled A/B test where Variant A used a naive distance-based ETA while Variant B used a predictive ETA model combining route distance and live kitchen congestion. The analysis quantifies impact on cancellations, support tickets, and delivery-time prediction quality, then translates the result into concrete product recommendations for production rollout.
+            </p>
+            <div class="case-study-meta">
+                <span class="meta-pill">Python</span>
+                <span class="meta-pill">pandas</span>
+                <span class="meta-pill">scikit-learn</span>
+                <span class="meta-pill">A/B Testing</span>
+                <span class="meta-pill">Random Forest</span>
+                <span class="meta-pill">Gradient Boosting</span>
+                <span class="meta-pill">Product Analytics</span>
+            </div>
+        </header>
+
+        <div class="case-study-grid">
+            <nav class="cs-toc" aria-label="Table of contents">
+                <span class="cs-toc-label">On this page</span>
+                <ul class="cs-toc-list">
+                    <li><a class="cs-toc-link" href="#business-problem">The Business Problem</a></li>
+                    <li><a class="cs-toc-link" href="#ab-setup">A/B Test Setup &amp; Guardrail Metrics</a></li>
+                    <li><a class="cs-toc-link" href="#ml-models">Machine Learning Models (Regression &amp; Classification)</a></li>
+                    <li><a class="cs-toc-link" href="#results-impact">Results &amp; Impact on UX</a></li>
+                    <li><a class="cs-toc-link" href="#recommendations">Executive Recommendations</a></li>
+                </ul>
+            </nav>
+
+            <main class="case-study-main">
+                <section id="business-problem" class="case-panel">
+                    <h2>The Business Problem</h2>
+                    <p>
+                        Late deliveries are one of the most expensive trust failures in food delivery. When ETA is consistently under-estimated, users perceive the experience as unreliable, which increases abandonment, cancellations, and support contact volume.
+                    </p>
+                    <p>
+                        For product leadership, the strategic question is simple: should we keep the lightweight ETA logic (Variant A), or move to the predictive ETA model (Variant B) that incorporates both travel distance and kitchen load?
+                    </p>
+                    <ol style="padding-left:1.5rem; line-height:2;">
+                        <li><strong>Customer trust:</strong> ETA error directly impacts user confidence and conversion.</li>
+                        <li><strong>Operational cost:</strong> delays increase cancellation and support ticket burden.</li>
+                        <li><strong>Revenue safety:</strong> improvements must not cannibalize order value (guardrail KPI).</li>
+                    </ol>
+                    <div class="inline-note">
+                        Dataset: 10,000 sessions, evenly split across variants (A=4,996; B=5,004), with behavioral and fulfillment outcomes.
+                    </div>
+                </section>
+
+                <section id="ab-setup" class="case-panel">
+                    <h2>A/B Test Setup &amp; Guardrail Metrics</h2>
+                    <p>
+                        Variant A relied on a naive ETA approximation. Variant B used a predictive model calibrated on route distance and real-time kitchen pressure. The experiment was assessed on primary outcomes (cancellation and support ticket rates) and a business guardrail (average order value).
+                    </p>
+
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Business impact and guardrail checks</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python">summary = df.groupby("variant").agg(
+    cancellation_rate=("is_canceled", "mean"),
+    support_ticket_rate=("support_ticket_opened", "mean"),
+    avg_order_value=("order_value_eur", "mean"),
+)
+
+print(summary)
+# A: cancellation 33.8%, support 45.4%, avg value EUR 19.98
+# B: cancellation 0.0%,  support 1.6%,  avg value EUR 19.11</code></pre>
+                    </div>
+
+                    <div class="chart-grid">
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button" data-lightbox-src="../figures/delivery_hero_business_impact.png" data-lightbox-alt="Cancellation rate and support ticket rate comparison between variants" aria-label="Open business impact chart in full screen">
+                                <img src="../figures/delivery_hero_business_impact.png" alt="Cancellation and support ticket rates for Variant A vs Variant B">
+                            </button>
+                            <figcaption class="chart-caption">Variant B materially lowers both cancellation rate and support ticket rate versus Variant A.</figcaption>
+                        </figure>
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button" data-lightbox-src="../figures/delivery_hero_guardrail_order_value.png" data-lightbox-alt="Average order value guardrail comparison by variant" aria-label="Open guardrail KPI chart in full screen">
+                                <img src="../figures/delivery_hero_guardrail_order_value.png" alt="Guardrail KPI showing average order value for variants A and B">
+                            </button>
+                            <figcaption class="chart-caption">Guardrail KPI: average order value remains in a narrow range (EUR 19.98 in A vs EUR 19.11 in B, delta -4.33%).</figcaption>
+                        </figure>
+                    </div>
+                </section>
+
+                <section id="ml-models" class="case-panel">
+                    <h2>Machine Learning Models (Regression &amp; Classification)</h2>
+                    <p>
+                        Two modeling tracks were run. First, a regression task predicted actual delivery time. Second, a classification task estimated cancellation probability using delay-aware features.
+                    </p>
+
+                    <div class="tool-stack">
+                        <article class="tool-card">
+                            <strong>Regression (Delivery Time)</strong>
+                            <p>RandomForestRegressor and GradientBoostingRegressor trained on variant, rating, distance, kitchen load, and promised ETA.</p>
+                        </article>
+                        <article class="tool-card">
+                            <strong>Classification (Cancellation)</strong>
+                            <p>LogisticRegression and RandomForestClassifier trained with delay-based features to estimate cancellation risk.</p>
+                        </article>
+                        <article class="tool-card">
+                            <strong>Key Non-Linearity Test</strong>
+                            <p>Model comparison specifically evaluated MAE under high kitchen pressure to detect non-linear saturation effects.</p>
+                        </article>
+                        <article class="tool-card">
+                            <strong>Interpretability</strong>
+                            <p>Tree-based feature importance extracted to identify the strongest operational drivers of failure.</p>
+                        </article>
+                    </div>
+
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Model evaluation highlights</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python"># Regression
+# RandomForestRegressor:    MAE 3.956 | RMSE 4.961 | R2 0.883 | High-load MAE 3.826
+# GradientBoostingRegressor: MAE 3.662 | RMSE 4.610 | R2 0.899 | High-load MAE 3.632
+# Winner for non-linear kitchen load: GradientBoostingRegressor
+
+# Classification
+# LogisticRegression:      Accuracy 0.874 | F1 0.743 | ROC-AUC 0.940
+# RandomForestClassifier:  Accuracy 0.912 | F1 0.844 | ROC-AUC 0.952
+# Best cancellation model: RandomForestClassifier</code></pre>
+                    </div>
+
+                    <p>
+                        The delay-risk relationship is sharp: in low-delay buckets (early to up to 5 minutes late), cancellation was effectively 0%. In high-delay buckets (20+ minutes late), cancellation rose to ~75%. This demonstrates why ETA precision is not just a UX nicety, but a hard business lever.
+                    </p>
+                </section>
+
+                <section id="results-impact" class="case-panel visualizations-panel">
+                    <h2>Results &amp; Impact on UX</h2>
+                    <p>
+                        The visual evidence confirms that Variant B is both more accurate and more operationally stable. Actual delivery times cluster closer to promised ETA, reducing customer frustration moments that typically trigger cancellations and support interactions.
+                    </p>
+
+                    <div class="chart-grid">
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button" data-lightbox-src="../figures/delivery_hero_eta_accuracy.png" data-lightbox-alt="Promised ETA versus actual delivery by variant" aria-label="Open ETA accuracy chart in full screen">
+                                <img src="../figures/delivery_hero_eta_accuracy.png" alt="Promised ETA versus actual delivery time for Variant A and Variant B">
+                            </button>
+                            <figcaption class="chart-caption">Variant B shows a tighter concentration around the ideal diagonal, indicating improved ETA calibration.</figcaption>
+                        </figure>
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button" data-lightbox-src="../figures/delivery_hero_feature_importance.png" data-lightbox-alt="Tree model feature importance for delivery time prediction" aria-label="Open feature importance chart in full screen">
+                                <img src="../figures/delivery_hero_feature_importance.png" alt="Feature importance showing active orders in kitchen as dominant driver">
+                            </button>
+                            <figcaption class="chart-caption">Feature importance mathematically validates that active_orders_in_kitchen is the dominant driver of delivery-time variance (importance 0.675).</figcaption>
+                        </figure>
+                    </div>
+
+                    <div class="inline-note">
+                        Executive readout: the experiment indicates a strong quality lift from Variant B, driven by better handling of kitchen-load non-linearity while keeping average order value stable.
+                    </div>
+                </section>
+
+                <section id="recommendations" class="case-panel">
+                    <h2>Executive Recommendations</h2>
+
+                    <h3 style="margin-top:1.5rem; color: var(--cs-accent, #6366f1);">1. Roll Out Variant B with Regional Phasing</h3>
+                    <p>
+                        The effect size on cancellation and support burden is large enough to justify rollout. Deploy first in medium/high-volume markets where kitchen pressure is frequently elevated and gains will materialize fastest.
+                    </p>
+
+                    <h3 style="margin-top:1.5rem; color: var(--cs-accent, #6366f1);">2. Add Delay-Based Intervention Triggers</h3>
+                    <p>
+                        Introduce proactive UX and ops interventions when predicted delay exceeds 15 minutes: dynamic ETA updates, user reassurance messaging, and dispatch/kitchen escalation. This is where cancellation probability accelerates.
+                    </p>
+
+                    <h3 style="margin-top:1.5rem; color: var(--cs-accent, #6366f1);">3. Track Guardrail and Unit Economics Weekly</h3>
+                    <p>
+                        Keep order value, refund rates, and discount compensation under active monitoring to ensure the ETA-model uplift remains net-positive on margin after full rollout.
+                    </p>
+
+                    <h3 style="margin-top:1.5rem; color: var(--cs-accent, #6366f1);">4. Productionize with Ongoing Retraining</h3>
+                    <p>
+                        Kitchen dynamics drift by season, city, and campaign cadence. Set a retraining cadence and monitor model drift to preserve ETA accuracy over time.
+                    </p>
+                </section>
+
+                <nav class="project-pagination" aria-label="Project pagination">
+                    <a class="pp-card pp-prev" href="food-delivery.html">
+                        <span class="pp-dir">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+                            Previous
+                        </span>
+                        <span class="pp-title">Food Delivery Time Prediction</span>
+                    </a>
+                    <a class="pp-card pp-next" href="ecommerce-churn.html">
+                        <span class="pp-dir">
+                            Next
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+                        </span>
+                        <span class="pp-title">E-commerce Churn Modeling</span>
+                    </a>
+                </nav>
+
+            </main>
+
+            <aside class="case-study-sidebar">
+                <section class="case-panel sidebar-block">
+                    <h3>What This Shows</h3>
+                    <ul class="case-list">
+                        <li>A/B test design interpreted through product and operational outcomes</li>
+                        <li>Dual-model strategy: regression for ETA precision and classification for churn risk</li>
+                        <li>Feature importance tied directly to actionable operational levers</li>
+                        <li>Guardrail-led decision framing for executive-level rollout decisions</li>
+                    </ul>
+                </section>
+
+                <section class="case-panel sidebar-block">
+                    <h3>Key Metrics</h3>
+                    <ul class="case-list">
+                        <li>Sessions analyzed: 10,000</li>
+                        <li>Best ETA regressor: GradientBoostingRegressor (R2 = 0.899)</li>
+                        <li>Best cancellation classifier: RandomForestClassifier (ROC-AUC = 0.952)</li>
+                        <li>Cancellation rate: 33.8% (A) vs 0.0% (B)</li>
+                        <li>Support ticket rate: 45.4% (A) vs 1.6% (B)</li>
+                        <li>Top failure driver: active_orders_in_kitchen (importance = 0.675)</li>
+                    </ul>
+                </section>
+
+                <section class="case-panel sidebar-block">
+                    <h3>Suggested File Layout</h3>
+                    <ul class="case-list">
+                        <li>projects/delivery-hero-ab-test.html</li>
+                        <li>kaggle/test_a-b_delivery_hero/generate_delivery_hero_ab_test_assets.py</li>
+                        <li>kaggle/test_a-b_delivery_hero/delivery_hero_ab_test_metrics.json</li>
+                        <li>figures/delivery_hero_business_impact.png</li>
+                        <li>figures/delivery_hero_eta_accuracy.png</li>
+                        <li>figures/delivery_hero_feature_importance.png</li>
+                        <li>figures/delivery_hero_guardrail_order_value.png</li>
+                    </ul>
+                </section>
+            </aside>
+        </div>
+    </div>
+
+    <nav class="project-quick-nav" aria-label="Quick project navigation">
+        <span class="pqn-label">Projects</span>
+        <a class="pqn-link" href="fraud-detection.html">
+            <span class="pqn-dot"></span>
+            <span class="pqn-text">Fraud Detection</span>
+        </a>
+        <a class="pqn-link" href="yard-moves-forecast.html">
+            <span class="pqn-dot"></span>
+            <span class="pqn-text">Yard Moves Forecast</span>
+        </a>
+        <a class="pqn-link" href="customer-churn.html">
+            <span class="pqn-dot"></span>
+            <span class="pqn-text">Customer Churn</span>
+        </a>
+        <a class="pqn-link" href="food-delivery.html">
+            <span class="pqn-dot"></span>
+            <span class="pqn-text">Food Delivery Time</span>
+        </a>
+        <a class="pqn-link active" href="delivery-hero-ab-test.html">
+            <span class="pqn-dot"></span>
+            <span class="pqn-text">Delivery Hero A/B Test</span>
+        </a>
+        <a class="pqn-link" href="ecommerce-churn.html">
+            <span class="pqn-dot"></span>
+            <span class="pqn-text">Coupon Engine</span>
+        </a>
+        <a class="pqn-link" href="foodpanda-vendor-intelligence.html">
+            <span class="pqn-dot"></span>
+            <span class="pqn-text">Foodpanda Vendors</span>
+        </a>
+        <a class="pqn-link" href="flight-search.html">
+            <span class="pqn-dot"></span>
+            <span class="pqn-text">Flight Search LTR</span>
+        </a>
+    </nav>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+    <div class="lightbox" id="chartLightbox" aria-hidden="true" role="dialog" aria-label="Expanded chart view">
+        <button type="button" class="lightbox-close" id="lightboxClose" aria-label="Close full screen image">&times;</button>
+        <img id="lightboxImage" src="" alt="Expanded chart image">
+    </div>
+
+    <script>
+        hljs.highlightAll();
+
+        const lightbox = document.getElementById('chartLightbox');
+        const lightboxImage = document.getElementById('lightboxImage');
+        const lightboxClose = document.getElementById('lightboxClose');
+        const zoomTriggers = document.querySelectorAll('[data-lightbox-src]');
+
+        function closeLightbox() {
+            lightbox.classList.remove('active');
+            lightbox.setAttribute('aria-hidden', 'true');
+            lightboxImage.src = '';
+        }
+
+        zoomTriggers.forEach((trigger) => {
+            trigger.addEventListener('click', () => {
+                lightboxImage.src = trigger.dataset.lightboxSrc;
+                lightboxImage.alt = trigger.dataset.lightboxAlt || 'Expanded chart image';
+                lightbox.classList.add('active');
+                lightbox.setAttribute('aria-hidden', 'false');
+            });
+        });
+
+        lightboxClose.addEventListener('click', closeLightbox);
+        lightbox.addEventListener('click', (event) => {
+            if (event.target === lightbox) {
+                closeLightbox();
+            }
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && lightbox.classList.contains('active')) {
+                closeLightbox();
+            }
+        });
+
+        // ── ToC Scrollspy ──────────────────────────────────────────────────────
+        (function () {
+            const tocLinks = document.querySelectorAll('.cs-toc-link');
+            if (!tocLinks.length) return;
+
+            const sectionIds = Array.from(tocLinks).map(l => l.getAttribute('href').slice(1));
+            const sections   = sectionIds.map(id => document.getElementById(id)).filter(Boolean);
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        tocLinks.forEach(l => l.classList.remove('active'));
+                        const link = document.querySelector(`.cs-toc-link[href="#${entry.target.id}"]`);
+                        if (link) link.classList.add('active');
+                    }
+                });
+            }, { rootMargin: '-15% 0% -75% 0%', threshold: 0 });
+
+            sections.forEach(s => observer.observe(s));
+            if (tocLinks.length) tocLinks[0].classList.add('active');
+        })();
+    </script>
+</body>
+</html>
