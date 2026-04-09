@@ -1,0 +1,530 @@
+{
+  "pedidosya_BR": {
+    "label": "PedidosYa BR (PT)",
+    "total": 1438,
+    "freq": {
+      "App crash / nao abre": 330,
+      "GPS / endereco": 127,
+      "Pagamento / cobracas": 135,
+      "Suporte / atendimento": 127,
+      "Entrega / pedido": 139
+    },
+    "quotes": {
+      "App crash / nao abre": [
+        "Pessima experiência. Oferecem cupom de primeiro uso e nao funciona nem mesmo falando com suporte. Após isso fiz pedido e entregaram errado. Depois de falar com chat e enviar foto do pedido entregue errado me enviam e-mai",
+        "horrível, da erro não consigo pedir nada."
+      ],
+      "GPS / endereco": [
+        "El local me envio la comida con un bicho muerto adentro. PedidosYa nunca me reembolsó. Aceptan cualquier local sin control sanitario y no se hacen cargo. No es recomendable.",
+        "No acepta pago con QR"
+      ],
+      "Pagamento / cobracas": [
+        "Depois que eu coloquei as informações do meu cartão, me cobraram um valor a mais. não recomendo esse app",
+        "fazer pedidos para pagar com cartão neste aplicativo é um inferno, 90% das vezes aparece uma mensagem dizendo que não foi possível criar o pedido, sendo que ao trocar pra pagar no dinheiro ele cria o pedido normalmente, "
+      ],
+      "Suporte / atendimento": [
+        "Se for usar, pague em dinheiro e SEMPRE confira o troco. Os entregadores vão se aproveitar sempre que possível, e a central de atendimentos não serve pra absolutamente nada além de dizer que a culpa foi sua. Além disso, ",
+        "Pessima experiência. Oferecem cupom de primeiro uso e nao funciona nem mesmo falando com suporte. Após isso fiz pedido e entregaram errado. Depois de falar com chat e enviar foto do pedido entregue errado me enviam e-mai"
+      ],
+      "Entrega / pedido": [
+        "Se for usar, pague em dinheiro e SEMPRE confira o troco. Os entregadores vão se aproveitar sempre que possível, e a central de atendimentos não serve pra absolutamente nada além de dizer que a culpa foi sua. Além disso, ",
+        "demora de mas"
+      ]
+    },
+    "top_words": [
+      {
+        "word": "abre",
+        "count": 153
+      },
+      {
+        "word": "restaurante",
+        "count": 128
+      },
+      {
+        "word": "funciona",
+        "count": 110
+      },
+      {
+        "word": "ifood",
+        "count": 101
+      },
+      {
+        "word": "está",
+        "count": 96
+      },
+      {
+        "word": "restaurantes",
+        "count": 91
+      },
+      {
+        "word": "brasil",
+        "count": 78
+      },
+      {
+        "word": "pedido",
+        "count": 75
+      },
+      {
+        "word": "app",
+        "count": 74
+      },
+      {
+        "word": "fica",
+        "count": 74
+      },
+      {
+        "word": "péssimo",
+        "count": 67
+      },
+      {
+        "word": "tela",
+        "count": 62
+      },
+      {
+        "word": "entrega",
+        "count": 61
+      },
+      {
+        "word": "hora",
+        "count": 60
+      },
+      {
+        "word": "consigo",
+        "count": 58
+      },
+      {
+        "word": "cidade",
+        "count": 54
+      },
+      {
+        "word": "vezes",
+        "count": 50
+      },
+      {
+        "word": "horrível",
+        "count": 50
+      },
+      {
+        "word": "problema",
+        "count": 49
+      },
+      {
+        "word": "comida",
+        "count": 48
+      }
+    ],
+    "top3": [
+      {
+        "kw": "App crash / nao abre",
+        "count": 330,
+        "pct": 22.9
+      },
+      {
+        "kw": "Entrega / pedido",
+        "count": 139,
+        "pct": 9.7
+      },
+      {
+        "kw": "Pagamento / cobracas",
+        "count": 135,
+        "pct": 9.4
+      }
+    ]
+  },
+  "pedidosya_BO": {
+    "label": "PedidosYa BO (ES)",
+    "total": 2000,
+    "freq": {
+      "App crash / nao abre": 239,
+      "GPS / endereco": 76,
+      "Pagamento / cobracas": 595,
+      "Suporte / atendimento": 289,
+      "Entrega / pedido": 238
+    },
+    "quotes": {
+      "App crash / nao abre": [
+        "me entregaron pedido incompleto y ok, entiendo que se les puede pasar, intente comunicar que mi pedido estaba con piezas faltantes y nada, de una y mil maneras intente comunicarme con la app y nada, intente reportar el e",
+        "Esta app me estafó. Pagué virtualmente, el dinero se descontó de mi cuenta, pero el pedido nunca cargó en el sistema. Al final tuve que pagar el mismo pedido nuevamente en efectivo al repartidor para no quedarme sin come"
+      ],
+      "GPS / endereco": [
+        "la verdad una decepción todo con sobreprecio y cuando pedís no hay vez que no te reasignan los pedidos y te hagan demorar 40 minutos un pedido múltiples entregas muchísima demora",
+        "El señor del pedido fue muy grosero, porque no respondi pronto (acepto que me demore 5 min) me trató mal, para el colmo luego dijo que iba a volver a pasar y como se canceló el pedido porque el no contestaba...ya no me e"
+      ],
+      "Pagamento / cobracas": [
+        "Aplicación incompleta y con fallos, el soporte solo existe para enviar un guión y no solucionan nada... pasarelas de pago te debitan y no te procesan la orden, en fin no se tomen el tiempo de descargar si no quieren pasa",
+        "mala aplicación no devuelven el dinero y además el pedido siempre llega, atrasado y además lo, repartidores insultan"
+      ],
+      "Suporte / atendimento": [
+        "Aplicación incompleta y con fallos, el soporte solo existe para enviar un guión y no solucionan nada... pasarelas de pago te debitan y no te procesan la orden, en fin no se tomen el tiempo de descargar si no quieren pasa",
+        "Horrible experiencia. Comunican cosas que no cumplen, y la atención al cliente no resuelve nada. Quiero dar de baja la cuenta y tampoco te mandan el mail para confirmar la baja, un desastre."
+      ],
+      "Entrega / pedido": [
+        "la verdad una decepción todo con sobreprecio y cuando pedís no hay vez que no te reasignan los pedidos y te hagan demorar 40 minutos un pedido múltiples entregas muchísima demora",
+        "mala aplicación no devuelven el dinero y además el pedido siempre llega, atrasado y además lo, repartidores insultan"
+      ]
+    },
+    "top_words": [
+      {
+        "word": "aplicación",
+        "count": 219
+      },
+      {
+        "word": "servicio",
+        "count": 187
+      },
+      {
+        "word": "dinero",
+        "count": 171
+      },
+      {
+        "word": "pedido",
+        "count": 150
+      },
+      {
+        "word": "pedir",
+        "count": 140
+      },
+      {
+        "word": "deja",
+        "count": 124
+      },
+      {
+        "word": "pagar",
+        "count": 123
+      },
+      {
+        "word": "está",
+        "count": 122
+      },
+      {
+        "word": "pago",
+        "count": 119
+      },
+      {
+        "word": "tarjeta",
+        "count": 116
+      },
+      {
+        "word": "local",
+        "count": 109
+      },
+      {
+        "word": "hora",
+        "count": 109
+      },
+      {
+        "word": "opción",
+        "count": 97
+      },
+      {
+        "word": "mala",
+        "count": 94
+      },
+      {
+        "word": "mucho",
+        "count": 94
+      },
+      {
+        "word": "llega",
+        "count": 92
+      },
+      {
+        "word": "tiempo",
+        "count": 89
+      },
+      {
+        "word": "app",
+        "count": 87
+      },
+      {
+        "word": "cupón",
+        "count": 87
+      },
+      {
+        "word": "tengo",
+        "count": 85
+      }
+    ],
+    "top3": [
+      {
+        "kw": "Pagamento / cobracas",
+        "count": 595,
+        "pct": 29.8
+      },
+      {
+        "kw": "Suporte / atendimento",
+        "count": 289,
+        "pct": 14.4
+      },
+      {
+        "kw": "App crash / nao abre",
+        "count": 239,
+        "pct": 11.9
+      }
+    ]
+  },
+  "pedidosya_AR": {
+    "label": "PedidosYa AR (ES)",
+    "total": 2000,
+    "freq": {
+      "App crash / nao abre": 239,
+      "GPS / endereco": 76,
+      "Pagamento / cobracas": 595,
+      "Suporte / atendimento": 289,
+      "Entrega / pedido": 238
+    },
+    "quotes": {
+      "App crash / nao abre": [
+        "me entregaron pedido incompleto y ok, entiendo que se les puede pasar, intente comunicar que mi pedido estaba con piezas faltantes y nada, de una y mil maneras intente comunicarme con la app y nada, intente reportar el e",
+        "Esta app me estafó. Pagué virtualmente, el dinero se descontó de mi cuenta, pero el pedido nunca cargó en el sistema. Al final tuve que pagar el mismo pedido nuevamente en efectivo al repartidor para no quedarme sin come"
+      ],
+      "GPS / endereco": [
+        "la verdad una decepción todo con sobreprecio y cuando pedís no hay vez que no te reasignan los pedidos y te hagan demorar 40 minutos un pedido múltiples entregas muchísima demora",
+        "El señor del pedido fue muy grosero, porque no respondi pronto (acepto que me demore 5 min) me trató mal, para el colmo luego dijo que iba a volver a pasar y como se canceló el pedido porque el no contestaba...ya no me e"
+      ],
+      "Pagamento / cobracas": [
+        "Aplicación incompleta y con fallos, el soporte solo existe para enviar un guión y no solucionan nada... pasarelas de pago te debitan y no te procesan la orden, en fin no se tomen el tiempo de descargar si no quieren pasa",
+        "mala aplicación no devuelven el dinero y además el pedido siempre llega, atrasado y además lo, repartidores insultan"
+      ],
+      "Suporte / atendimento": [
+        "Aplicación incompleta y con fallos, el soporte solo existe para enviar un guión y no solucionan nada... pasarelas de pago te debitan y no te procesan la orden, en fin no se tomen el tiempo de descargar si no quieren pasa",
+        "Horrible experiencia. Comunican cosas que no cumplen, y la atención al cliente no resuelve nada. Quiero dar de baja la cuenta y tampoco te mandan el mail para confirmar la baja, un desastre."
+      ],
+      "Entrega / pedido": [
+        "la verdad una decepción todo con sobreprecio y cuando pedís no hay vez que no te reasignan los pedidos y te hagan demorar 40 minutos un pedido múltiples entregas muchísima demora",
+        "mala aplicación no devuelven el dinero y además el pedido siempre llega, atrasado y además lo, repartidores insultan"
+      ]
+    },
+    "top_words": [
+      {
+        "word": "aplicación",
+        "count": 219
+      },
+      {
+        "word": "servicio",
+        "count": 187
+      },
+      {
+        "word": "dinero",
+        "count": 171
+      },
+      {
+        "word": "pedido",
+        "count": 150
+      },
+      {
+        "word": "pedir",
+        "count": 140
+      },
+      {
+        "word": "deja",
+        "count": 124
+      },
+      {
+        "word": "pagar",
+        "count": 123
+      },
+      {
+        "word": "está",
+        "count": 122
+      },
+      {
+        "word": "pago",
+        "count": 119
+      },
+      {
+        "word": "tarjeta",
+        "count": 116
+      },
+      {
+        "word": "local",
+        "count": 109
+      },
+      {
+        "word": "hora",
+        "count": 109
+      },
+      {
+        "word": "opción",
+        "count": 97
+      },
+      {
+        "word": "mala",
+        "count": 94
+      },
+      {
+        "word": "mucho",
+        "count": 94
+      },
+      {
+        "word": "llega",
+        "count": 92
+      },
+      {
+        "word": "tiempo",
+        "count": 89
+      },
+      {
+        "word": "app",
+        "count": 87
+      },
+      {
+        "word": "cupón",
+        "count": 87
+      },
+      {
+        "word": "tengo",
+        "count": 85
+      }
+    ],
+    "top3": [
+      {
+        "kw": "Pagamento / cobracas",
+        "count": 595,
+        "pct": 29.8
+      },
+      {
+        "kw": "Suporte / atendimento",
+        "count": 289,
+        "pct": 14.4
+      },
+      {
+        "kw": "App crash / nao abre",
+        "count": 239,
+        "pct": 11.9
+      }
+    ]
+  },
+  "foodpanda_BD": {
+    "label": "Foodpanda BD (EN)",
+    "total": 132674,
+    "freq": {
+      "Wrong / missing items": 4218,
+      "App error / not working": 343,
+      "Payment / refund": 515,
+      "Late delivery / rider": 323,
+      "Support / no response": 259
+    },
+    "quotes": {
+      "Wrong / missing items": [
+        "I ordered two items (Set Menu - A ,Special Badam & Kalo Jeera Bhorta) and they gave me only one item. Special Badam & Kalo Jeera Bhorta was missing poor service.",
+        "Not recommended any more. repeatedly giving wrong items and awful teast."
+      ],
+      "App error / not working": [
+        "grilled chicken chilo ota naki koykdin er freeze e rakha mangsho pura bola jacchilo na..joghnno grill khelam..r thanda shokto porata",
+        "Worst kabab ever. Meat kabab everything was frozen old food. Charging price so high like scam"
+      ],
+      "Payment / refund": [
+        "They charged extra money for the rice!",
+        "I paid to BKash and after 30 minutes I see order was cancelled. I did not get back my money also the order status showing Delivered. Which is completely absurd."
+      ],
+      "Late delivery / rider": [
+        "Taste was bad and delivery was late....It took 1 hour 15 minutes. ",
+        "i love the food but they always delay the time\nwe have to wait for 60-80 minutes or more after ordering "
+      ],
+      "Support / no response": [
+        "worst, man I ordered beef kacchi and  they gave a piece like a laddu. so small. and cold very 😞 disappointed guys don't order from it the workers are very unprofessional. ",
+        "I ordered Chicken Curry, but they've delivered Chicken Roast without notifying me!!! Really unprofessional and bad taste "
+      ]
+    },
+    "top_words": [
+      {
+        "word": "chicken",
+        "count": 18553
+      },
+      {
+        "word": "taste",
+        "count": 10012
+      },
+      {
+        "word": "খাবার",
+        "count": 8566
+      },
+      {
+        "word": "বাজে",
+        "count": 7366
+      },
+      {
+        "word": "quality",
+        "count": 7363
+      },
+      {
+        "word": "quantity",
+        "count": 7306
+      },
+      {
+        "word": "rice",
+        "count": 7030
+      },
+      {
+        "word": "chilo",
+        "count": 7022
+      },
+      {
+        "word": "অর্ডার",
+        "count": 6913
+      },
+      {
+        "word": "ভালো",
+        "count": 6199
+      },
+      {
+        "word": "baje",
+        "count": 5442
+      },
+      {
+        "word": "beef",
+        "count": 5040
+      },
+      {
+        "word": "pizza",
+        "count": 4579
+      },
+      {
+        "word": "meat",
+        "count": 4365
+      },
+      {
+        "word": "khabar",
+        "count": 4314
+      },
+      {
+        "word": "burger",
+        "count": 4213
+      },
+      {
+        "word": "চিকেন",
+        "count": 4136
+      },
+      {
+        "word": "money",
+        "count": 3972
+      },
+      {
+        "word": "price",
+        "count": 3916
+      },
+      {
+        "word": "ever",
+        "count": 3845
+      }
+    ],
+    "top3": [
+      {
+        "kw": "Wrong / missing items",
+        "count": 4218,
+        "pct": 3.2
+      },
+      {
+        "kw": "Payment / refund",
+        "count": 515,
+        "pct": 0.4
+      },
+      {
+        "kw": "App error / not working",
+        "count": 343,
+        "pct": 0.3
+      }
+    ]
+  }
+}

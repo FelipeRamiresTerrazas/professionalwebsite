@@ -42,6 +42,7 @@
                     <li><a class="cs-toc-link" href="#the-code">The Code</a></li>
                     <li><a class="cs-toc-link" href="#visualizations">Visualizations</a></li>
                     <li><a class="cs-toc-link" href="#model-selection">Model Selection</a></li>
+                    <li><a class="cs-toc-link" href="#voc-bangladesh">Voice of the Customer</a></li>
                     <li><a class="cs-toc-link" href="#conclusion">Conclusion</a></li>
                 </ul>
             </nav>
@@ -358,7 +359,148 @@ risk_by_market = (
                         The low absolute precision across all models is an artefact of class imbalance (2.3% base rate), not a model failure. At deployment, the RF's probability score would be used to rank vendors rather than hard-classify them &mdash; teams would work down a sorted priority list, not act on a binary flag.
                     </div>
                 </section>
+                <!-- ── VOC BANGLADESH ───────────────────────────────── -->
+                <section id="voc-bangladesh" class="case-panel">
+                    <h2>Voice of the Customer: Bangladesh Market Friction Analysis</h2>
+                    <p>
+                        The Kaggle dataset contains <strong>132,674 low-rating reviews (overall &le;&nbsp;2)</strong> from Foodpanda Bangladesh.
+                        An NLP keyword-frequency pass on this corpus surfaces three clearly dominant friction categories
+                        that map directly to the ML model's highest-importance features.
+                    </p>
 
+                    <!-- metric highlights -->
+                    <div class="metrics-row" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;margin:1.4rem 0;">
+                        <div class="metric-card">
+                            <span class="metric-number">132K</span>
+                            <span class="metric-label">Negative Reviews</span>
+                            <span class="metric-sub">overall ≤&nbsp;2 stars, BD market</span>
+                        </div>
+                        <div class="metric-card metric-card--featured">
+                            <span class="metric-number">7.4%</span>
+                            <span class="metric-label">#1 Wrong / Missing Items</span>
+                            <span class="metric-sub">9,800 explicit mentions</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-number">5.1%</span>
+                            <span class="metric-label">#2 App Error</span>
+                            <span class="metric-sub">6,780 explicit mentions</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-number">4.0%</span>
+                            <span class="metric-label">#3 Payment / Refund</span>
+                            <span class="metric-sub">5,261 explicit mentions</span>
+                        </div>
+                    </div>
+
+                    <!-- pain point bars -->
+                    <h3>BD Friction Signal Breakdown</h3>
+                    <div style="display:grid;gap:0.75rem;margin:1.2rem 0;">
+
+                        <div>
+                            <div style="display:flex;justify-content:space-between;margin-bottom:0.3rem;">
+                                <span style="font-size:0.875rem;font-weight:600;color:var(--text-primary);">Wrong / Missing Items</span>
+                                <span style="font-size:0.8rem;color:#94A3B8;">9,800 mentions &mdash; 7.4%</span>
+                            </div>
+                            <div style="background:#1E293B;border-radius:4px;height:10px;">
+                                <div style="width:74%;height:10px;background:#FF043C;border-radius:4px;"></div>
+                            </div>
+                            <p style="margin:0.3rem 0 0;font-size:0.78rem;color:#64748B;font-style:italic;">&ldquo;They didn&rsquo;t send the items I paid for and never replied.&rdquo;</p>
+                        </div>
+
+                        <div>
+                            <div style="display:flex;justify-content:space-between;margin-bottom:0.3rem;">
+                                <span style="font-size:0.875rem;font-weight:600;color:var(--text-primary);">App Error / Not Working</span>
+                                <span style="font-size:0.8rem;color:#94A3B8;">6,780 mentions &mdash; 5.1%</span>
+                            </div>
+                            <div style="background:#1E293B;border-radius:4px;height:10px;">
+                                <div style="width:51%;height:10px;background:#F59E0B;border-radius:4px;"></div>
+                            </div>
+                            <p style="margin:0.3rem 0 0;font-size:0.78rem;color:#64748B;font-style:italic;">&ldquo;The app doesn&rsquo;t load at all. Stuck on the loading screen.&rdquo;</p>
+                        </div>
+
+                        <div>
+                            <div style="display:flex;justify-content:space-between;margin-bottom:0.3rem;">
+                                <span style="font-size:0.875rem;font-weight:600;color:var(--text-primary);">Payment / Refund Failure</span>
+                                <span style="font-size:0.8rem;color:#94A3B8;">5,261 mentions &mdash; 4.0%</span>
+                            </div>
+                            <div style="background:#1E293B;border-radius:4px;height:10px;">
+                                <div style="width:40%;height:10px;background:#0EA5E9;border-radius:4px;"></div>
+                            </div>
+                            <p style="margin:0.3rem 0 0;font-size:0.78rem;color:#64748B;font-style:italic;">&ldquo;Charged via bKash but order cancelled. No refund after 2 weeks.&rdquo;</p>
+                        </div>
+
+                        <div>
+                            <div style="display:flex;justify-content:space-between;margin-bottom:0.3rem;">
+                                <span style="font-size:0.875rem;font-weight:600;color:var(--text-primary);">Late Delivery / Rider</span>
+                                <span style="font-size:0.8rem;color:#94A3B8;">1,623 mentions &mdash; 1.2%</span>
+                            </div>
+                            <div style="background:#1E293B;border-radius:4px;height:10px;">
+                                <div style="width:12%;height:10px;background:#22C55E;border-radius:4px;"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div style="display:flex;justify-content:space-between;margin-bottom:0.3rem;">
+                                <span style="font-size:0.875rem;font-weight:600;color:var(--text-primary);">Support / No Response</span>
+                                <span style="font-size:0.8rem;color:#94A3B8;">465 mentions &mdash; 0.4%</span>
+                            </div>
+                            <div style="background:#1E293B;border-radius:4px;height:10px;">
+                                <div style="width:4%;height:10px;background:#94A3B8;border-radius:4px;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="inline-note">
+                        <strong>Why wrong/missing items dominates:</strong> Bangladesh has the highest at-risk vendor
+                        concentration in the dataset (31.2%). Low-quality vendors produce order accuracy failures at a
+                        structurally higher rate. This means the top VoC pain point is a <em>vendor quality control problem</em>,
+                        not an app UX problem — confirming the ML model's commercial diagnosis.
+                    </div>
+
+                    <!-- Product Ops Lens -->
+                    <h3 style="margin-top:2rem;">Product Ops Lens: Localised Solution for Bangladesh</h3>
+
+                    <div class="rec-card" style="border-left:4px solid #FF043C;padding:1.2rem 1.4rem;margin:1.2rem 0;background:rgba(255,4,60,0.04);border-radius:0 12px 12px 0;">
+                        <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.8rem;">
+                            <span style="font-size:1.5rem;">📦</span>
+                            <strong style="color:var(--text-primary);font-size:1rem;">Wrong Item Rate is a Vendor Quality Signal, Not a Logistics Signal</strong>
+                        </div>
+                        <div style="display:grid;gap:0.6rem;">
+                            <p style="margin:0;font-size:0.88rem;"><span style="color:#FF043C;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Problem Found</span><br>
+                            9,800 mentions of wrong or missing items in BD negative reviews (7.4%). Correlated with
+                            Bangladesh's 31.2% at-risk vendor rate from the ML model. Reviews mention specific items
+                            not sent, substitutions made without consent, and quantity shortfalls &mdash; all preparation-side failures.</p>
+                            <p style="margin:0;font-size:0.88rem;"><span style="color:#F59E0B;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Impact Hypothesis</span><br>
+                            At-risk vendors in BD are fulfilling orders from an outdated menu or with ingredient shortages
+                            and substituting without notifying the customer. The app currently has no mechanism for vendors
+                            to flag item unavailability pre-dispatch, so the problem becomes visible only in post-delivery reviews.</p>
+                            <p style="margin:0;font-size:0.88rem;"><span style="color:#22C55E;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Recommended Action (Localised)</span><br>
+                            <strong>1. Pre-dispatch item confirmation flow:</strong> Add a vendor-side "confirm items ready" tap before the rider is dispatched — surfaces unavailability before it becomes a bad review.<br>
+                            <strong>2. Automatic bKash refund SLA:</strong> 72-hour automated refund for wrong-item complaints
+                            (bKash is the dominant mobile wallet in BD) — removes the support bottleneck and the payment/refund frustration signal simultaneously.<br>
+                            <strong>3. Menu hygiene score:</strong> Track vendor menu-accuracy rate as a vendor tier KPI;
+                            at-risk vendors (RF-flagged) with &lt;90% accuracy automatically enter a 30-day improvement programme.</p>
+                        </div>
+                    </div>
+
+                    <div class="rec-card" style="border-left:4px solid #F59E0B;padding:1.2rem 1.4rem;margin:1.2rem 0;background:rgba(245,158,11,0.04);border-radius:0 12px 12px 0;">
+                        <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.8rem;">
+                            <span style="font-size:1.5rem;">📱</span>
+                            <strong style="color:var(--text-primary);font-size:1rem;">App Errors Compounding at Scale in a High-Growth Market</strong>
+                        </div>
+                        <div style="display:grid;gap:0.6rem;">
+                            <p style="margin:0;font-size:0.88rem;"><span style="color:#FF043C;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Problem Found</span><br>
+                            6,780 mentions of app errors in BD negative reviews (5.1%). Bangladesh is a mobile-first
+                            market with high Android fragmentation (low-RAM devices, intermittent 4G). "Loading",
+                            "stuck", and "can&rsquo;t order" are the dominant organic terms.</p>
+                            <p style="margin:0;font-size:0.88rem;"><span style="color:#22C55E;font-weight:700;text-transform:uppercase;font-size:0.7rem;letter-spacing:0.08em;">Recommended Action</span><br>
+                            Introduce a <strong>low-bandwidth mode</strong> for the Foodpanda BD app: disable non-essential
+                            image lazy-loading and reduce API payload size on low-signal connections.
+                            Target Android devices with &lt;2GB RAM in the test matrix. This is a market-specific
+                            engineering investment that mirrors what Grab and Gojek have deployed in similar markets.</p>
+                        </div>
+                    </div>
+                </section>
                 <!-- ── CONCLUSION ───────────────────────────────────────── -->
                 <section id="conclusion" class="case-panel">
                     <h2>Conclusion</h2>
