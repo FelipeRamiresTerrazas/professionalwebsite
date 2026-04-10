@@ -2,7 +2,7 @@
 creditcard.csv
 kaggle/foodpanda/
 kaggle/search_flights/
-kaggle/test_a-b_delivery_hero
+kaggle/test_a-b_delivery_hero/delivery_hero_ab_test_large.csv
 
 # Modelo treinado (pode ser grande)
 *.joblib

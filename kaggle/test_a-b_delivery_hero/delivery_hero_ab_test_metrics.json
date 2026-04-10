@@ -1,0 +1,61 @@
+{
+  "rows": 10000,
+  "business_impact": {
+    "A_cancellation_rate": 0.3380704563650921,
+    "B_cancellation_rate": 0.0,
+    "A_support_rate": 0.4535628502802242,
+    "B_support_rate": 0.01618705035971223,
+    "cancellation_drop_pct": 33.80704563650921,
+    "support_drop_pct": 43.737579992051195
+  },
+  "patience_threshold": {
+    "patience_threshold_min": 16,
+    "cancel_probability_at_threshold": 0.4903474903474903,
+    "cancel_before_threshold": 0.0,
+    "cancel_after_threshold": 0.7475728155339806,
+    "relative_jump_x": 74757281.55339806
+  },
+  "kitchen_bottleneck": {
+    "median_actual_low_load": 33.0,
+    "median_actual_high_load": 61.0,
+    "high_vs_low_multiplier": 1.8484848484848484
+  },
+  "model_accuracy": {
+    "rf_mae": 3.9135579128279843,
+    "naive_mae": 12.608695652173912,
+    "mae_improvement_pct": 68.9614372430884,
+    "rf_bias": 0.02882455776806362,
+    "naive_bias": -10.553775743707094
+  },
+  "cancel_models": {
+    "logistic_auc": 0.9397950576512049,
+    "rf_auc": 0.9512180738135575
+  },
+  "cancel_feature_importance": {
+    "delay_min": 0.43044043780989305,
+    "active_orders_in_kitchen": 0.15317100975816034,
+    "variant_B": 0.10273712923222914,
+    "variant_A": 0.09439089711565998,
+    "eta_shown_min": 0.07612967258189399,
+    "order_value_eur": 0.06817696042818275,
+    "driver_distance_km": 0.0406159080945172,
+    "restaurant_rating": 0.03433798497946356
+  },
+  "guardrail_avg_order_value_delta_pct": -4.32988762290889,
+  "variant_summary": {
+    "A": {
+      "conversion_rate": 0.717173738991193,
+      "avg_order_value": 19.975312249799842,
+      "avg_delay": 7.2171737389911925,
+      "avg_eta": 28.662530024019215,
+      "avg_actual": 35.87970376301041
+    },
+    "B": {
+      "conversion_rate": 0.6808553157474021,
+      "avg_order_value": 19.110403677058354,
+      "avg_delay": -15.38449240607514,
+      "avg_eta": 45.608912869704234,
+      "avg_actual": 30.224420463629098
+    }
+  }
+}
