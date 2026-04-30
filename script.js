@@ -21,6 +21,55 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ========================================
+// INFOGRAPHIC ANIMATIONS
+// ========================================
+
+function animateInfographic() {
+    // Animate timeline rail + nodes
+    var nodes = document.querySelector('.ctl-nodes');
+    if (nodes) {
+        nodes.classList.add('is-visible');
+        nodes.querySelectorAll('.ctl-node').forEach(function(n) {
+            n.classList.add('is-visible');
+        });
+    }
+
+    // Animate tool bars
+    document.querySelectorAll('.tool-bar').forEach(function(bar) {
+        bar.classList.add('is-visible');
+    });
+}
+
+// Trigger once when home section becomes active
+(function() {
+    var infographicAnimated = false;
+
+    function maybeAnimate() {
+        if (infographicAnimated) return;
+        var homeSection = document.getElementById('home');
+        if (homeSection && homeSection.classList.contains('active')) {
+            infographicAnimated = true;
+            // Small delay so CSS transition fires after display:block
+            setTimeout(animateInfographic, 120);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        maybeAnimate(); // Home is active on page load
+
+        // Also re-check whenever a tab button is clicked
+        document.querySelectorAll('.tab-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                if (btn.getAttribute('data-tab') === 'home') {
+                    infographicAnimated = false; // allow re-animate
+                    setTimeout(maybeAnimate, 50);
+                }
+            });
+        });
+    });
+})();
+
+// ========================================
 // EXPERTISE MASTER-DETAIL
 // ========================================
 
