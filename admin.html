@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CV Admin — Felipe Ramires Terrazas</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary:  #2563eb;
+            --secondary: #0ea5e9;
+            --bg:       #071028;
+            --card:     #0b1624;
+            --card2:    #0f1a2a;
+            --border:   rgba(255,255,255,0.07);
+            --text:     #e6f0ff;
+            --muted:    #9fb0c8;
+            --success:  #10b981;
+            --error:    #ef4444;
+            --warn:     #f59e0b;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* ── SCREEN SYSTEM ── */
+        .screen { display: none; }
+        .screen.active { display: flex; }
+        #screen-setup, #screen-login {
+            min-height: 100vh;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        #screen-main {
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* ── AUTH CARD ── */
+        .auth-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 48px 44px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 24px 64px rgba(2,6,23,0.7);
+        }
+        .auth-logo {
+            width: 52px; height: 52px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem;
+            margin: 0 auto 24px;
+        }
+        .auth-title {
+            font-size: 1.35rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 6px;
+        }
+        .auth-sub {
+            font-size: 0.8rem;
+            color: var(--muted);
+            text-align: center;
+            margin-bottom: 32px;
+            line-height: 1.65;
+        }
+
+        /* ── FIELDS ── */
+        .field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            margin-bottom: 18px;
+        }
+        .field-label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+        }
+        .field-input {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 11px 15px;
+            font-family: inherit;
+            font-size: 0.88rem;
+            color: var(--text);
+            outline: none;
+            transition: border-color 0.2s;
+            width: 100%;
+        }
+        .field-input:focus { border-color: rgba(37,99,235,0.55); }
+        .field-input::placeholder { color: rgba(159,176,200,0.45); }
+
+        /* ── BUTTONS ── */
+        .btn-primary {
+            width: 100%;
+            padding: 13px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.12s;
+            margin-top: 6px;
+        }
+        .btn-primary:hover  { opacity: 0.88; transform: translateY(-1px); }
+        .btn-primary:active { transform: translateY(0); }
+        .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+        .btn-ghost {
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 7px 16px;
+            font-family: inherit;
+            font-size: 0.76rem;
+            color: var(--muted);
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+        }
+        .btn-ghost:hover { border-color: rgba(255,255,255,0.2); color: var(--text); }
+
+        .auth-err {
+            font-size: 0.77rem;
+            color: var(--error);
+            text-align: center;
+            margin-top: 12px;
+            min-height: 18px;
+        }
+        .auth-hint {
+            font-size: 0.72rem;
+            color: var(--muted);
+            text-align: center;
+            margin-top: 20px;
+            opacity: 0.6;
+        }
+        .auth-hint button {
+            background: none; border: none; color: var(--secondary);
+            cursor: pointer; font-family: inherit; font-size: inherit;
+            text-decoration: underline;
+        }
+
+        /* ── TOP BAR ── */
+        .top-bar {
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+            padding: 0 36px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            flex-shrink: 0;
+        }
+        .top-bar-brand { display: flex; align-items: center; gap: 12px; }
+        .top-bar-icon {
+            width: 32px; height: 32px;
+            border-radius: 9px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem;
+        }
+        .top-bar-title { font-size: 0.9rem; font-weight: 700; }
+        .top-bar-sub   { font-size: 0.7rem; color: var(--muted); }
+        .top-bar-actions { display: flex; gap: 8px; }
+
+        /* ── DASHBOARD ── */
+        .dashboard {
+            padding: 36px 40px;
+            max-width: 960px;
+            margin: 0 auto;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* ── PANEL ── */
+        .panel {
+            background: var(--card2);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        .panel-head {
+            padding: 16px 22px 14px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .panel-title {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted);
+        }
+        .panel-body { padding: 20px 22px; }
+
+        /* ── BADGE ── */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: 100px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        .badge-live    { background: rgba(16,185,129,0.12); color: var(--success); border: 1px solid rgba(16,185,129,0.28); }
+        .badge-warn    { background: rgba(245,158,11,0.12); color: var(--warn);    border: 1px solid rgba(245,158,11,0.28); }
+        .badge-missing { background: rgba(239,68,68,0.1);  color: var(--error);   border: 1px solid rgba(239,68,68,0.25); }
+
+        /* ── ACTIVE CV CARD ── */
+        .active-cv-display {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+        .cv-pdf-icon {
+            width: 46px; height: 54px;
+            background: linear-gradient(135deg, rgba(239,68,68,0.18), rgba(239,68,68,0.06));
+            border: 1px solid rgba(239,68,68,0.22);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.4rem;
+            flex-shrink: 0;
+        }
+        .active-cv-info { flex: 1; min-width: 0; }
+        .active-cv-name {
+            font-size: 0.95rem;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .active-cv-role {
+            font-size: 0.77rem;
+            color: var(--secondary);
+            margin-top: 2px;
+            font-weight: 500;
+        }
+        .active-cv-url {
+            font-size: 0.7rem;
+            color: var(--muted);
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* ── CV LIST ── */
+        .cv-list { display: flex; flex-direction: column; gap: 8px; }
+        .cv-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 13px 16px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,0.015);
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .cv-item--active {
+            border-color: rgba(16,185,129,0.35);
+            background: rgba(16,185,129,0.04);
+        }
+        .cv-item-info { flex: 1; min-width: 0; }
+        .cv-item-name {
+            font-size: 0.82rem;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .cv-item-role {
+            font-size: 0.7rem;
+            color: var(--muted);
+            margin-top: 1px;
+        }
+        .cv-item-size {
+            font-size: 0.7rem;
+            color: var(--muted);
+            flex-shrink: 0;
+            min-width: 44px;
+            text-align: right;
+        }
+        .cv-item-actions { display: flex; gap: 7px; flex-shrink: 0; }
+
+        .btn-sm {
+            padding: 6px 13px;
+            border-radius: 7px;
+            font-family: inherit;
+            font-size: 0.72rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.18s;
+            border: 1px solid transparent;
+            white-space: nowrap;
+        }
+        .btn-activate {
+            background: rgba(37,99,235,0.13);
+            color: #60a5fa;
+            border-color: rgba(37,99,235,0.3);
+        }
+        .btn-activate:hover:not(:disabled) { background: rgba(37,99,235,0.24); }
+        .btn-activate:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-preview {
+            background: rgba(255,255,255,0.04);
+            color: var(--muted);
+            border-color: var(--border);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+        }
+        .btn-preview:hover { color: var(--text); border-color: rgba(255,255,255,0.18); }
+
+        /* ── SKELETONS ── */
+        .skeleton {
+            border-radius: 10px;
+            height: 52px;
+            background: linear-gradient(90deg,
+                rgba(255,255,255,0.04) 0%,
+                rgba(255,255,255,0.08) 50%,
+                rgba(255,255,255,0.04) 100%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+        /* ── TOKEN SECTION ── */
+        .token-row { display: flex; gap: 10px; align-items: flex-end; }
+        .token-row .field-group { flex: 1; margin-bottom: 0; }
+        .btn-save {
+            background: rgba(37,99,235,0.13);
+            color: #60a5fa;
+            border: 1px solid rgba(37,99,235,0.3);
+            border-radius: 10px;
+            padding: 11px 20px;
+            font-family: inherit;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            flex-shrink: 0;
+        }
+        .btn-save:hover { background: rgba(37,99,235,0.24); }
+        .token-help {
+            font-size: 0.75rem;
+            color: var(--muted);
+            line-height: 1.65;
+            margin-bottom: 14px;
+        }
+        .token-help a { color: var(--secondary); }
+        .token-help code {
+            font-size: 0.72rem;
+            background: rgba(255,255,255,0.06);
+            padding: 1px 6px;
+            border-radius: 4px;
+            color: var(--secondary);
+        }
+
+        /* ── ACTIVITY LOG ── */
+        .log-list { display: flex; flex-direction: column; gap: 6px; }
+        .log-entry {
+            display: flex;
+            gap: 10px;
+            font-size: 0.77rem;
+            color: var(--muted);
+            padding: 8px 12px;
+            border-radius: 7px;
+            background: rgba(255,255,255,0.02);
+            line-height: 1.5;
+        }
+        .log-time  { color: var(--muted); opacity: 0.5; white-space: nowrap; flex-shrink: 0; font-size: 0.68rem; padding-top: 1px; }
+        .log-entry.log-success { color: var(--success); background: rgba(16,185,129,0.05); }
+        .log-entry.log-error   { color: var(--error);   background: rgba(239,68,68,0.05); }
+        .log-entry.log-info    { color: var(--secondary); background: rgba(14,165,233,0.05); }
+        .empty-state { text-align: center; padding: 28px; color: var(--muted); font-size: 0.8rem; }
+
+        /* ── MISC ── */
+        .btn-refresh {
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            padding: 5px 12px;
+            font-family: inherit;
+            font-size: 0.7rem;
+            color: var(--muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s;
+        }
+        .btn-refresh:hover { color: var(--text); }
+        .spin { display: inline-block; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .panel-head-actions { display: flex; gap: 8px; align-items: center; }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 600px) {
+            .dashboard { padding: 20px 16px; }
+            .top-bar   { padding: 0 16px; }
+            .auth-card { padding: 32px 24px; margin: 16px; }
+            .cv-item-size { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+     SETUP SCREEN (first visit)
+══════════════════════════════════════════════ -->
+<div id="screen-setup" class="screen">
+    <div class="auth-card">
+        <div class="auth-logo">🔐</div>
+        <h1 class="auth-title">Set Admin PIN</h1>
+        <p class="auth-sub">First-time setup. Choose a PIN to protect this admin panel. It's stored only in your browser.</p>
+        <div class="field-group">
+            <label class="field-label" for="setup-pin">New PIN</label>
+            <input type="password" id="setup-pin" class="field-input" placeholder="At least 4 characters" autocomplete="new-password">
+        </div>
+        <div class="field-group">
+            <label class="field-label" for="setup-pin2">Confirm PIN</label>
+            <input type="password" id="setup-pin2" class="field-input" placeholder="Repeat PIN" autocomplete="new-password">
+        </div>
+        <button class="btn-primary" id="setup-btn">Set PIN &amp; Continue →</button>
+        <p class="auth-err" id="setup-err"></p>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     LOGIN SCREEN
+══════════════════════════════════════════════ -->
+<div id="screen-login" class="screen">
+    <div class="auth-card">
+        <div class="auth-logo">🗂️</div>
+        <h1 class="auth-title">CV Admin Panel</h1>
+        <p class="auth-sub">Enter your PIN to manage which CV version is live on your portfolio site.</p>
+        <div class="field-group">
+            <label class="field-label" for="login-pin">Admin PIN</label>
+            <input type="password" id="login-pin" class="field-input" placeholder="••••••" autocomplete="current-password">
+        </div>
+        <button class="btn-primary" id="login-btn">Unlock</button>
+        <p class="auth-err" id="login-err"></p>
+        <p class="auth-hint">Forgot PIN? <button id="reset-pin-btn">Reset (clears saved PIN)</button></p>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     MAIN DASHBOARD
+══════════════════════════════════════════════ -->
+<div id="screen-main" class="screen">
+
+    <header class="top-bar">
+        <div class="top-bar-brand">
+            <div class="top-bar-icon">🗂️</div>
+            <div>
+                <div class="top-bar-title">CV Admin Panel</div>
+                <div class="top-bar-sub">Felipe Ramires Terrazas</div>
+            </div>
+        </div>
+        <div class="top-bar-actions">
+            <a href="/" class="btn-ghost">← Back to Site</a>
+            <button class="btn-ghost" id="logout-btn">Log Out</button>
+        </div>
+    </header>
+
+    <div class="dashboard">
+
+        <!-- ── Active CV ── -->
+        <div class="panel">
+            <div class="panel-head">
+                <span class="panel-title">Active CV</span>
+                <span class="badge badge-live" id="active-badge">● Live</span>
+            </div>
+            <div class="panel-body">
+                <div class="active-cv-display">
+                    <div class="cv-pdf-icon">📄</div>
+                    <div class="active-cv-info">
+                        <div class="active-cv-name" id="active-cv-name">Loading…</div>
+                        <div class="active-cv-role" id="active-cv-role"></div>
+                        <div class="active-cv-url"  id="active-cv-url"></div>
+                    </div>
+                    <a id="active-cv-preview" class="btn-sm btn-preview" href="#" target="_blank" rel="noopener noreferrer">Preview ↗</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── CV Versions ── -->
+        <div class="panel">
+            <div class="panel-head">
+                <span class="panel-title">CV Versions in Repository</span>
+                <button class="btn-refresh" id="refresh-btn">
+                    <span id="refresh-icon">↺</span> Refresh
+                </button>
+            </div>
+            <div class="panel-body">
+                <div class="cv-list" id="cv-list">
+                    <div class="skeleton"></div>
+                    <div class="skeleton" style="margin-top:8px"></div>
+                    <div class="skeleton" style="margin-top:8px"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── GitHub Token ── -->
+        <div class="panel">
+            <div class="panel-head">
+                <span class="panel-title">GitHub Access Token</span>
+                <span class="badge" id="token-badge" style="display:none"></span>
+            </div>
+            <div class="panel-body">
+                <p class="token-help">
+                    Required to <strong style="color:var(--text)">publish changes</strong> to the live site.
+                    Create a <a href="https://github.com/settings/tokens?type=beta" target="_blank" rel="noopener">Fine-grained PAT</a>
+                    scoped to <code>FelipeRamiresTerrazas/professionalwebsite</code> with
+                    <code>Contents: Read &amp; Write</code>. The token is saved only in your browser's localStorage — never sent anywhere except GitHub's API.
+                </p>
+                <div class="token-row">
+                    <div class="field-group">
+                        <label class="field-label" for="token-input">Personal Access Token</label>
+                        <input type="password" id="token-input" class="field-input" placeholder="github_pat_…">
+                    </div>
+                    <button class="btn-save" id="save-token-btn">Save Token</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Activity Log ── -->
+        <div class="panel">
+            <div class="panel-head">
+                <span class="panel-title">Activity Log</span>
+                <button class="btn-ghost" id="clear-log-btn" style="font-size:0.7rem;padding:4px 10px;">Clear</button>
+            </div>
+            <div class="panel-body">
+                <div class="log-list" id="log-list">
+                    <div class="empty-state">No activity yet.</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+'use strict';
+
+// ── CONFIG ──────────────────────────────────────────────
+const CV_REPO        = 'FelipeRamiresTerrazas/cv';
+const SITE_REPO      = 'FelipeRamiresTerrazas/professionalwebsite';
+const CV_CONFIG_PATH = 'cv-config.js';
+const OUTPUT_DIR     = 'output';
+const RAW_BASE       = 'https://raw.githubusercontent.com/FelipeRamiresTerrazas/cv/main/output/';
+
+const KEY_PIN     = 'cvadmin_pin_hash';
+const KEY_TOKEN   = 'cvadmin_gh_token';
+const KEY_SESSION = 'cvadmin_session';
+
+// ── CRYPTO ──────────────────────────────────────────────
+async function hashPin(pin) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+// ── SCREENS ─────────────────────────────────────────────
+function show(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-' + id).classList.add('active');
+}
+
+async function boot() {
+    const hasPin = !!localStorage.getItem(KEY_PIN);
+    const hasSession = sessionStorage.getItem(KEY_SESSION) === '1';
+    if (!hasPin)       { show('setup'); }
+    else if (hasSession) { show('main'); loadDashboard(); }
+    else                { show('login'); }
+}
+
+// ── SETUP ────────────────────────────────────────────────
+document.getElementById('setup-btn').addEventListener('click', async () => {
+    const pin  = document.getElementById('setup-pin').value;
+    const pin2 = document.getElementById('setup-pin2').value;
+    const err  = document.getElementById('setup-err');
+    if (pin.length < 4)  { err.textContent = 'PIN must be at least 4 characters.'; return; }
+    if (pin !== pin2)    { err.textContent = 'PINs do not match.'; return; }
+    localStorage.setItem(KEY_PIN, await hashPin(pin));
+    sessionStorage.setItem(KEY_SESSION, '1');
+    show('main');
+    loadDashboard();
+});
+['setup-pin', 'setup-pin2'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => {
+        if (e.key === 'Enter') document.getElementById('setup-btn').click();
+    });
+});
+
+// ── LOGIN ────────────────────────────────────────────────
+document.getElementById('login-btn').addEventListener('click', async () => {
+    const pin = document.getElementById('login-pin').value;
+    const err = document.getElementById('login-err');
+    if ((await hashPin(pin)) !== localStorage.getItem(KEY_PIN)) {
+        err.textContent = 'Incorrect PIN.';
+        document.getElementById('login-pin').value = '';
+        return;
+    }
+    sessionStorage.setItem(KEY_SESSION, '1');
+    show('main');
+    loadDashboard();
+});
+document.getElementById('login-pin').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('login-btn').click();
+});
+document.getElementById('reset-pin-btn').addEventListener('click', () => {
+    if (confirm('This will delete your saved PIN and require you to set a new one. Continue?')) {
+        localStorage.removeItem(KEY_PIN);
+        document.getElementById('login-err').textContent = '';
+        show('setup');
+    }
+});
+
+// ── LOGOUT ───────────────────────────────────────────────
+document.getElementById('logout-btn').addEventListener('click', () => {
+    sessionStorage.removeItem(KEY_SESSION);
+    document.getElementById('login-pin').value = '';
+    document.getElementById('login-err').textContent = '';
+    show('login');
+});
+
+// ── TOKEN ────────────────────────────────────────────────
+function getToken() { return localStorage.getItem(KEY_TOKEN) || ''; }
+
+function refreshTokenUI() {
+    const tok = getToken();
+    const badge = document.getElementById('token-badge');
+    badge.style.display = 'inline-flex';
+    if (tok) {
+        badge.className = 'badge badge-live';
+        badge.textContent = '● Token saved';
+        document.getElementById('token-input').value = tok;
+    } else {
+        badge.className = 'badge badge-missing';
+        badge.textContent = '⚠ No token';
+    }
+}
+
+document.getElementById('save-token-btn').addEventListener('click', () => {
+    const tok = document.getElementById('token-input').value.trim();
+    if (!tok) { log('No token entered.', 'error'); return; }
+    localStorage.setItem(KEY_TOKEN, tok);
+    refreshTokenUI();
+    log('GitHub token saved to localStorage.', 'success');
+    loadCvList(); // re-fetch with auth now available
+});
+
+// ── GITHUB API ───────────────────────────────────────────
+function ghHeaders(needsWrite) {
+    const tok = getToken();
+    if (needsWrite && !tok) throw new Error('GitHub token required. Save your token in the settings panel first.');
+    const h = { 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
+    if (tok) h['Authorization'] = 'Bearer ' + tok;
+    return h;
+}
+
+async function ghJson(url, opts) {
+    const resp = await fetch(url, opts);
+    if (!resp.ok) {
+        const body = await resp.json().catch(() => ({}));
+        throw new Error(body.message || `GitHub API error ${resp.status}`);
+    }
+    return resp.json();
+}
+
+async function fetchCvFiles() {
+    const files = await ghJson(
+        `https://api.github.com/repos/${CV_REPO}/contents/${OUTPUT_DIR}?per_page=100`,
+        { headers: ghHeaders(false) }
+    );
+    return files.filter(f => f.name.toLowerCase().endsWith('.pdf'))
+                .sort((a, b) => b.name.localeCompare(a.name)); // newest-ish first
+}
+
+async function fetchSiteConfig() {
+    // Read committed cv-config.js from GitHub (most accurate source of truth)
+    return ghJson(
+        `https://api.github.com/repos/${SITE_REPO}/contents/${CV_CONFIG_PATH}`,
+        { headers: ghHeaders(false) }
+    );
+}
+
+async function publishVersion(fileName, roleTitle) {
+    log(`Fetching current cv-config.js from GitHub…`, 'info');
+    const configFile = await fetchSiteConfig();
+
+    // Decode base64 → UTF-8
+    const raw = configFile.content.replace(/\n/g, '');
+    const currentContent = new TextDecoder().decode(
+        Uint8Array.from(atob(raw), c => c.charCodeAt(0))
+    );
+
+    if (!currentContent.includes('fileName:')) {
+        throw new Error('Could not locate fileName field in cv-config.js');
+    }
+
+    let updated = currentContent
+        .replace(/(fileName:\s*')[^']*(')/,   `$1${fileName}$2`)
+        .replace(/(roleTitle:\s*')[^']*(')/,  `$1${roleTitle}$2`);
+
+    if (updated === currentContent) {
+        log(`"${fileName}" is already the active CV — no change needed.`, 'info');
+        return null;
+    }
+
+    log(`Committing updated cv-config.js…`, 'info');
+    const encoded = btoa(String.fromCharCode(...new TextEncoder().encode(updated)));
+
+    await ghJson(
+        `https://api.github.com/repos/${SITE_REPO}/contents/${CV_CONFIG_PATH}`,
+        {
+            method: 'PUT',
+            headers: { ...ghHeaders(true), 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message: `cv: activate ${fileName}`,
+                content: encoded,
+                sha: configFile.sha
+            })
+        }
+    );
+
+    return fileName;
+}
+
+// ── HELPERS ──────────────────────────────────────────────
+function roleFromFilename(name) {
+    // cv_felipe_terrazas_data_specialist.pdf → "Data Specialist"
+    const base  = name.replace(/\.pdf$/i, '');
+    const parts = base.split('_').slice(3); // skip cv, felipe, terrazas
+    if (!parts.length) return 'CV';
+    return parts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+}
+
+function fmtSize(bytes) {
+    if (!bytes) return '';
+    return bytes < 1024 * 1024
+        ? `${Math.round(bytes / 1024)} KB`
+        : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+// ── DASHBOARD ────────────────────────────────────────────
+let activeCvName = '';
+let cvFiles      = [];
+
+async function loadDashboard() {
+    refreshTokenUI();
+    await Promise.all([loadActiveCv(), loadCvList()]);
+}
+
+async function loadActiveCv() {
+    try {
+        const configFile = await fetchSiteConfig();
+        const raw     = configFile.content.replace(/\n/g, '');
+        const content = new TextDecoder().decode(Uint8Array.from(atob(raw), c => c.charCodeAt(0)));
+        const mFile   = content.match(/fileName:\s*'([^']+)'/);
+        const mRole   = content.match(/roleTitle:\s*'([^']+)'/);
+        if (mFile) {
+            activeCvName = mFile[1];
+            const role   = mRole ? mRole[1] : roleFromFilename(activeCvName);
+            const url    = RAW_BASE + activeCvName;
+            document.getElementById('active-cv-name').textContent    = activeCvName;
+            document.getElementById('active-cv-role').textContent    = role;
+            document.getElementById('active-cv-url').textContent     = url;
+            document.getElementById('active-cv-preview').href        = url;
+            renderCvList(cvFiles); // re-render to update active highlights
+        }
+    } catch(e) {
+        document.getElementById('active-cv-name').textContent = 'Could not load — check token';
+        log('Failed to load active CV: ' + e.message, 'error');
+    }
+}
+
+async function loadCvList() {
+    const list = document.getElementById('cv-list');
+    const icon = document.getElementById('refresh-icon');
+    list.innerHTML = '<div class="skeleton"></div><div class="skeleton" style="margin-top:8px"></div><div class="skeleton" style="margin-top:8px"></div>';
+    icon.innerHTML = '<span class="spin">↺</span>';
+    try {
+        cvFiles = await fetchCvFiles();
+        renderCvList(cvFiles);
+        log(`Found ${cvFiles.length} CV file(s) in the repository.`, 'info');
+    } catch(e) {
+        list.innerHTML = `<div class="empty-state">⚠ ${e.message}</div>`;
+        log('Failed to load CV list: ' + e.message, 'error');
+    } finally {
+        icon.textContent = '↺';
+    }
+}
+
+function renderCvList(files) {
+    const list = document.getElementById('cv-list');
+    if (!files.length) {
+        list.innerHTML = '<div class="empty-state">No PDF files found in the output/ folder.</div>';
+        return;
+    }
+    list.innerHTML = '';
+    files.forEach(f => {
+        const isActive = f.name === activeCvName;
+        const role     = roleFromFilename(f.name);
+        const item     = document.createElement('div');
+        item.className = 'cv-item' + (isActive ? ' cv-item--active' : '');
+        item.innerHTML = `
+            <span style="font-size:1.2rem;flex-shrink:0">📄</span>
+            <div class="cv-item-info">
+                <div class="cv-item-name">${f.name}</div>
+                <div class="cv-item-role">${role}</div>
+            </div>
+            <span class="cv-item-size">${fmtSize(f.size)}</span>
+            ${isActive ? '<span class="badge badge-live">● Active</span>' : ''}
+            <div class="cv-item-actions">
+                <a class="btn-sm btn-preview" href="${RAW_BASE}${f.name}" target="_blank" rel="noopener noreferrer">Preview ↗</a>
+                <button class="btn-sm btn-activate" data-file="${f.name}" data-role="${role}" ${isActive ? 'disabled' : ''}>
+                    ${isActive ? 'Current' : 'Activate'}
+                </button>
+            </div>`;
+        list.appendChild(item);
+    });
+
+    list.querySelectorAll('.btn-activate:not(:disabled)').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const fileName  = btn.dataset.file;
+            const roleTitle = btn.dataset.role;
+            btn.disabled    = true;
+            btn.textContent = 'Publishing…';
+            try {
+                const result = await publishVersion(fileName, roleTitle);
+                if (result) {
+                    activeCvName = fileName;
+                    log(`✓ "${fileName}" is now active. GitHub Pages will update in ~1 min.`, 'success');
+                }
+                await loadActiveCv();
+                renderCvList(cvFiles);
+            } catch(e) {
+                log('Error: ' + e.message, 'error');
+                btn.disabled    = false;
+                btn.textContent = 'Activate';
+            }
+        });
+    });
+}
+
+// ── REFRESH ──────────────────────────────────────────────
+document.getElementById('refresh-btn').addEventListener('click', () => {
+    loadActiveCv();
+    loadCvList();
+});
+
+// ── LOG ──────────────────────────────────────────────────
+function log(msg, type = 'info') {
+    const list  = document.getElementById('log-list');
+    const empty = list.querySelector('.empty-state');
+    if (empty) empty.remove();
+    const time  = new Date().toLocaleTimeString();
+    const entry = document.createElement('div');
+    entry.className = `log-entry log-${type}`;
+    entry.innerHTML = `<span class="log-time">${time}</span><span>${msg}</span>`;
+    list.insertBefore(entry, list.firstChild);
+}
+document.getElementById('clear-log-btn').addEventListener('click', () => {
+    document.getElementById('log-list').innerHTML = '<div class="empty-state">No activity yet.</div>';
+});
+
+// ── START ─────────────────────────────────────────────────
+boot();
+</script>
+</body>
+</html>
