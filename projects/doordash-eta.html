@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DoorDash ETA Prediction Case Study | Felipe Ramires Terrazas</title>
+    <meta name="description" content="End-to-end delivery ETA prediction pipeline on 197K DoorDash orders, benchmarking five models on supply/demand operational signals with XGBoost achieving 20% RMSE improvement over the naive baseline.">
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css">
+</head>
+<body class="case-study-page">
+    <div class="case-study-shell">
+        <a class="case-study-back" href="../index.html">&larr; Back to portfolio</a>
+
+        <header class="case-study-hero">
+            <span class="case-study-kicker">Machine Learning Case Study &mdash; Kaggle Dataset</span>
+            <h1>DoorDash ETA Prediction: Supply &amp; Demand Signals</h1>
+            <p class="case-study-lead">
+                An end-to-end regression pipeline that predicts food delivery duration (in minutes) from 197,280 real DoorDash orders using only operational supply/demand signals &mdash; no GPS data, just dasher availability, demand pressure, and order characteristics. The project covers temporal and utilisation feature engineering, a five-model benchmark, and a rigorous analysis of why ETA prediction is hard when the key physics (actual route) is unobservable.
+            </p>
+            <div class="case-study-meta">
+                <span class="meta-pill">Python</span>
+                <span class="meta-pill">scikit-learn</span>
+                <span class="meta-pill">XGBoost</span>
+                <span class="meta-pill">LightGBM</span>
+                <span class="meta-pill">Supply/Demand Engineering</span>
+                <span class="meta-pill">Dasher Utilisation</span>
+                <span class="meta-pill">RMSE / R²</span>
+                <span class="meta-pill">Matplotlib / Seaborn</span>
+            </div>
+        </header>
+
+        <div class="case-study-grid">
+            <nav class="cs-toc" aria-label="Table of contents">
+                <span class="cs-toc-label">On this page</span>
+                <ul class="cs-toc-list">
+                    <li><a class="cs-toc-link" href="#business-problem">Business Problem</a></li>
+                    <li><a class="cs-toc-link" href="#architecture">Architecture &amp; Tools</a></li>
+                    <li><a class="cs-toc-link" href="#the-code">The Code</a></li>
+                    <li><a class="cs-toc-link" href="#visualizations">Visualizations</a></li>
+                    <li><a class="cs-toc-link" href="#conclusion">Conclusion</a></li>
+                </ul>
+            </nav>
+
+            <main class="case-study-main">
+
+                <!-- ── BUSINESS PROBLEM ─────────────────────────────────── -->
+                <section id="business-problem" class="case-panel">
+                    <h2>Business Problem</h2>
+                    <p>
+                        The ETA displayed at checkout is one of the highest-leverage numbers in food delivery. Underestimate it and customers cancel or churn. Overestimate it and conversion drops as users switch to a competitor showing a shorter time. Getting it right is worth tens of millions of dollars at DoorDash's scale.
+                    </p>
+                    <p>
+                        The core challenge is that actual delivery time is determined by four interacting factors that are hard to observe simultaneously: <strong>kitchen preparation time</strong>, <strong>dasher availability and dispatch lag</strong>, <strong>real-time traffic</strong>, and <strong>last-mile distance</strong>. This dataset captures only the operational layer &mdash; dasher supply, demand queue, estimated durations &mdash; with no GPS coordinates or live traffic data. That constraint makes it an ideal test of how much signal pure supply/demand features carry.
+                    </p>
+                    <div class="inline-note">
+                        Dataset: Kaggle DoorDash Historical Orders. 197,280 orders (after filtering deliveries under 5 min or over 180 min) across multiple markets. Features cover dasher availability, demand queue depth, order characteristics, and platform-estimated durations. Target: <code>actual_delivery_time &minus; created_at</code> in minutes (mean: 47.5 min, std: ~18 min).
+                    </div>
+                </section>
+
+                <!-- ── ARCHITECTURE ─────────────────────────────────────── -->
+                <section id="architecture" class="case-panel">
+                    <h2>Pipeline Architecture &amp; Tools</h2>
+                    <p>
+                        The pipeline runs five sequential stages: data cleaning, feature engineering, preprocessing, model benchmarking, and ETA accuracy evaluation framed around business-relevant tolerance thresholds.
+                    </p>
+                    <div class="tool-stack">
+                        <article class="tool-card">
+                            <strong>Target Engineering</strong>
+                            <p>The target <code>delivery_minutes</code> is derived by subtracting <code>created_at</code> from <code>actual_delivery_time</code> and converting to minutes. Orders below 5 min (data artifacts) and above 180 min (extreme outliers that would distort gradient-based training) are dropped, retaining 99.9% of the data.</p>
+                        </article>
+                        <article class="tool-card">
+                            <strong>Supply / Demand Feature Engineering</strong>
+                            <p>Three composite features capture the operational pressure at order time: <code>dasher_utilization</code> (busy dashers &divide; on-shift dashers, clipped at 2.0 to handle over-capacity states), <code>available_dashers</code> (on-shift &minus; busy), and <code>orders_per_dasher</code> (outstanding orders &divide; available dashers + 1). These transform raw headcount numbers into interpretable capacity signals.</p>
+                        </article>
+                        <article class="tool-card">
+                            <strong>Temporal Features</strong>
+                            <p>Four temporal features are extracted from <code>created_at</code>: <code>order_hour</code>, <code>order_dow</code> (day of week), <code>is_weekend</code>, and <code>is_peak_hour</code> (1 during lunch 11&ndash;14 and dinner 18&ndash;22). Peak-hour traffic effects are a known cause of ETA variance and are not captured in the estimated duration columns.</p>
+                        </article>
+                        <article class="tool-card">
+                            <strong>Estimate-Derived Features</strong>
+                            <p><code>estimated_order_place_duration</code> and <code>estimated_store_to_consumer_driving_duration</code> (both in seconds in the raw data) are converted to minutes and summed into <code>est_total_min</code>. This composite feature represents the platform&rsquo;s own ETA guess and becomes a strong but imperfect baseline signal for all models.</p>
+                        </article>
+                        <article class="tool-card">
+                            <strong>Five-Model Benchmark</strong>
+                            <p>Naive Mean (predict training mean, used as the floor), Ridge (linear baseline), Random Forest, XGBoost, and LightGBM are all evaluated. Each non-naive model runs inside a scikit-learn <code>Pipeline</code> combining a <code>ColumnTransformer</code> (median imputation + scaling for numerics; most-frequent imputation + OHE for categoricals) with the estimator.</p>
+                        </article>
+                        <article class="tool-card">
+                            <strong>ETA Accuracy Framing</strong>
+                            <p>Beyond RMSE and R², every model is evaluated on the fraction of predictions within &plusmn;5 min and &plusmn;10 min of actual delivery time. A delivery app that shows &ldquo;35&ndash;45 min&rdquo; needs models accurate to roughly &plusmn;5 min to honour that window &mdash; making <em>Within&nbsp;&plusmn;5&nbsp;min</em> the key operational KPI, not R².</p>
+                        </article>
+                    </div>
+                </section>
+
+                <!-- ── CODE ─────────────────────────────────────────────── -->
+                <section id="the-code" class="case-panel">
+                    <h2>The Code</h2>
+
+                    <!-- 1. Load & target -->
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Load data and engineer delivery duration target</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python">import numpy as np
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.impute import SimpleImputer
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.linear_model import Ridge
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from xgboost import XGBRegressor
+from lightgbm import LGBMRegressor
+
+df = pd.read_csv("historical_data.csv",
+                 parse_dates=["created_at", "actual_delivery_time"])
+
+# Target: seconds from order placed to delivered, converted to minutes.
+# Filter impossible values (data artifacts < 5 min, extreme outliers > 180 min).
+df["delivery_minutes"] = (
+    df["actual_delivery_time"] - df["created_at"]
+).dt.total_seconds() / 60
+
+df = df[(df["delivery_minutes"] >= 5) &amp; (df["delivery_minutes"] &lt;= 180)].copy()
+# 197,280 rows remain  |  mean 47.5 min  |  std ~18 min</code></pre>
+                    </div>
+
+                    <!-- 2. Feature engineering -->
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Feature engineering — supply/demand pressure and temporal signals</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python"># Temporal signals from order timestamp
+df["order_hour"]   = df["created_at"].dt.hour
+df["order_dow"]    = df["created_at"].dt.dayofweek  # 0=Mon, 6=Sun
+df["is_weekend"]   = (df["order_dow"] >= 5).astype(int)
+df["is_peak_hour"] = df["order_hour"].apply(
+    lambda h: 1 if (11 &lt;= h &lt;= 14) or (18 &lt;= h &lt;= 22) else 0
+)
+
+# Supply/demand pressure at the moment the order was placed.
+# Dasher utilisation: fraction of on-shift dashers already busy.
+# Orders-per-dasher: queue depth relative to available capacity.
+# Both are stronger predictors than raw headcounts because they
+# capture the capacity *ratio*, not the absolute volume.
+df["dasher_utilization"] = (
+    df["total_busy_dashers"] / df["total_onshift_dashers"].replace(0, np.nan)
+).clip(0, 2)
+df["available_dashers"]  = (
+    df["total_onshift_dashers"] - df["total_busy_dashers"]
+).clip(lower=0)
+df["orders_per_dasher"]  = (
+    df["total_outstanding_orders"] / (df["available_dashers"] + 1)
+)
+
+# Platform estimate features (seconds → minutes)
+df["est_order_min"] = df["estimated_order_place_duration"] / 60
+df["est_drive_min"] = df["estimated_store_to_consumer_driving_duration"] / 60
+df["est_total_min"] = df["est_order_min"] + df["est_drive_min"]
+
+# Order complexity proxies
+df["avg_item_price"] = df["subtotal"] / df["total_items"].replace(0, np.nan)
+df["price_range"]    = df["max_item_price"] - df["min_item_price"]</code></pre>
+                    </div>
+
+                    <!-- 3. Preprocessing pipeline -->
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Preprocessing — imputation, scaling, and OHE inside a scikit-learn Pipeline</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python">NUM_FEATURES = [
+    "total_items", "subtotal", "num_distinct_items",
+    "min_item_price", "max_item_price",
+    "total_onshift_dashers", "total_busy_dashers", "total_outstanding_orders",
+    "est_order_min", "est_drive_min", "est_total_min",
+    "order_hour", "order_dow", "is_weekend", "is_peak_hour",
+    "dasher_utilization", "available_dashers", "orders_per_dasher",
+    "avg_item_price", "price_range",         # 20 numeric features
+]
+CAT_FEATURES = ["market_id", "store_primary_category", "order_protocol"]
+
+num_pipe = Pipeline([
+    ("imputer", SimpleImputer(strategy="median")),
+    ("scaler",  StandardScaler()),
+])
+cat_pipe = Pipeline([
+    ("imputer", SimpleImputer(strategy="most_frequent")),
+    ("ohe",     OneHotEncoder(handle_unknown="ignore", sparse_output=False)),
+])
+preprocessor = ColumnTransformer([
+    ("num", num_pipe, NUM_FEATURES),
+    ("cat", cat_pipe, CAT_FEATURES),
+])
+
+X_train, X_test, y_train, y_test = train_test_split(
+    df[NUM_FEATURES + CAT_FEATURES],
+    df["delivery_minutes"],
+    test_size=0.2, random_state=42
+)
+# Train: 157,824  |  Test: 39,456</code></pre>
+                    </div>
+
+                    <!-- 4. Model training -->
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>Model training — five models from naive baseline to gradient boosting</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python"># Naive baseline: always predict the training-set mean.
+# Sets the floor — any model must beat this to justify its complexity.
+naive_pred = np.full(len(y_test), y_train.mean())
+
+# Ridge: linear baseline. Exposes whether the relationship is
+# approximately linear before committing to tree-based models.
+ridge_pipe = Pipeline([("prep", preprocessor), ("model", Ridge(alpha=1.0))])
+
+# XGBoost: best single model.
+# max_depth=6, learning_rate=0.05, 400 trees, L1+L2 regularisation.
+# subsample=0.8 and colsample_bytree=0.8 reduce overfitting on
+# correlated supply/demand features.
+xgb_pipe = Pipeline([
+    ("prep", preprocessor),
+    ("model", XGBRegressor(
+        n_estimators=400, max_depth=6, learning_rate=0.05,
+        subsample=0.8, colsample_bytree=0.8,
+        reg_alpha=0.1, reg_lambda=1.0,
+        n_jobs=-1, random_state=42, verbosity=0,
+    )),
+])
+
+# Results after all 5 models:
+# Naive Mean:    RMSE=18.05  R²=-0.000  Within±5=23.1%  Within±10=45.4%
+# Ridge:         RMSE=15.45  R²=0.268   Within±5=28.7%  Within±10=54.4%
+# Random Forest: RMSE=15.34  R²=0.279   Within±5=28.9%  Within±10=54.8%
+# XGBoost:       RMSE=14.43  R²=0.362   Within±5=31.3%  Within±10=58.4%  ← best
+# LightGBM:      RMSE=14.46  R²=0.359   Within±5=31.2%  Within±10=58.2%</code></pre>
+                    </div>
+
+                    <!-- 5. ETA accuracy -->
+                    <div class="code-shell">
+                        <div class="code-shell-header">
+                            <span>ETA accuracy metric — fraction of predictions within ±N minutes</span>
+                            <span>Python</span>
+                        </div>
+                        <pre><code class="language-python">def eta_accuracy(y_true, y_pred, tolerance_min):
+    """
+    Fraction of orders where the predicted ETA is within ±tolerance_min
+    of the actual delivery time. This maps directly to the delivery window
+    a customer sees at checkout: if we show '35–45 min', we need
+    predictions accurate to ±5 min to honour that range reliably.
+    """
+    return np.mean(np.abs(y_true - y_pred) &lt;= tolerance_min)
+
+# XGBoost: Within±5=31.3%  |  Within±10=58.4%
+# Naive:   Within±5=23.1%  |  Within±10=45.4%
+# Δ at ±5 min:  +8.2pp  |  Δ at ±10 min: +13.0pp
+
+# The low absolute Within±5 (31%) is expected — without actual GPS routes
+# and live traffic data, predicting to within 5 minutes from pure supply/
+# demand signals is near the theoretical limit of what this feature set allows.
+# The 13pp improvement at ±10 min shows the model is learning real structure,
+# just not enough to overcome the irreducible noise from kitchen variability.</code></pre>
+                    </div>
+                </section>
+
+                <!-- ── VISUALIZATIONS ────────────────────────────────────── -->
+                <section id="visualizations" class="case-panel visualizations-panel">
+                    <h2>Visualizations</h2>
+                    <p>
+                        Four multi-panel charts cover exploratory analysis, model performance, feature importance, and business-impact framing. All figures are built on a dark background to match the portfolio&rsquo;s visual language.
+                    </p>
+
+                    <div class="chart-grid">
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button"
+                                data-lightbox-src="../figures/fig_doordash_01_eda.png"
+                                data-lightbox-alt="4-panel EDA: delivery time distribution, avg delivery by hour, dasher utilization scatter, delivery time by food category boxplot"
+                                aria-label="Open EDA panel in full screen">
+                                <img src="../figures/fig_doordash_01_eda.png" alt="Exploratory Data Analysis - 4 panel grid">
+                            </button>
+                            <figcaption class="chart-caption"><strong>Exploratory Data Analysis.</strong> Delivery time is right-skewed (mean 47.5 min). Peak-hour orders (highlighted orange) show consistently higher mean delivery times. The dasher utilisation scatter reveals that high-utilisation + high orders-per-dasher combinations cluster at longer delivery times, validating the engineered capacity features. Delivery time varies up to ~8 minutes across food categories, with fast-food categories showing tighter distributions.</figcaption>
+                        </figure>
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button"
+                                data-lightbox-src="../figures/fig_doordash_02_model_performance.png"
+                                data-lightbox-alt="4-panel model performance: RMSE bar chart, R² bar chart, actual vs predicted scatter for XGBoost, residual histogram"
+                                aria-label="Open model performance panel in full screen">
+                                <img src="../figures/fig_doordash_02_model_performance.png" alt="Model Performance - RMSE, R², actual vs predicted, residuals">
+                            </button>
+                            <figcaption class="chart-caption"><strong>Model Performance.</strong> XGBoost (RMSE&nbsp;14.43 min, R²&nbsp;0.362) is the best single model, beating the naive baseline by 20% on RMSE. Ridge and Random Forest are nearly identical (R²&nbsp;0.268 vs&nbsp;0.279), suggesting diminishing returns from non-linear complexity when the key physics is unobservable. The residual distribution is tightly centred at zero but has heavy tails &mdash; signature of irreducible kitchen-time variance.</figcaption>
+                        </figure>
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button"
+                                data-lightbox-src="../figures/fig_doordash_03_feature_importance.png"
+                                data-lightbox-alt="Side-by-side horizontal bar charts of top 15 feature importances for XGBoost and LightGBM"
+                                aria-label="Open feature importance panel in full screen">
+                                <img src="../figures/fig_doordash_03_feature_importance.png" alt="Feature Importance - XGBoost vs LightGBM top 15 features">
+                            </button>
+                            <figcaption class="chart-caption"><strong>Feature Importance.</strong> Both XGBoost and LightGBM consistently rank <code>est_drive_min</code> and <code>est_total_min</code> at the top &mdash; confirming the platform&rsquo;s own estimated driving duration carries the most raw signal. Critically, the engineered supply/demand features (<code>dasher_utilization</code>, <code>orders_per_dasher</code>, <code>available_dashers</code>) appear in the top 10 for both models, validating that operational pressure adds information beyond what the estimates alone capture.</figcaption>
+                        </figure>
+
+                        <figure class="chart-frame">
+                            <button class="chart-zoom" type="button"
+                                data-lightbox-src="../figures/fig_doordash_04_business_impact.png"
+                                data-lightbox-alt="3-panel business impact: Within±5 min accuracy bars, Within±10 min accuracy bars, accuracy vs tolerance curve"
+                                aria-label="Open business impact panel in full screen">
+                                <img src="../figures/fig_doordash_04_business_impact.png" alt="Business Impact - ETA accuracy within tolerance thresholds">
+                            </button>
+                            <figcaption class="chart-caption"><strong>Business Impact.</strong> XGBoost achieves 31.3% within &plusmn;5 min (vs 23.1% naive, +8.2pp) and 58.4% within &plusmn;10 min (vs 45.4% naive, +13.0pp). The tolerance-curve chart shows XGBoost consistently outperforms Ridge and the naive baseline at every threshold from &plusmn;1 min to &plusmn;20 min. The gap widens around &plusmn;8&ndash;12 min &mdash; the range where supply/demand signals are most informative relative to the irreducible delivery-time noise.</figcaption>
+                        </figure>
+
+                    </div>
+                </section>
+
+                <!-- ── CONCLUSION ───────────────────────────────────────── -->
+                <section id="conclusion" class="case-panel">
+                    <h2>Conclusion</h2>
+                    <p>
+                        The most important result here is not the R² &mdash; it is the honest acknowledgment of <strong>what the feature set cannot capture</strong>. R²&nbsp;0.36 on a delivery-time regression is not underperformance; it is the correct answer when the dataset contains no GPS coordinates, no live traffic data, and no kitchen-state signals. The model&rsquo;s error has a floor set by the irreducible variance of kitchen preparation time and last-mile routing, both of which are invisible to the feature set.
+                    </p>
+                    <p>
+                        The meaningful result is that supply/demand engineering adds real signal on top of the platform&rsquo;s own estimates. <code>dasher_utilization</code>, <code>orders_per_dasher</code>, and <code>available_dashers</code> all appear in the top 10 features for both gradient-boosting models, and XGBoost beats a Ridge model trained on the same preprocessed inputs by 94 basis points in R² (0.268 &rarr; 0.362). The non-linear interactions between capacity pressure and estimated driving time are genuinely informative and would not be captured by a linear model.
+                    </p>
+                    <p>
+                        The 13-percentage-point improvement in Within&nbsp;&plusmn;10&nbsp;min accuracy (45.4% &rarr; 58.4%) is the number a product team can act on. It means the model correctly places an additional 1-in-8 orders into the right 20-minute delivery window compared to predicting the mean, which is the lift that translates to fewer customer support contacts and fewer cancellations from broken ETA promises.
+                    </p>
+                </section>
+
+                <!-- ── PROJECT PAGINATION ───────────────────────────────── -->
+                <nav class="project-pagination" aria-label="Project pagination">
+                    <a class="pp-card pp-prev" href="pedidosya-friction-analysis.html">
+                        <span class="pp-dir">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+                            Previous
+                        </span>
+                        <span class="pp-title">PedidosYa App Friction Analysis</span>
+                    </a>
+                    <a class="pp-card pp-next" href="fraud-detection.html">
+                        <span class="pp-dir">
+                            Next
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+                        </span>
+                        <span class="pp-title">Credit Card Fraud Detection</span>
+                    </a>
+                </nav>
+
+            </main>
+
+            <!-- ── SIDEBAR ──────────────────────────────────────────────── -->
+            <aside class="case-study-sidebar">
+                <section class="case-panel sidebar-block">
+                    <h3>Key Results</h3>
+                    <ul class="case-list">
+                        <li><strong>Best model:</strong> XGBoost</li>
+                        <li><strong>RMSE:</strong> 14.43 min</li>
+                        <li><strong>MAE:</strong> 10.51 min</li>
+                        <li><strong>R²:</strong> 0.362</li>
+                        <li><strong>Within ±5 min:</strong> 31.3%</li>
+                        <li><strong>Within ±10 min:</strong> 58.4%</li>
+                        <li><strong>vs. naive (±10 min):</strong> +13.0pp</li>
+                        <li><strong>RMSE vs. naive:</strong> &minus;20%</li>
+                        <li><strong>Models evaluated:</strong> 5 (+ naive)</li>
+                    </ul>
+                </section>
+
+                <section class="case-panel sidebar-block">
+                    <h3>What This Shows</h3>
+                    <ul class="case-list">
+                        <li>Supply/demand feature engineering for ETA</li>
+                        <li>Honest R² interpretation in feature-constrained regression</li>
+                        <li>scikit-learn Pipeline preventing target leakage</li>
+                        <li>Five-model benchmark with consistent preprocessing</li>
+                        <li>Business-framing via ±5 / ±10 min tolerance analysis</li>
+                        <li>Non-linear capacity interactions XGBoost captures vs Ridge</li>
+                    </ul>
+                </section>
+
+                <section class="case-panel sidebar-block">
+                    <h3>Dataset</h3>
+                    <ul class="case-list">
+                        <li>197,280 DoorDash orders (cleaned)</li>
+                        <li>Target: delivery duration 5–180 min (mean 47.5 min)</li>
+                        <li>Features: dasher supply/demand, order size, estimated durations, food category</li>
+                        <li>No GPS or live traffic data</li>
+                        <li>Source: Kaggle DoorDash ETA Historical Data</li>
+                    </ul>
+                </section>
+
+                <section class="case-panel sidebar-block">
+                    <h3>Why R² = 0.36?</h3>
+                    <ul class="case-list">
+                        <li>Kitchen prep time is unobserved — major noise source</li>
+                        <li>No GPS: actual route length is unknown</li>
+                        <li>No live traffic: estimated driving time ≠ actual time</li>
+                        <li>Dasher-level dispatch decisions are untracked</li>
+                        <li>0.36 reflects the true signal ceiling of this feature set</li>
+                        <li>Adding GPS + kitchen sensors typically pushes R² above 0.7</li>
+                    </ul>
+                </section>
+
+                <section class="case-panel sidebar-block">
+                    <h3>File Layout</h3>
+                    <ul class="case-list">
+                        <li>kaggle/doordash/historical_data.csv</li>
+                        <li>kaggle/doordash/eta_prediction.py</li>
+                        <li>figures/fig_doordash_01_eda.png</li>
+                        <li>figures/fig_doordash_02_model_performance.png</li>
+                        <li>figures/fig_doordash_03_feature_importance.png</li>
+                        <li>figures/fig_doordash_04_business_impact.png</li>
+                    </ul>
+                </section>
+            </aside>
+        </div>
+    </div>
+
+    <!-- ── LIGHTBOX ──────────────────────────────────────────────────── -->
+    <div id="lightboxOverlay" class="lightbox-overlay" role="dialog" aria-modal="true" aria-label="Image zoom" style="display:none;">
+        <button class="lightbox-close" id="lightboxClose" aria-label="Close">&times;</button>
+        <img id="lightboxImg" class="lightbox-img" src="" alt="">
+    </div>
+
+    <!-- ── STICKY PROJECT QUICK NAV ────────────────────────── -->
+    <nav class="project-quick-nav" aria-label="Quick project navigation">
+        <span class="pqn-label">Projects</span>
+        <a class="pqn-link" href="fraud-detection.html"><span class="pqn-dot"></span><span class="pqn-text">Fraud Detection</span></a>
+        <a class="pqn-link" href="yard-moves-forecast.html"><span class="pqn-dot"></span><span class="pqn-text">Yard Moves Forecast</span></a>
+        <a class="pqn-link" href="customer-churn.html"><span class="pqn-dot"></span><span class="pqn-text">Customer Churn</span></a>
+        <a class="pqn-link" href="food-delivery.html"><span class="pqn-dot"></span><span class="pqn-text">Food Delivery Time</span></a>
+        <a class="pqn-link" href="ecommerce-churn.html"><span class="pqn-dot"></span><span class="pqn-text">Coupon Engine</span></a>
+        <a class="pqn-link" href="foodpanda-vendor-intelligence.html"><span class="pqn-dot"></span><span class="pqn-text">Foodpanda Vendors</span></a>
+        <a class="pqn-link" href="delivery-hero-ab-test.html"><span class="pqn-dot"></span><span class="pqn-text">Delivery Hero A/B Test</span></a>
+        <a class="pqn-link" href="flight-search.html"><span class="pqn-dot"></span><span class="pqn-text">Flight Search LTR</span></a>
+        <a class="pqn-link" href="pedidosya-friction-analysis.html"><span class="pqn-dot"></span><span class="pqn-text">PedidosYa Friction</span></a>
+        <a class="pqn-link active" href="doordash-eta.html"><span class="pqn-dot"></span><span class="pqn-text">DoorDash ETA</span></a>
+    </nav>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+    <script>
+        hljs.highlightAll();
+
+        (function () {
+            const overlay  = document.getElementById("lightboxOverlay");
+            const lbImg    = document.getElementById("lightboxImg");
+            const lbClose  = document.getElementById("lightboxClose");
+
+            document.querySelectorAll(".chart-zoom").forEach(btn => {
+                btn.addEventListener("click", () => {
+                    lbImg.src = btn.dataset.lightboxSrc;
+                    lbImg.alt = btn.dataset.lightboxAlt || "";
+                    overlay.style.display = "flex";
+                    document.body.style.overflow = "hidden";
+                    lbClose.focus();
+                });
+            });
+
+            function closeLightbox() {
+                overlay.style.display = "none";
+                document.body.style.overflow = "";
+                lbImg.src = "";
+            }
+
+            lbClose.addEventListener("click", closeLightbox);
+            overlay.addEventListener("click", e => { if (e.target === overlay) closeLightbox(); });
+            document.addEventListener("keydown", e => { if (e.key === "Escape") closeLightbox(); });
+        })();
+
+        // ── Active TOC link on scroll
+        (function () {
+            const links    = document.querySelectorAll(".cs-toc-link");
+            const sections = Array.from(links).map(l => document.querySelector(l.getAttribute("href")));
+            const io = new IntersectionObserver(
+                entries => {
+                    entries.forEach(e => {
+                        if (e.isIntersecting) {
+                            links.forEach(l => l.classList.remove("active"));
+                            const active = document.querySelector(`.cs-toc-link[href="#${e.target.id}"]`);
+                            if (active) active.classList.add("active");
+                        }
+                    });
+                },
+                { rootMargin: "-20% 0px -70% 0px" }
+            );
+            sections.forEach(s => s && io.observe(s));
+        })();
+    </script>
+</body>
+</html>

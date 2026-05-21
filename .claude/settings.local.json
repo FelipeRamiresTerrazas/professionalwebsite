@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python kaggle/doordash/eta_prediction.py)",
+      "Bash(grep -n pqn-link c:/Users/frami/Documents/Github/professionalwebsite/projects/__TRACKED_VAR__.html)",
+      "Bash(python -)"
+    ]
+  }
+}
